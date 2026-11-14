@@ -5,16 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cuentas</title>
 <style>
-:root{--bg:#f6f8fa;--card:#fff;--fg:#17222d;--muted:#5b6b7a;--line:#dde5ec;--accent:#1f6f5c;--accent-fg:#fff;--bad:#b3261e;--good:#1f6f5c}
-@media(prefers-color-scheme:dark){:root{--bg:#10171d;--card:#18222b;--fg:#e8eef3;--muted:#98a7b4;--line:#2a3743;--accent:#4fc3a1;--accent-fg:#06231b;--bad:#ff8a80;--good:#4fc3a1}}
+:root{--bg:#F4EFE3;--card:#FBF8F0;--field:#FFFFFF;--fg:#26331F;--muted:#5F6A52;--line:#DDE2C5;--accent:#4F6B4F;--accent-fg:#F4EFE3;--bad:#A55F26;--good:#4F6B4F;--warm:#D89A57}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1C251B;--card:#25311F;--field:#1C251B;--fg:#EDE8D8;--muted:#A9B49B;--line:#37442F;--accent:#8FA77A;--accent-fg:#1C251B;--bad:#E3AA70;--good:#A9C493;--warm:#D89A57;color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 main{max-width:640px;margin:0 auto;padding:16px}
-h1{font-size:1.4rem;margin:0}h2{font-size:1.1rem;margin:0 0 8px}
+h1{font-size:1.4rem;margin:0;color:var(--accent)}h2{font-size:1.1rem;margin:0 0 8px}
 header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
-input,select,button{font:inherit;width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+input,select,button{font:inherit;width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--fg)}
 button{background:var(--accent);color:var(--accent-fg);border:0;font-weight:600;cursor:pointer}
+button[data-pay]{background:var(--warm);color:#2B1B08}
 button.sec{background:transparent;color:var(--fg);border:1px solid var(--line)}
 button:disabled{opacity:.5}
 .row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
