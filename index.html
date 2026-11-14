@@ -64,7 +64,7 @@ label{font-size:.9rem;color:var(--muted)}
 
 <section id="vGroup" hidden>
  <button class="sec" id="btnBack">← Mis grupos</button>
- <div class="card"><h2 id="gTitle"></h2><div id="gMeta" class="muted"></div>
+ <div class="card"><h2 id="gTitle"></h2><div id="gMeta" class="muted"></div><div id="gMembers" class="muted"></div>
   <div class="row"><button class="sec" id="btnInvite">Crear link de invitación</button><button class="sec" id="btnStatus"></button></div>
   <input id="inviteLink" readonly hidden aria-label="Link de invitación">
  </div>
@@ -147,6 +147,8 @@ async function openGroup(id){
  const cur=g.reference_currency;
  $('gTitle').textContent=g.name;
  $('gMeta').textContent=`${cur} · ${g.status==='open'?'abierto':'cerrado: no admite gastos nuevos'} · ${active.length} miembros`;
+ const roleEs={admin:'administra',coadmin:'coadministra',member:'miembro'};
+ $('gMembers').textContent='Miembros: '+active.map(m=>name(m.user_id)+(m.role!=='member'?' ('+roleEs[m.role]+')':'')).join(', ');
  $('btnStatus').hidden=!(me&&me.role==='admin');
  $('btnStatus').textContent=g.status==='open'?'Cerrar grupo':'Reabrir grupo';
  $('cExpense').hidden=g.status!=='open';
@@ -170,7 +172,7 @@ async function openGroup(id){
    if(isE&&(m.created_by===myId||(me&&me.role==='admin')))act=`<button class="sec" style="width:auto;margin:0" data-void="${m.id}">Anular</button>`;
    if(!isE&&!m.confirmed&&m.to_user===myId)act=`<button style="width:auto;margin:0" data-conf="${m.id}">Confirmar</button>`;
   }
-  return `<div class="item"><div><b>${esc(m.description||(isE?'Gasto':'Pago'))}</b> ${st}<div class="muted">${who} · ${esc(m.occurred_on||'')}</div></div><div style="text-align:right"><b>${money(m.amount_minor,m.currency)}</b><div>${act}</div></div></div>`}).join(''):'<p class="muted">Sin movimientos.</p>';
+  return `<div class="item"><div><b>${esc(m.description||(isE?'Gasto':'Pago'))}</b> ${st}<div class="muted">${who} · ${esc(m.occurred_on||'')}</div>${isE&&m.shares&&Object.keys(m.shares).length?`<div class="muted">Reparto: ${Object.entries(m.shares).map(([u,v])=>esc(name(u))+' '+money(v,m.currency)).join(', ')}</div>`:''}</div><div style="text-align:right"><b>${money(m.amount_minor,m.currency)}</b><div>${act}</div></div></div>`}).join(''):'<p class="muted">Sin movimientos.</p>';
  $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}));
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
