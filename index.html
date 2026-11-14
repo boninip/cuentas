@@ -54,6 +54,16 @@ label{font-size:.9rem;color:var(--muted)}
   <label for="gCur">Moneda (código de 3 letras)</label><input id="gCur" value="ARS" maxlength="3">
   <button id="btnCreate">Crear grupo</button>
  </div>
+ <div class="card">
+  <h2>Mis datos de cobro</h2>
+  <p class="muted">Para que tus amigos te transfieran. Los ven solo los miembros activos de tus grupos y podés dejar de compartirlos cuando quieras. Cuentas no mueve plata.</p>
+  <label for="oAlias">Alias</label><input id="oAlias" maxlength="20" placeholder="nombre.apellido.mp" autocapitalize="none">
+  <label for="oCbu">CBU / CVU (22 números)</label><input id="oCbu" inputmode="numeric" maxlength="26" placeholder="0000003100012345678901">
+  <label for="oHolder">Titular (opcional)</label><input id="oHolder" maxlength="80">
+  <label for="oBank">Banco o billetera (opcional)</label><input id="oBank" maxlength="60" placeholder="Mercado Pago, Galicia…">
+  <label class="chk"><input type="checkbox" id="oShared" checked><span>Compartir con mis grupos</span></label>
+  <div class="row"><button id="btnPayoutSave">Guardar</button><button class="sec" id="btnPayoutClear">Borrar mis datos</button></div>
+ </div>
  <button class="sec" id="btnLogout">Cerrar sesión</button>
 </section>
 
@@ -68,6 +78,10 @@ label{font-size:.9rem;color:var(--muted)}
   <div class="row"><button class="sec" id="btnInvite">Crear link de invitación</button><button class="sec" id="btnStatus"></button></div>
   <input id="inviteLink" readonly hidden aria-label="Link de invitación">
  </div>
+ <div class="card"><h2>Miembros</h2><div id="mList"></div>
+  <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div></div>
+ <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
+ <div class="card" id="cProps" hidden><h2>Propuestas pendientes</h2><p class="muted">Leer no es consentir: tu decisión queda ligada a esta versión exacta de la propuesta.</p><div id="props"></div></div>
  <div class="card"><h2>Saldos</h2><p class="muted">Positivo: te deben. Negativo: debés.</p><div id="balances"></div>
   <h2 style="margin-top:14px">Cómo saldar</h2><div id="settle"></div></div>
  <div class="card" id="cExpense"><h2>Nuevo gasto</h2>
@@ -132,6 +146,7 @@ function busy(btn,fn){return async()=>{btn.disabled=true;try{await fn()}catch(e)
 async function home(){
  gid=null;show('vHome');
  if(token)$('vInvite').hidden=false;
+ loadPayout().catch(()=>{});
  const gs=await rpc('cuentas_my_groups');
  $('noGroups').hidden=gs.length>0;
  $('groups').innerHTML=gs.map(g=>`<div class="item"><div><b>${esc(g.name)}</b><div class="muted">${esc(g.reference_currency)} · ${g.status==='open'?'abierto':'cerrado'}</div></div><button class="sec" style="width:auto" data-g="${g.id}">Abrir</button></div>`).join('');
@@ -139,7 +154,7 @@ async function home(){
 }
 async function openGroup(id){
  gid=id;
- const [g,bal,mv]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id})]);
+ const [g,bal,mv,pay,props]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id})]);
  group=g;show('vGroup');say('');
  const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
  const active=g.members.filter(m=>m.status==='active');
@@ -150,12 +165,33 @@ async function openGroup(id){
  const roleEs={admin:'administra',coadmin:'coadministra',member:'miembro'};
  $('gMembers').textContent='Miembros: '+active.map(m=>name(m.user_id)+(m.role!=='member'?' ('+roleEs[m.role]+')':'')).join(', ');
  $('btnStatus').hidden=!(me&&me.role==='admin');
+ const isAdmin=!!(me&&me.role==='admin');
+ $('mList').innerHTML=active.map(m=>`<div class="item"><span>${esc(name(m.user_id))} <span class="tag">${roleEs[m.role]}</span></span>${isAdmin&&m.user_id!==myId?`<button class="sec" style="width:auto;margin:0" data-rm="${m.user_id}">Quitar</button>`:''}</div>`).join('');
+ $('mList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: quitar';say('Quitar a alguien no borra sus deudas ni el historial. Tocá de nuevo para confirmar.');return}await rpc('cuentas_member_remove',{p_group:gid,p_user:b.dataset.rm});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')}));
+ $('btnArchive').hidden=!(isAdmin&&g.status==='closed');
+ const payBy={};(pay||[]).forEach(x=>payBy[x.user_id]=x);
+ $('payouts').innerHTML=(pay&&pay.length)?pay.map(x=>`<div class="item"><div><b>${esc(name(x.user_id))}</b>${x.holder_name?`<div class="muted">${esc(x.holder_name)}${x.bank?' · '+esc(x.bank):''}</div>`:(x.bank?`<div class="muted">${esc(x.bank)}</div>`:'')}${x.alias?`<div>Alias: <b>${esc(x.alias)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.alias)}">Copiar</button></div>`:''}${x.cbu?`<div>CBU/CVU: <b>${esc(x.cbu)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.cbu)}">Copiar</button></div>`:''}</div></div>`).join(''):'<p class="muted">Nadie compartió datos de cobro todavía. Cargá los tuyos en «Mis grupos».</p>';
+ $('payouts').querySelectorAll('[data-copy]').forEach(b=>b.onclick=copyBtn(b));
+ const openProps=(props||[]).filter(p=>p.status==='open');
+ $('cProps').hidden=!openProps.length;
+ $('props').innerHTML=openProps.map(p=>{
+  const req=p.required||[];const mine=req.find(r=>r.user_id===myId);
+  const kind=p.kind==='void_expense'?'Anular gasto':'Anular pago';
+  const st=req.map(r=>esc(name(r.user_id))+': '+(r.decision==='approve'?'aprobó':r.decision==='reject'?'rechazó':'falta')).join(' · ');
+  const acts=mine&&!mine.decision?`<button style="width:auto;margin:0" data-ap="${p.id}" data-h="${esc(p.version_hash)}">Aprobar</button> <button class="sec" style="width:auto;margin:0" data-rj="${p.id}" data-h="${esc(p.version_hash)}">Rechazar</button>`:'';
+  const cancel=p.created_by===myId?` <button class="sec" style="width:auto;margin:0" data-pc="${p.id}">Cancelar propuesta</button>`:'';
+  return `<div class="item"><div><b>${kind}</b>: ${esc(p.description||'')} · ${money(p.amount_minor,p.currency)}<div class="muted">${p.reason?esc(p.reason)+' · ':''}${st}</div></div><div style="text-align:right">${acts}${cancel}</div></div>`}).join('');
+ const consent=(b,d)=>busy(b,async()=>{const r=await rpc('cuentas_proposal_consent',{p_proposal:b.dataset.ap||b.dataset.rj,p_hash:b.dataset.h,p_decision:d});await openGroup(gid);say('Registrado: '+r)});
+ $('props').querySelectorAll('[data-ap]').forEach(b=>b.onclick=consent(b,'approve'));
+ $('props').querySelectorAll('[data-rj]').forEach(b=>b.onclick=consent(b,'reject'));
+ $('props').querySelectorAll('[data-pc]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_cancel',{p_proposal:b.dataset.pc});await openGroup(gid);say('Propuesta cancelada.')}));
  $('btnStatus').textContent=g.status==='open'?'Cerrar grupo':'Reabrir grupo';
  $('cExpense').hidden=g.status!=='open';
  $('inviteLink').hidden=true;
  $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item"><span>${esc(name(b.user_id))}</span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(b.balance_minor,b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
  const sug=settleSuggestions(bal);
- $('settle').innerHTML=sug.length?sug.map((x,k)=>`<div class="item"><span>${esc(name(x.from))} le paga a ${esc(name(x.to))}</span><span><b>${money(x.amount,x.currency)}</b>${x.from===myId?` <button style="width:auto;margin:0 0 0 8px;padding:6px 10px" data-pay="${k}">Pagar</button>`:''}</span></div>`).join('')+'<p class="muted">Es una sugerencia con la menor cantidad de pagos. Los pagos pendientes de confirmar no cuentan todavía.</p>':'<p class="muted">Está todo saldado.</p>';
+ $('settle').innerHTML=sug.length?sug.map((x,k)=>`<div class="item"><span>${esc(name(x.from))} le paga a ${esc(name(x.to))}${x.from===myId&&payBy[x.to]&&(payBy[x.to].alias||payBy[x.to].cbu)?`<div class="muted">Alias/CBU: ${esc(payBy[x.to].alias||payBy[x.to].cbu)} <button class="sec" style="width:auto;margin:0;padding:2px 8px" data-copy="${esc(payBy[x.to].alias||payBy[x.to].cbu)}">Copiar</button></div>`:''}</span><span><b>${money(x.amount,x.currency)}</b>${x.from===myId?` <button style="width:auto;margin:0 0 0 8px;padding:6px 10px" data-pay="${k}">Pagar</button>`:''}</span></div>`).join('')+'<p class="muted">Es una sugerencia con la menor cantidad de pagos. Los pagos pendientes de confirmar no cuentan todavía.</p>':'<p class="muted">Está todo saldado.</p>';
+ $('settle').querySelectorAll('[data-copy]').forEach(b=>b.onclick=copyBtn(b));
  $('settle').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{const x=sug[Number(b.dataset.pay)];$('pTo').value=x.to;$('pAmt').value=(x.amount/100).toFixed(2).replace('.',',');$('pAmt').scrollIntoView({behavior:'smooth',block:'center'});$('pAmt').focus()});
  const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('ePayer').innerHTML=opts;$('ePayer').value=myId;
@@ -170,10 +206,14 @@ async function openGroup(id){
   let act='';
   if(!m.voided){
    if(isE&&(m.created_by===myId||(me&&me.role==='admin')))act=`<button class="sec" style="width:auto;margin:0" data-void="${m.id}">Anular</button>`;
+   if(!isE&&!m.confirmed&&m.from_user===myId)act=`<button class="sec" style="width:auto;margin:0" data-pcancel="${m.id}">Cancelar pago</button>`;
+   if(!isE&&m.confirmed&&(m.from_user===myId||m.to_user===myId))act=`<button class="sec" style="width:auto;margin:0" data-prev="${m.id}">Proponer anular</button>`;
    if(!isE&&!m.confirmed&&m.to_user===myId)act=`<button style="width:auto;margin:0" data-conf="${m.id}">Confirmar</button>`;
   }
   return `<div class="item"><div><b>${esc(m.description||(isE?'Gasto':'Pago'))}</b> ${st}<div class="muted">${who} · ${esc(m.occurred_on||'')}</div>${isE&&m.shares&&Object.keys(m.shares).length?`<div class="muted">Reparto: ${Object.entries(m.shares).map(([u,v])=>esc(name(u))+' '+money(v,m.currency)).join(', ')}</div>`:''}</div><div style="text-align:right"><b>${money(m.amount_minor,m.currency)}</b><div>${act}</div></div></div>`}).join(''):'<p class="muted">Sin movimientos.</p>';
- $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}));
+ $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{try{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}catch(e){if(!/propuesta/i.test(e.message))throw e;await rpc('cuentas_proposal_create',{p_kind:'void_expense',p_target:b.dataset.void,p_reason:null});await openGroup(gid);say('Este gasto ya tiene pagos confirmados: creé una propuesta de anulación que necesita la aprobación de los afectados.')}}));
+ $('moves').querySelectorAll('[data-pcancel]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_cancel',{p_payment:b.dataset.pcancel});await openGroup(gid);say('Pago cancelado: no llegó a afectar saldos.')}));
+ $('moves').querySelectorAll('[data-prev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_create',{p_kind:'reverse_payment',p_target:b.dataset.prev,p_reason:null});await openGroup(gid);say('Propuesta creada: necesita la aprobación de todos los afectados.')}));
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
 function syncMode(){
@@ -230,6 +270,24 @@ function settleSuggestions(bal){
  });
  return out;
 }
+function copyBtn(b){return async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);say('Copiado.')}catch(_){say('Copialo a mano: '+b.dataset.copy)}}}
+async function loadPayout(){
+ const o=await rpc('cuentas_payout_get');
+ $('oAlias').value=(o&&o.alias)||'';$('oCbu').value=(o&&o.cbu)||'';$('oHolder').value=(o&&o.holder_name)||'';$('oBank').value=(o&&o.bank)||'';$('oShared').checked=o?o.shared!==false:true;
+}
+$('btnPayoutSave').onclick=busy($('btnPayoutSave'),async()=>{
+ await rpc('cuentas_payout_set',{p_alias:$('oAlias').value.trim()||null,p_cbu:$('oCbu').value.replace(/\s/g,'')||null,p_holder:$('oHolder').value.trim()||null,p_bank:$('oBank').value.trim()||null,p_shared:$('oShared').checked});
+ say('Datos de cobro guardados.');
+});
+$('btnPayoutClear').onclick=busy($('btnPayoutClear'),async()=>{await rpc('cuentas_payout_clear');await loadPayout();say('Borraste tus datos de cobro.')});
+$('btnLeave').onclick=busy($('btnLeave'),async()=>{
+ const b=$('btnLeave');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: salir';say('Salir no borra tus deudas ni el historial; seguís viendo tu saldo. Tocá de nuevo para confirmar.');return}
+ b.dataset.armed='';b.textContent='Salir del grupo';await rpc('cuentas_member_leave',{p_group:gid});await home();say('Saliste del grupo.');
+});
+$('btnArchive').onclick=busy($('btnArchive'),async()=>{
+ const b=$('btnArchive');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: archivar';say('Archivar oculta el grupo de la lista; el historial se conserva. Tocá de nuevo para confirmar.');return}
+ b.dataset.armed='';b.textContent='Archivar grupo';await rpc('cuentas_group_archive',{p_group:gid});await home();say('Grupo archivado.');
+});
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 
 $('btnLogin').onclick=busy($('btnLogin'),async()=>{
