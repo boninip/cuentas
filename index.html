@@ -68,7 +68,8 @@ label{font-size:.9rem;color:var(--muted)}
   <div class="row"><button class="sec" id="btnInvite">Crear link de invitación</button><button class="sec" id="btnStatus"></button></div>
   <input id="inviteLink" readonly hidden aria-label="Link de invitación">
  </div>
- <div class="card"><h2>Saldos</h2><p class="muted">Positivo: te deben. Negativo: debés.</p><div id="balances"></div></div>
+ <div class="card"><h2>Saldos</h2><p class="muted">Positivo: te deben. Negativo: debés.</p><div id="balances"></div>
+  <h2 style="margin-top:14px">Cómo saldar</h2><div id="settle"></div></div>
  <div class="card" id="cExpense"><h2>Nuevo gasto</h2>
   <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300">
   <div class="row"><div><label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00"></div>
@@ -151,6 +152,9 @@ async function openGroup(id){
  $('cExpense').hidden=g.status!=='open';
  $('inviteLink').hidden=true;
  $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item"><span>${esc(name(b.user_id))}</span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(b.balance_minor,b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
+ const sug=settleSuggestions(bal);
+ $('settle').innerHTML=sug.length?sug.map((x,k)=>`<div class="item"><span>${esc(name(x.from))} le paga a ${esc(name(x.to))}</span><span><b>${money(x.amount,x.currency)}</b>${x.from===myId?` <button style="width:auto;margin:0 0 0 8px;padding:6px 10px" data-pay="${k}">Pagar</button>`:''}</span></div>`).join('')+'<p class="muted">Es una sugerencia con la menor cantidad de pagos. Los pagos pendientes de confirmar no cuentan todavía.</p>':'<p class="muted">Está todo saldado.</p>';
+ $('settle').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{const x=sug[Number(b.dataset.pay)];$('pTo').value=x.to;$('pAmt').value=(x.amount/100).toFixed(2).replace('.',',');$('pAmt').scrollIntoView({behavior:'smooth',block:'center'});$('pAmt').focus()});
  const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('ePayer').innerHTML=opts;$('ePayer').value=myId;
  $('pTo').innerHTML=active.filter(m=>m.user_id!==myId).map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
@@ -189,6 +193,23 @@ function updSum(){
  try{const a=toMinor($('eAmt').value)||0;const {sum}=exactShares();const cur=group?group.reference_currency:'ARS';
   const d=a-sum;$('eSum').textContent=d===0&&a>0?'Suma correcta.':'Falta asignar '+money(d,cur)+' (total '+money(a,cur)+').';
  }catch(e){$('eSum').textContent=e.message}
+}
+function settleSuggestions(bal){
+ const by={};
+ bal.forEach(b=>{(by[b.currency]=by[b.currency]||[]).push({u:b.user_id,m:Number(b.balance_minor)})});
+ const out=[];
+ Object.keys(by).forEach(cur=>{
+  const cr=by[cur].filter(x=>x.m>0).sort((a,b)=>b.m-a.m).map(x=>({...x}));
+  const de=by[cur].filter(x=>x.m<0).sort((a,b)=>a.m-b.m).map(x=>({u:x.u,m:-x.m}));
+  let i=0,j=0;
+  while(i<de.length&&j<cr.length){
+   const t=Math.min(de[i].m,cr[j].m);
+   if(t>0)out.push({from:de[i].u,to:cr[j].u,amount:t,currency:cur});
+   de[i].m-=t;cr[j].m-=t;
+   if(de[i].m===0)i++;if(cr[j].m===0)j++;
+  }
+ });
+ return out;
 }
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 
