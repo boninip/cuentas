@@ -172,7 +172,7 @@ $('btnLogin').onclick=busy($('btnLogin'),async()=>{
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Ingresá un email válido');
  const redirect=new URL(location.pathname,location.origin);
  if(token)redirect.searchParams.set('invite',token);
- await req('/auth/v1/otp',{email,create_user:true,email_redirect_to:redirect.toString()});
+ await req('/auth/v1/otp?redirect_to='+encodeURIComponent(redirect.toString()),{email,create_user:true});
  say('Revisá tu correo y abrí el enlace. Si no llega, mirá spam.');
 });
 $('btnLogout').onclick=()=>{save(null);start()};
