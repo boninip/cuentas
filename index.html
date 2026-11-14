@@ -27,6 +27,14 @@ button:disabled{opacity:.5}
 label{font-size:.9rem;color:var(--muted)}
 .chk{display:flex;gap:8px;align-items:center}.chk input[type=checkbox]{width:auto;margin:0}
 .chk .amt{flex:0 0 7.5em;margin:2px 0 2px auto;display:none}.exact .chk .amt{display:block}.chk .nm{flex:1}
+.tabs{display:flex;gap:4px;margin:10px 0;border-bottom:1px solid var(--line)}
+.tabs button{margin:0;background:transparent;color:var(--muted);border:0;border-bottom:3px solid transparent;border-radius:0;padding:10px 4px}
+.tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
+details>summary{cursor:pointer;font-weight:600;list-style:none}details>summary::-webkit-details-marker{display:none}
+details.card[open]>summary{margin-bottom:10px}
+#cExpense>summary{background:var(--accent);color:var(--accent-fg);text-align:center;padding:14px;border-radius:12px;font-size:1.05rem}
+#cExpense{padding:10px}#cExpense[open]>summary{margin-bottom:12px}
+#gSum{font-size:1.15rem;font-weight:700;margin:6px 0}
 </style>
 </head>
 <body>
@@ -48,14 +56,14 @@ label{font-size:.9rem;color:var(--muted)}
   <div id="groups"></div>
   <p id="noGroups" class="muted" hidden>Todavía no tenés grupos.</p>
  </div>
- <div class="card">
-  <h2>Nuevo grupo</h2>
+ <details class="card" id="cNew">
+  <summary>+ Nuevo grupo</summary>
   <label for="gName">Nombre</label><input id="gName" maxlength="120" placeholder="Ej. Viaje a Mendoza">
   <label for="gCur">Moneda (código de 3 letras)</label><input id="gCur" value="ARS" maxlength="3">
   <button id="btnCreate">Crear grupo</button>
- </div>
- <div class="card">
-  <h2>Mis datos de cobro</h2>
+ </details>
+ <details class="card" id="cPayout">
+  <summary>Mis datos de cobro (alias / CBU)</summary>
   <p class="muted">Para que tus amigos te transfieran. Los ven solo los miembros activos de tus grupos y podés dejar de compartirlos cuando quieras. Cuentas no mueve plata.</p>
   <label for="oAlias">Alias</label><input id="oAlias" maxlength="20" placeholder="nombre.apellido.mp" autocapitalize="none">
   <label for="oCbu">CBU / CVU (22 números)</label><input id="oCbu" inputmode="numeric" maxlength="26" placeholder="0000003100012345678901">
@@ -63,7 +71,7 @@ label{font-size:.9rem;color:var(--muted)}
   <label for="oBank">Banco o billetera (opcional)</label><input id="oBank" maxlength="60" placeholder="Mercado Pago, Galicia…">
   <label class="chk"><input type="checkbox" id="oShared" checked><span>Compartir con mis grupos</span></label>
   <div class="row"><button id="btnPayoutSave">Guardar</button><button class="sec" id="btnPayoutClear">Borrar mis datos</button></div>
- </div>
+ </details>
  <button class="sec" id="btnLogout">Cerrar sesión</button>
 </section>
 
@@ -82,43 +90,52 @@ label{font-size:.9rem;color:var(--muted)}
 
 <section id="vGroup" hidden>
  <button class="sec" id="btnBack">← Mis grupos</button>
- <div class="card"><h2 id="gTitle"></h2><div id="gMeta" class="muted"></div><div id="gMembers" class="muted"></div>
-  <div class="row"><button class="sec" id="btnInvite">Crear link de invitación</button><button class="sec" id="btnStatus"></button></div>
-  <input id="inviteLink" readonly hidden aria-label="Link de invitación">
+ <div class="card"><h2 id="gTitle"></h2><div id="gSum"></div><div id="gMeta" class="muted"></div><div id="gMembers" hidden></div></div>
+ <nav class="tabs" role="tablist"><button role="tab" data-tab="gastos">Gastos</button><button role="tab" data-tab="saldos">Saldos</button><button role="tab" data-tab="mas">Más</button></nav>
+
+ <div data-pane="gastos">
+  <details class="card" id="cExpense"><summary>+ Agregar gasto</summary>
+   <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300">
+   <div class="row"><div><label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00"></div>
+   <div><label for="ePayer">Pagó</label><select id="ePayer"></select></div></div>
+   <label for="eMode">Cómo dividir</label>
+   <select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select>
+   <label>Entre quiénes</label><div id="eParts"></div>
+   <p id="eSum" class="muted" hidden></p>
+   <button id="btnExpense">Guardar gasto</button>
+  </details>
+  <div class="card" id="cProps" hidden><h2>Propuestas pendientes</h2><p class="muted">Leer no es consentir: tu decisión queda ligada a esta versión exacta de la propuesta.</p><div id="props"></div></div>
+  <div class="card"><h2>Movimientos</h2><div id="moves"></div></div>
  </div>
- <div class="card"><h2>Miembros</h2><div id="mList"></div>
-  <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div></div>
- <div class="card" id="cDeleg" hidden><h2>Coadministración</h2><p class="muted">Delegación expresa, revocable y auditada. Reabrir y archivar quedan solo para quien administra.</p><div id="dList"></div>
-  <label for="dUser">Delegar en</label><select id="dUser"></select>
-  <div id="dScopes"><label class="chk"><input type="checkbox" value="invite"><span>Invitar</span></label><label class="chk"><input type="checkbox" value="close"><span>Cerrar grupo</span></label><label class="chk"><input type="checkbox" value="void"><span>Anular gastos ajenos</span></label><label class="chk"><input type="checkbox" value="link"><span>Vincular eventos</span></label></div>
-  <button id="btnGrant">Delegar</button></div>
- <div class="card"><h2>Viajes y eventos vinculados</h2><p class="muted">Eliminar un viaje o evento nunca borra deudas, pagos ni historial.</p><div id="lList"></div>
-  <div id="lForm"><label for="lType">Tipo</label><select id="lType"><option value="escapada_trip">Viaje (Escapada)</option><option value="juntada">Evento (Juntada)</option></select>
-  <label for="lRef">ID del viaje o evento</label><input id="lRef" placeholder="uuid" autocapitalize="none">
-  <div id="lOrgW" hidden><label for="lOrg">Código de organizador (Juntada)</label><input id="lOrg" placeholder="uuid" autocapitalize="none"></div>
-  <button class="sec" id="btnLink">Vincular</button><p class="muted">Provisorio: más adelante se elige desde la lista de tus viajes y eventos.</p></div></div>
- <div class="card"><h2>Cuenta compartida</h2><p class="muted">Dos personas que comparten gastos (pareja, familia). Agrupa saldos, no reemplaza las deudas de cada una. Una compensación solo se aplica si las dos la aprueban. Provisorio: aún no aprobado para producción.</p><div id="pairs"></div><div id="pairNew" hidden><label for="pairWith">Pedirle una cuenta compartida a</label><select id="pairWith"></select><button class="sec" id="btnPairReq">Enviar solicitud</button></div></div>
- <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
- <div class="card" id="cProps" hidden><h2>Propuestas pendientes</h2><p class="muted">Leer no es consentir: tu decisión queda ligada a esta versión exacta de la propuesta.</p><div id="props"></div></div>
- <div class="card"><h2>Saldos</h2><p class="muted">Positivo: te deben. Negativo: debés.</p><div id="balances"></div>
-  <h2 style="margin-top:14px">Cómo saldar</h2><div id="settle"></div></div>
- <div class="card" id="cExpense"><h2>Nuevo gasto</h2>
-  <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300">
-  <div class="row"><div><label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00"></div>
-  <div><label for="ePayer">Pagó</label><select id="ePayer"></select></div></div>
-  <label for="eMode">Cómo dividir</label>
-  <select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select>
-  <label>Entre quiénes</label><div id="eParts"></div>
-  <p id="eSum" class="muted" hidden></p>
-  <button id="btnExpense">Guardar gasto</button>
+
+ <div data-pane="saldos" hidden>
+  <div class="card"><h2>Saldos</h2><p class="muted">Positivo: te deben. Negativo: debés.</p><div id="balances"></div>
+   <h2 style="margin-top:14px">Cómo saldar</h2><div id="settle"></div></div>
+  <details class="card" id="cPay"><summary>Registrar un pago</summary>
+   <div class="row"><div><label for="pTo">Le pagaste a</label><select id="pTo"></select></div>
+   <div><label for="pAmt">Importe</label><input id="pAmt" inputmode="decimal" placeholder="0,00"></div></div>
+   <button id="btnPay">Registrar pago</button>
+   <p class="muted">El pago cuenta en los saldos cuando quien cobra lo confirma.</p>
+  </details>
+  <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
  </div>
- <div class="card"><h2>Registrar pago</h2>
-  <div class="row"><div><label for="pTo">Le pagaste a</label><select id="pTo"></select></div>
-  <div><label for="pAmt">Importe</label><input id="pAmt" inputmode="decimal" placeholder="0,00"></div></div>
-  <button id="btnPay">Registrar pago</button>
-  <p class="muted">El pago cuenta en los saldos cuando quien cobra lo confirma.</p>
+
+ <div data-pane="mas" hidden>
+  <div class="card"><h2>Miembros</h2><div id="mList"></div>
+   <div class="row"><button class="sec" id="btnInvite">Crear link de invitación</button><button class="sec" id="btnStatus"></button></div>
+   <input id="inviteLink" readonly hidden aria-label="Link de invitación">
+   <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div></div>
+  <details class="card" id="cDeleg" hidden><summary>Coadministración</summary><p class="muted">Delegación expresa, revocable y auditada. Reabrir y archivar quedan solo para quien administra.</p><div id="dList"></div>
+   <label for="dUser">Delegar en</label><select id="dUser"></select>
+   <div id="dScopes"><label class="chk"><input type="checkbox" value="invite"><span>Invitar</span></label><label class="chk"><input type="checkbox" value="close"><span>Cerrar grupo</span></label><label class="chk"><input type="checkbox" value="void"><span>Anular gastos ajenos</span></label><label class="chk"><input type="checkbox" value="link"><span>Vincular eventos</span></label></div>
+   <button id="btnGrant">Delegar</button></details>
+  <details class="card"><summary>Viajes y eventos vinculados</summary><p class="muted">Eliminar un viaje o evento nunca borra deudas, pagos ni historial.</p><div id="lList"></div>
+   <div id="lForm"><label for="lType">Tipo</label><select id="lType"><option value="escapada_trip">Viaje (Escapada)</option><option value="juntada">Evento (Juntada)</option></select>
+   <label for="lRef">ID del viaje o evento</label><input id="lRef" placeholder="uuid" autocapitalize="none">
+   <div id="lOrgW" hidden><label for="lOrg">Código de organizador (Juntada)</label><input id="lOrg" placeholder="uuid" autocapitalize="none"></div>
+   <button class="sec" id="btnLink">Vincular</button><p class="muted">Provisorio: más adelante se elige desde la lista de tus viajes y eventos.</p></div></details>
+  <details class="card"><summary>Cuenta compartida (pareja / familia)</summary><p class="muted">Dos personas que comparten gastos. Agrupa saldos, no reemplaza las deudas de cada una. Una compensación solo se aplica si las dos la aprueban. Provisorio: aún no aprobado para producción.</p><div id="pairs"></div><div id="pairNew" hidden><label for="pairWith">Pedirle una cuenta compartida a</label><select id="pairWith"></select><button class="sec" id="btnPairReq">Enviar solicitud</button></div></details>
  </div>
- <div class="card"><h2>Movimientos</h2><div id="moves"></div></div>
 </section>
 </main>
 <script>
@@ -131,7 +148,7 @@ const $=id=>document.getElementById(id);
 const url=new URL(location.href);
 const inv=url.searchParams.get('invite');
 const token=/^[a-f0-9]{64}$/.test(inv||'')?inv:null;
-let session=null,group=null,gid=null,myId=null;
+let session=null,group=null,gid=null,myId=null,tab='gastos';
 try{const r=JSON.parse(localStorage.getItem(STORE)||'null');if(r&&r.access_token&&r.refresh_token)session=r}catch(_){}
 const say=(t,bad)=>{const m=$('msg');m.textContent=t||'';m.className=bad?'bad':'muted'};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -158,11 +175,13 @@ async function rpc(fn,args){
  if(!(await fresh()))throw Error('Iniciá sesión para continuar');
  return req('/rest/v1/rpc/'+fn,args||{},session.access_token);
 }
+function setTab(t){tab=t;document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'))}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 function show(v){['vLogin','vHome','vInvite','vGroup','vFormer'].forEach(x=>$(x).hidden=x!==v)}
 function busy(btn,fn){return async()=>{btn.disabled=true;try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
 
 async function home(){
- gid=null;show('vHome');
+ gid=null;tab='gastos';show('vHome');
  if(token)$('vInvite').hidden=false;
  loadPayout().catch(()=>{});
  const gs=(await rpc('cuentas_my_groups_all')).filter(g=>g.status!=='archived');
@@ -173,7 +192,7 @@ async function home(){
 async function openGroup(id){
  gid=id;
  const [g,bal,mv,pay,props,dels,links,pairs]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id})]);
- group=g;show('vGroup');say('');
+ group=g;show('vGroup');say('');setTab(tab);
  const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
  const active=g.members.filter(m=>m.status==='active');
  const me=g.members.find(m=>m.user_id===myId);
@@ -237,13 +256,15 @@ async function openGroup(id){
  $('props').querySelectorAll('[data-rj]').forEach(b=>b.onclick=consent(b,'reject'));
  $('props').querySelectorAll('[data-pc]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_cancel',{p_proposal:b.dataset.pc});await openGroup(gid);say('Propuesta cancelada.')}));
  $('btnStatus').textContent=g.status==='open'?'Cerrar grupo':'Reabrir grupo';
- $('cExpense').hidden=g.status!=='open';
+ $('cExpense').hidden=g.status!=='open';$('cExpense').open=false;
+ const mine=bal.filter(b=>b.user_id===myId);
+ $('gSum').innerHTML=mine.length&&mine.some(b=>Number(b.balance_minor)!==0)?mine.filter(b=>Number(b.balance_minor)!==0).map(b=>Number(b.balance_minor)>0?`<span class="good">Te deben ${money(b.balance_minor,b.currency)}</span>`:`<span class="bad">Debés ${money(-Number(b.balance_minor),b.currency)}</span>`).join(' · '):'<span class="muted">Estás al día</span>';
  $('inviteLink').hidden=true;
  $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item"><span>${esc(name(b.user_id))}</span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(b.balance_minor,b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
  const sug=settleSuggestions(bal);
  $('settle').innerHTML=sug.length?sug.map((x,k)=>`<div class="item"><span>${esc(name(x.from))} le paga a ${esc(name(x.to))}${x.from===myId&&payBy[x.to]&&(payBy[x.to].alias||payBy[x.to].cbu)?`<div class="muted">Alias/CBU: ${esc(payBy[x.to].alias||payBy[x.to].cbu)} <button class="sec" style="width:auto;margin:0;padding:2px 8px" data-copy="${esc(payBy[x.to].alias||payBy[x.to].cbu)}">Copiar</button></div>`:''}</span><span><b>${money(x.amount,x.currency)}</b>${x.from===myId?` <button style="width:auto;margin:0 0 0 8px;padding:6px 10px" data-pay="${k}">Pagar</button>`:''}</span></div>`).join('')+'<p class="muted">Es una sugerencia con la menor cantidad de pagos. Los pagos pendientes de confirmar no cuentan todavía.</p>':'<p class="muted">Está todo saldado.</p>';
  $('settle').querySelectorAll('[data-copy]').forEach(b=>b.onclick=copyBtn(b));
- $('settle').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{const x=sug[Number(b.dataset.pay)];$('pTo').value=x.to;$('pAmt').value=(x.amount/100).toFixed(2).replace('.',',');$('pAmt').scrollIntoView({behavior:'smooth',block:'center'});$('pAmt').focus()});
+ $('settle').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{const x=sug[Number(b.dataset.pay)];$('pTo').value=x.to;$('pAmt').value=(x.amount/100).toFixed(2).replace('.',',');setTab('saldos');$('cPay').open=true;$('pAmt').scrollIntoView({behavior:'smooth',block:'center'});$('pAmt').focus()});
  const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('ePayer').innerHTML=opts;$('ePayer').value=myId;
  $('pTo').innerHTML=active.filter(m=>m.user_id!==myId).map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
