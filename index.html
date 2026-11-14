@@ -51,6 +51,7 @@ details.card[open]>summary{margin-bottom:10px}
 </section>
 
 <section id="vHome" hidden>
+ <div class="card" id="cPending" hidden><h2>Te están esperando</h2><div id="pending"></div></div>
  <div class="card">
   <h2>Mis grupos</h2>
   <div id="groups"></div>
@@ -189,10 +190,18 @@ async function home(){
  gid=null;tab='gastos';show('vHome');
  if(token)$('vInvite').hidden=false;
  loadPayout().catch(()=>{});
+ loadPending().catch(()=>{});
  const gs=(await rpc('cuentas_my_groups_all')).filter(g=>g.status!=='archived');
  $('noGroups').hidden=gs.length>0;
  $('groups').innerHTML=gs.map(g=>`<div class="item"><div><b>${esc(g.name)}</b><div class="muted">${esc(g.reference_currency)} · ${g.member_status==='former'?'ex miembro':(g.status==='open'?'abierto':'cerrado')}</div></div><button class="sec" style="width:auto" data-g="${g.id}">${g.member_status==='former'?'Ver mi saldo':'Abrir'}</button></div>`).join('');
  $('groups').querySelectorAll('button').forEach(b=>b.onclick=()=>{const g=gs.find(x=>x.id===b.dataset.g);(g.member_status==='former'?openFormer(g):openGroup(g.id)).catch(e=>say(e.message,true))});
+}
+async function loadPending(){
+ const p=await rpc('cuentas_my_pending');
+ $('cPending').hidden=!p.length;
+ $('pending').innerHTML=p.map(x=>{const t=[];const n=(c,s,pl)=>{if(Number(c))t.push(c+' '+(Number(c)===1?s:pl))};n(x.payments,'pago por confirmar','pagos por confirmar');n(x.proposals,'propuesta por decidir','propuestas por decidir');n(x.pairs,'solicitud de cuenta compartida','solicitudes de cuenta compartida');
+  return `<div class="item"><div><b>${esc(x.name)}</b><div class="muted">${t.join(' · ')}</div></div><button style="width:auto;margin:0" data-pg="${x.group_id}">Ver</button></div>`}).join('');
+ $('pending').querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>openGroup(b.dataset.pg).catch(e=>say(e.message,true)));
 }
 async function openGroup(id){
  gid=id;
