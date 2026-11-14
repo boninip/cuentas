@@ -96,6 +96,7 @@ details.card[open]>summary{margin-bottom:10px}
  <nav class="tabs" role="tablist"><button role="tab" data-tab="gastos">Gastos</button><button role="tab" data-tab="saldos">Saldos</button><button role="tab" data-tab="mas">Más</button></nav>
 
  <div data-pane="gastos">
+  <div class="card" id="cEmpty" hidden><h2>Sumá a tu grupo</h2><p class="muted">Cuentas sirve para dividir gastos entre varias personas. Invitalas con un link.</p><button id="btnInvite2">+ Agregar personas</button></div>
   <details class="card" id="cExpense"><summary>+ Agregar gasto</summary>
    <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300">
    <div class="row"><div><label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00"></div>
@@ -257,6 +258,7 @@ async function openGroup(id){
  $('props').querySelectorAll('[data-rj]').forEach(b=>b.onclick=consent(b,'reject'));
  $('props').querySelectorAll('[data-pc]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_cancel',{p_proposal:b.dataset.pc});await openGroup(gid);say('Propuesta cancelada.')}));
  $('btnStatus').textContent=g.status==='open'?'Cerrar grupo':'Reabrir grupo';
+ $('cEmpty').hidden=!(active.length<2&&g.status==='open');
  $('cExpense').hidden=g.status!=='open';$('cExpense').open=false;
  const mine=bal.filter(b=>b.user_id===myId);
  $('gSum').innerHTML=mine.length&&mine.some(b=>Number(b.balance_minor)!==0)?mine.filter(b=>Number(b.balance_minor)!==0).map(b=>Number(b.balance_minor)>0?`<span class="good">Te deben ${money(b.balance_minor,b.currency)}</span>`:`<span class="bad">Debés ${money(-Number(b.balance_minor),b.currency)}</span>`).join(' · '):'<span class="muted">Estás al día</span>';
@@ -426,6 +428,7 @@ $('btnInvite').onclick=busy($('btnInvite'),async()=>{
  if(navigator.share){try{await navigator.share({title:'Sumate al grupo '+group.name+' en Cuentas',url:f.value});return}catch(e){if(e&&e.name==='AbortError')return}}
  try{await navigator.clipboard.writeText(f.value);say('Link copiado: pegalo en WhatsApp. Vale 7 días.')}catch(_){say('Copiá el link del campo.')}
 });
+$('btnInvite2').onclick=()=>$('btnInvite').click();
 $('btnStatus').onclick=busy($('btnStatus'),async()=>{
  await rpc('cuentas_group_set_status',{p_group:gid,p_status:group.status==='open'?'closed':'open'});await openGroup(gid);
 });
