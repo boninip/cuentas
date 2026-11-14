@@ -75,6 +75,9 @@ label{font-size:.9rem;color:var(--muted)}
 <section id="vFormer" hidden>
  <button class="sec" id="btnBackF">← Mis grupos</button>
  <div class="card"><h2 id="fTitle"></h2><p class="muted">Ya no sos parte de este grupo. Solo ves tu propio saldo; tus obligaciones y el historial se mantienen.</p><div id="fBal"></div></div>
+ <div class="card" id="fPay" hidden><h2>Saldar mi deuda</h2><p class="muted">Podés registrar pagos a quienes les debés. El pago queda pendiente hasta que lo confirme quien cobra.</p>
+  <label for="fTo">Le pagaste a</label><select id="fTo"></select><div id="fAlias" class="muted"></div>
+  <label for="fAmt">Importe</label><input id="fAmt" inputmode="decimal" placeholder="0,00"><button id="btnFPay">Registrar pago</button></div>
 </section>
 
 <section id="vGroup" hidden>
@@ -325,8 +328,19 @@ $('btnLink').onclick=busy($('btnLink'),async()=>{
  await rpc('core_link_create',{p_group:gid,p_ref_type:$('lType').value,p_ref_id:ref,p_organizer:org});$('lRef').value='';$('lOrg').value='';await openGroup(gid);say('Vinculado.');
 });
 $('btnBackF').onclick=()=>home().catch(e=>say(e.message,true));
+let fGroup=null,fPayees=[];
+$('fTo').onchange=()=>{const x=fPayees.find(p=>p.user_id===$('fTo').value);const v=x&&(x.alias||x.cbu);$('fAlias').innerHTML=v?`Alias/CBU: <b>${esc(v)}</b> <button class="sec" style="width:auto;margin:0;padding:2px 8px" id="fCopy">Copiar</button>`:'';const c=$('fCopy');if(c){c.dataset.copy=v;c.onclick=copyBtn(c)}};
+$('btnFPay').onclick=busy($('btnFPay'),async()=>{
+ const amt=toMinor($('fAmt').value);if(!amt)throw Error('Importe inválido');if(!$('fTo').value)throw Error('Elegí a quién le pagaste');
+ await rpc('cuentas_payment_add',{p_group:fGroup.id,p_currency:fGroup.reference_currency,p_amount_minor:amt,p_to:$('fTo').value,p_description:null,p_occurred_on:today(),p_key:newKey()});
+ $('fAmt').value='';await openFormer(fGroup);say('Pago registrado: queda pendiente hasta que lo confirme quien cobra.');
+});
 async function openFormer(g){
- const bal=await rpc('cuentas_my_balance',{p_group:g.id});show('vFormer');say('');
+ fGroup=g;const bal=await rpc('cuentas_my_balance',{p_group:g.id});show('vFormer');say('');
+ const owes=bal.some(b=>Number(b.balance_minor)<0);
+ fPayees=owes?await rpc('cuentas_exmember_payees',{p_group:g.id}):[];
+ $('fPay').hidden=!fPayees.length;
+ $('fTo').innerHTML=fPayees.map(p=>`<option value="${p.user_id}">${esc(p.display_name||'Miembro '+String(p.user_id).slice(0,4))}</option>`).join('');$('fTo').onchange();
  $('fTitle').textContent=g.name;
  $('fBal').innerHTML=bal.length?bal.map(b=>`<div class="item"><span>Tu saldo</span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(b.balance_minor,b.currency)}</b></div>`).join(''):'<p class="muted">No tenés saldo pendiente.</p>';
 }
