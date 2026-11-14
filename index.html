@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cuentas</title>
+<style>
+:root{--bg:#f6f8fa;--card:#fff;--fg:#17222d;--muted:#5b6b7a;--line:#dde5ec;--accent:#1f6f5c;--accent-fg:#fff;--bad:#b3261e;--good:#1f6f5c}
+@media(prefers-color-scheme:dark){:root{--bg:#10171d;--card:#18222b;--fg:#e8eef3;--muted:#98a7b4;--line:#2a3743;--accent:#4fc3a1;--accent-fg:#06231b;--bad:#ff8a80;--good:#4fc3a1}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:1.4rem;margin:0}h2{font-size:1.1rem;margin:0 0 8px}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+input,select,button{font:inherit;width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+button{background:var(--accent);color:var(--accent-fg);border:0;font-weight:600;cursor:pointer}
+button.sec{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button:disabled{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
+.muted{color:var(--muted);font-size:.9rem}.bad{color:var(--bad)}.good{color:var(--good)}
+.item{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.tag{font-size:.75rem;border:1px solid var(--line);border-radius:99px;padding:1px 8px;color:var(--muted)}
+#msg{min-height:1.4em;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+label{font-size:.9rem;color:var(--muted)}
+.chk{display:flex;gap:8px;align-items:center}.chk input{width:auto;margin:0}
+</style>
+</head>
+<body>
+<main>
+<header><h1>Cuentas</h1><div id="who" class="muted"></div></header>
+<p id="msg" class="muted" role="status" aria-live="polite"></p>
+
+<section id="vLogin" class="card" hidden>
+ <h2>Ingresá con Pinto ID</h2>
+ <label for="email">Tu email</label>
+ <input id="email" type="email" autocomplete="email" placeholder="nombre@correo.com">
+ <button id="btnLogin">Recibir enlace de acceso</button>
+ <p class="muted">No necesitás contraseña. Te llega un enlace por email.</p>
+</section>
+
+<section id="vHome" hidden>
+ <div class="card">
+  <h2>Mis grupos</h2>
+  <div id="groups"></div>
+  <p id="noGroups" class="muted" hidden>Todavía no tenés grupos.</p>
+ </div>
+ <div class="card">
+  <h2>Nuevo grupo</h2>
+  <label for="gName">Nombre</label><input id="gName" maxlength="120" placeholder="Ej. Viaje a Mendoza">
+  <label for="gCur">Moneda (código de 3 letras)</label><input id="gCur" value="ARS" maxlength="3">
+  <button id="btnCreate">Crear grupo</button>
+ </div>
+ <button class="sec" id="btnLogout">Cerrar sesión</button>
+</section>
+
+<section id="vInvite" class="card" hidden>
+ <h2>Te invitaron a un grupo de Cuentas</h2>
+ <button id="btnAccept">Aceptar invitación</button>
+</section>
+
+<section id="vGroup" hidden>
+ <button class="sec" id="btnBack">← Mis grupos</button>
+ <div class="card"><h2 id="gTitle"></h2><div id="gMeta" class="muted"></div>
+  <div class="row"><button class="sec" id="btnInvite">Crear link de invitación</button><button class="sec" id="btnStatus"></button></div>
+  <input id="inviteLink" readonly hidden aria-label="Link de invitación">
+ </div>
+ <div class="card"><h2>Saldos</h2><p class="muted">Positivo: te deben. Negativo: debés.</p><div id="balances"></div></div>
+ <div class="card" id="cExpense"><h2>Nuevo gasto</h2>
+  <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300">
+  <div class="row"><div><label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00"></div>
+  <div><label for="ePayer">Pagó</label><select id="ePayer"></select></div></div>
+  <label>Dividir en partes iguales entre</label><div id="eParts"></div>
+  <button id="btnExpense">Guardar gasto</button>
+ </div>
+ <div class="card"><h2>Registrar pago</h2>
+  <div class="row"><div><label for="pTo">Le pagaste a</label><select id="pTo"></select></div>
+  <div><label for="pAmt">Importe</label><input id="pAmt" inputmode="decimal" placeholder="0,00"></div></div>
+  <button id="btnPay">Registrar pago</button>
+  <p class="muted">El pago cuenta en los saldos cuando quien cobra lo confirma.</p>
+ </div>
+ <div class="card"><h2>Movimientos</h2><div id="moves"></div></div>
+</section>
+</main>
+<script>
+(()=>{
+'use strict';
+const BASE='https://sswgtcpaayisecwxxskp.supabase.co';
+const KEY='sb_publishable_a8hB04TzAhc9NLwrCDtozg_FwVk377j';
+const STORE='cuentas_auth_v1';
+const $=id=>document.getElementById(id);
+const url=new URL(location.href);
+const inv=url.searchParams.get('invite');
+const token=/^[a-f0-9]{64}$/.test(inv||'')?inv:null;
+let session=null,group=null,gid=null,myId=null;
+try{const r=JSON.parse(localStorage.getItem(STORE)||'null');if(r&&r.access_token&&r.refresh_token)session=r}catch(_){}
+const say=(t,bad)=>{const m=$('msg');m.textContent=t||'';m.className=bad?'bad':'muted'};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=(m,c)=>{try{return new Intl.NumberFormat('es-AR',{style:'currency',currency:c}).format(Number(m)/100)}catch(_){return (Number(m)/100).toFixed(2)+' '+c}};
+const toMinor=s=>{const n=Number(String(s).trim().replace(/\./g,'').replace(',','.'));if(!isFinite(n)||n<=0)return null;return Math.round(n*100)};
+const newKey=()=>crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2);
+function decodeSub(t){try{return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub}catch(_){return null}}
+function save(d){
+ session=d?{access_token:d.access_token,refresh_token:d.refresh_token,expires_at:Date.now()+(d.expires_in||3600)*1000,email:d.user?.email||session?.email||''}:null;
+ try{session?localStorage.setItem(STORE,JSON.stringify(session)):localStorage.removeItem(STORE)}catch(_){}
+}
+async function req(path,body,tok){
+ const r=await fetch(BASE+path,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json',...(tok?{Authorization:'Bearer '+tok}:{})},body:JSON.stringify(body)});
+ const d=await r.json().catch(()=>({}));
+ if(!r.ok)throw Error(d.message||d.msg||d.error_description||'Error '+r.status);
+ return d;
+}
+async function fresh(){
+ if(!session)return false;
+ if(session.expires_at>Date.now()+60000)return true;
+ try{save(await req('/auth/v1/token?grant_type=refresh_token',{refresh_token:session.refresh_token}));return true}catch(_){save(null);return false}
+}
+async function rpc(fn,args){
+ if(!(await fresh()))throw Error('Iniciá sesión para continuar');
+ return req('/rest/v1/rpc/'+fn,args||{},session.access_token);
+}
+function show(v){['vLogin','vHome','vInvite','vGroup'].forEach(x=>$(x).hidden=x!==v)}
+function busy(btn,fn){return async()=>{btn.disabled=true;try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
+
+async function home(){
+ gid=null;show('vHome');
+ if(token)$('vInvite').hidden=false;
+ const gs=await rpc('cuentas_my_groups');
+ $('noGroups').hidden=gs.length>0;
+ $('groups').innerHTML=gs.map(g=>`<div class="item"><div><b>${esc(g.name)}</b><div class="muted">${esc(g.reference_currency)} · ${g.status==='open'?'abierto':'cerrado'}</div></div><button class="sec" style="width:auto" data-g="${g.id}">Abrir</button></div>`).join('');
+ $('groups').querySelectorAll('button').forEach(b=>b.onclick=()=>openGroup(b.dataset.g).catch(e=>say(e.message,true)));
+}
+async function openGroup(id){
+ gid=id;
+ const [g,bal,mv]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id})]);
+ group=g;show('vGroup');say('');
+ const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
+ const active=g.members.filter(m=>m.status==='active');
+ const me=g.members.find(m=>m.user_id===myId);
+ const cur=g.reference_currency;
+ $('gTitle').textContent=g.name;
+ $('gMeta').textContent=`${cur} · ${g.status==='open'?'abierto':'cerrado: no admite gastos nuevos'} · ${active.length} miembros`;
+ $('btnStatus').hidden=!(me&&me.role==='admin');
+ $('btnStatus').textContent=g.status==='open'?'Cerrar grupo':'Reabrir grupo';
+ $('cExpense').hidden=g.status!=='open';
+ $('inviteLink').hidden=true;
+ $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item"><span>${esc(name(b.user_id))}</span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(b.balance_minor,b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
+ const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
+ $('ePayer').innerHTML=opts;$('ePayer').value=myId;
+ $('pTo').innerHTML=active.filter(m=>m.user_id!==myId).map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
+ $('eParts').innerHTML=active.map(m=>`<label class="chk"><input type="checkbox" value="${m.user_id}" checked> ${esc(name(m.user_id))}</label>`).join('');
+ const rows=mv.filter(m=>m.kind==='expense'||m.kind==='payment').slice().reverse();
+ $('moves').innerHTML=rows.length?rows.map(m=>{
+  const isE=m.kind==='expense';
+  const st=m.voided?'<span class="tag">anulado</span>':(!isE?(m.confirmed?'<span class="tag">confirmado</span>':'<span class="tag">pendiente</span>'):'');
+  const who=isE?`Pagó ${esc(name(m.from_user))}`:`${esc(name(m.from_user))} → ${esc(name(m.to_user))}`;
+  let act='';
+  if(!m.voided){
+   if(isE&&(m.created_by===myId||(me&&me.role==='admin')))act=`<button class="sec" style="width:auto;margin:0" data-void="${m.id}">Anular</button>`;
+   if(!isE&&!m.confirmed&&m.to_user===myId)act=`<button style="width:auto;margin:0" data-conf="${m.id}">Confirmar</button>`;
+  }
+  return `<div class="item"><div><b>${esc(m.description||(isE?'Gasto':'Pago'))}</b> ${st}<div class="muted">${who} · ${esc(m.occurred_on||'')}</div></div><div style="text-align:right"><b>${money(m.amount_minor,m.currency)}</b><div>${act}</div></div></div>`}).join(''):'<p class="muted">Sin movimientos.</p>';
+ $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}));
+ $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
+}
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+
+$('btnLogin').onclick=busy($('btnLogin'),async()=>{
+ const email=$('email').value.trim();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Ingresá un email válido');
+ const redirect=new URL(location.pathname,location.origin);
+ if(token)redirect.searchParams.set('invite',token);
+ await req('/auth/v1/otp',{email,create_user:true,email_redirect_to:redirect.toString()});
+ say('Revisá tu correo y abrí el enlace. Si no llega, mirá spam.');
+});
+$('btnLogout').onclick=()=>{save(null);start()};
+$('btnBack').onclick=()=>home().catch(e=>say(e.message,true));
+$('btnCreate').onclick=busy($('btnCreate'),async()=>{
+ const name=$('gName').value.trim();if(!name)throw Error('Escribí un nombre');
+ const id=await rpc('cuentas_group_create',{p_name:name,p_currency:$('gCur').value.trim().toUpperCase()});
+ $('gName').value='';await openGroup(id);say('Grupo creado.');
+});
+$('btnAccept').onclick=busy($('btnAccept'),async()=>{
+ const id=await rpc('cuentas_invite_accept',{p_token:token});
+ const u=new URL(location.href);u.searchParams.delete('invite');history.replaceState(null,'',u);
+ $('vInvite').hidden=true;await openGroup(id);say('¡Ya sos parte del grupo!');
+});
+$('btnInvite').onclick=busy($('btnInvite'),async()=>{
+ const t=await rpc('cuentas_invite_create',{p_group:gid,p_hours:168,p_max_uses:20});
+ const u=new URL(location.pathname,location.origin);u.searchParams.set('invite',t);
+ const f=$('inviteLink');f.value=u.toString();f.hidden=false;f.select();
+ try{await navigator.clipboard.writeText(f.value);say('Link copiado. Vale 7 días.')}catch(_){say('Copiá el link del campo.')}
+});
+$('btnStatus').onclick=busy($('btnStatus'),async()=>{
+ await rpc('cuentas_group_set_status',{p_group:gid,p_status:group.status==='open'?'closed':'open'});await openGroup(gid);
+});
+$('btnExpense').onclick=busy($('btnExpense'),async()=>{
+ const amt=toMinor($('eAmt').value);if(!amt)throw Error('Importe inválido');
+ const parts=[...$('eParts').querySelectorAll('input:checked')].map(i=>i.value);
+ if(!parts.length)throw Error('Elegí al menos una persona');
+ await rpc('cuentas_expense_add',{p_group:gid,p_currency:group.reference_currency,p_amount_minor:amt,p_payer:$('ePayer').value,p_participants:parts,p_shares:null,p_description:$('eDesc').value.trim()||null,p_occurred_on:today(),p_key:newKey()});
+ $('eDesc').value='';$('eAmt').value='';await openGroup(gid);say('Gasto guardado.');
+});
+$('btnPay').onclick=busy($('btnPay'),async()=>{
+ const amt=toMinor($('pAmt').value);if(!amt)throw Error('Importe inválido');
+ if(!$('pTo').value)throw Error('No hay a quién pagarle');
+ await rpc('cuentas_payment_add',{p_group:gid,p_currency:group.reference_currency,p_amount_minor:amt,p_to:$('pTo').value,p_description:null,p_occurred_on:today(),p_key:newKey()});
+ $('pAmt').value='';await openGroup(gid);say('Pago registrado: queda pendiente hasta que lo confirme quien cobra.');
+});
+
+async function start(){
+ const h=new URLSearchParams(location.hash.replace(/^#/,''));
+ if(h.has('access_token')&&h.has('refresh_token')){
+  try{
+   const d={access_token:h.get('access_token'),refresh_token:h.get('refresh_token'),expires_in:Number(h.get('expires_in'))||3600};
+   const r=await fetch(BASE+'/auth/v1/user',{headers:{apikey:KEY,Authorization:'Bearer '+d.access_token}});
+   if(!r.ok)throw Error('Enlace inválido o vencido');d.user=await r.json();save(d);
+  }catch(e){say(e.message,true)}
+  history.replaceState(null,'',location.pathname+location.search);
+ }
+ if(!(await fresh())){show('vLogin');if(token)say('Ingresá para aceptar la invitación.');$('who').textContent='';return}
+ myId=decodeSub(session.access_token);
+ $('who').textContent=session.email||'';
+ try{await home()}catch(e){say(e.message,true)}
+ if(token){$('vInvite').hidden=false}
+}
+start();
+})();
+</script>
+</body>
+</html>
