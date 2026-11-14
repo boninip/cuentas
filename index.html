@@ -97,6 +97,7 @@ label{font-size:.9rem;color:var(--muted)}
   <label for="lRef">ID del viaje o evento</label><input id="lRef" placeholder="uuid" autocapitalize="none">
   <div id="lOrgW" hidden><label for="lOrg">Código de organizador (Juntada)</label><input id="lOrg" placeholder="uuid" autocapitalize="none"></div>
   <button class="sec" id="btnLink">Vincular</button><p class="muted">Provisorio: más adelante se elige desde la lista de tus viajes y eventos.</p></div></div>
+ <div class="card"><h2>Cuenta compartida</h2><p class="muted">Dos personas que comparten gastos (pareja, familia). Agrupa saldos, no reemplaza las deudas de cada una. Una compensación solo se aplica si las dos la aprueban. Provisorio: aún no aprobado para producción.</p><div id="pairs"></div><div id="pairNew" hidden><label for="pairWith">Pedirle una cuenta compartida a</label><select id="pairWith"></select><button class="sec" id="btnPairReq">Enviar solicitud</button></div></div>
  <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
  <div class="card" id="cProps" hidden><h2>Propuestas pendientes</h2><p class="muted">Leer no es consentir: tu decisión queda ligada a esta versión exacta de la propuesta.</p><div id="props"></div></div>
  <div class="card"><h2>Saldos</h2><p class="muted">Positivo: te deben. Negativo: debés.</p><div id="balances"></div>
@@ -171,7 +172,7 @@ async function home(){
 }
 async function openGroup(id){
  gid=id;
- const [g,bal,mv,pay,props,dels,links]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id})]);
+ const [g,bal,mv,pay,props,dels,links,pairs]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id})]);
  group=g;show('vGroup');say('');
  const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
  const active=g.members.filter(m=>m.status==='active');
@@ -196,6 +197,29 @@ async function openGroup(id){
  $('lForm').hidden=!canLink;
  $('lList').innerHTML=(links||[]).length?links.map(l=>`<div class="item"><span>${esc(l.name||'(eliminado)')} <span class="tag">${l.ref_type==='juntada'?'evento':'viaje'}</span> <span class="tag">${l.status==='active'?'vinculado':'desvinculado'}</span></span>${l.status==='active'&&canLink?`<button class="sec" style="width:auto;margin:0" data-ul="${l.id}">Desvincular</button>`:''}</div>`).join(''):'<p class="muted">Sin vínculos.</p>';
  $('lList').querySelectorAll('[data-ul]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('core_link_remove',{p_link:b.dataset.ul});await openGroup(gid);say('Desvinculado. Las deudas y el historial se mantienen.')}));
+ const myPair=(pairs||[]).find(x=>x.member_a===myId||x.member_b===myId);
+ $('pairNew').hidden=!!myPair;
+ $('pairWith').innerHTML=active.filter(m=>m.user_id!==myId).map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
+ const pairs_html=[];
+ (pairs||[]).forEach(a=>{
+  const mine=a.member_a===myId||a.member_b===myId;
+  const other=a.member_a===myId?a.member_b:a.member_a;
+  let h=`<div class="item"><div><b>${esc(name(a.member_a))} + ${esc(name(a.member_b))}</b> <span class="tag">${a.status==='active'?'activa':'pendiente'}</span>`;
+  if(a.status==='active'&&a.joint){
+   h+=a.joint.map(j=>{const can=(Number(j.a_minor)<0&&Number(j.b_minor)>0)||(Number(j.b_minor)<0&&Number(j.a_minor)>0);const mx=Math.min(Math.abs(Number(j.a_minor)),Math.abs(Number(j.b_minor)));
+    return `<div class="muted">Saldo conjunto ${esc(j.currency)}: <b>${money(j.joint_minor,j.currency)}</b> (${esc(name(a.member_a))} ${money(j.a_minor,j.currency)} · ${esc(name(a.member_b))} ${money(j.b_minor,j.currency)})</div>${mine&&can?`<div class="row"><input inputmode="decimal" value="${(mx/100).toFixed(2).replace('.',',')}" data-camt="${a.id}|${j.currency}" aria-label="Importe a compensar"><button class="sec" style="width:auto;margin:0" data-cprop="${a.id}|${j.currency}">Proponer compensar</button></div>`:''}`}).join('');
+  }
+  if(a.status==='pending'&&a.requested_by!==myId&&mine)h+=`<div class="row"><button style="width:auto;margin:0" data-pyes="${a.id}">Aceptar</button><button class="sec" style="width:auto;margin:0" data-pno="${a.id}">Rechazar</button></div>`;
+  if(a.status==='pending'&&a.requested_by===myId)h+='<div class="muted">Esperando que la otra persona acepte.</div>';
+  h+='</div>';
+  if(mine&&!(a.status==='pending'&&a.requested_by!==myId))h+=`<button class="sec" style="width:auto;margin:0" data-pend="${a.id}">${a.status==='active'?'Desvincular':'Retirar solicitud'}</button>`;
+  pairs_html.push(h+'</div>');
+ });
+ $('pairs').innerHTML=pairs_html.length?pairs_html.join(''):'<p class="muted">Todavía no hay cuentas compartidas en este grupo.</p>';
+ $('pairs').querySelectorAll('[data-pyes]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_pair_respond',{p_account:b.dataset.pyes,p_accept:true});await openGroup(gid);say('Cuenta compartida activa. No cancela deudas.')}));
+ $('pairs').querySelectorAll('[data-pno]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_pair_respond',{p_account:b.dataset.pno,p_accept:false});await openGroup(gid);say('Solicitud rechazada.')}));
+ $('pairs').querySelectorAll('[data-pend]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar';say('Desvincular es inmediato, invalida las propuestas abiertas y no borra deudas ni historial. Tocá de nuevo para confirmar.');return}await rpc('cuentas_pair_end',{p_account:b.dataset.pend});await openGroup(gid);say('Cuenta compartida desvinculada.')}));
+ $('pairs').querySelectorAll('[data-cprop]').forEach(b=>b.onclick=busy(b,async()=>{const [acc,cur]=b.dataset.cprop.split('|');const amt=toMinor($('pairs').querySelector('[data-camt="'+b.dataset.cprop+'"]').value);if(!amt)throw Error('Importe inválido');await rpc('cuentas_compensation_propose',{p_account:acc,p_currency:cur,p_amount_minor:amt,p_reason:null});await openGroup(gid);say('Propuesta creada: se aplica solo si las dos personas la aprueban.')}));
  const payBy={};(pay||[]).forEach(x=>payBy[x.user_id]=x);
  $('payouts').innerHTML=(pay&&pay.length)?pay.map(x=>`<div class="item"><div><b>${esc(name(x.user_id))}</b>${x.holder_name?`<div class="muted">${esc(x.holder_name)}${x.bank?' · '+esc(x.bank):''}</div>`:(x.bank?`<div class="muted">${esc(x.bank)}</div>`:'')}${x.alias?`<div>Alias: <b>${esc(x.alias)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.alias)}">Copiar</button></div>`:''}${x.cbu?`<div>CBU/CVU: <b>${esc(x.cbu)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.cbu)}">Copiar</button></div>`:''}</div></div>`).join(''):'<p class="muted">Nadie compartió datos de cobro todavía. Cargá los tuyos en «Mis grupos».</p>';
  $('payouts').querySelectorAll('[data-copy]').forEach(b=>b.onclick=copyBtn(b));
@@ -203,12 +227,12 @@ async function openGroup(id){
  $('cProps').hidden=!openProps.length;
  $('props').innerHTML=openProps.map(p=>{
   const req=p.required||[];const mine=req.find(r=>r.user_id===myId);
-  const kind=p.kind==='void_expense'?'Anular gasto':'Anular pago';
+  const kind={void_expense:'Anular gasto',reverse_payment:'Anular pago',compensation:'Compensación',reverse_compensation:'Revertir compensación'}[p.kind]||p.kind;
   const st=req.map(r=>esc(name(r.user_id))+': '+(r.decision==='approve'?'aprobó':r.decision==='reject'?'rechazó':'falta')).join(' · ');
   const acts=mine&&!mine.decision?`<button style="width:auto;margin:0" data-ap="${p.id}" data-h="${esc(p.version_hash)}">Aprobar</button> <button class="sec" style="width:auto;margin:0" data-rj="${p.id}" data-h="${esc(p.version_hash)}">Rechazar</button>`:'';
   const cancel=p.created_by===myId?` <button class="sec" style="width:auto;margin:0" data-pc="${p.id}">Cancelar propuesta</button>`:'';
-  return `<div class="item"><div><b>${kind}</b>: ${esc(p.description||'')} · ${money(p.amount_minor,p.currency)}<div class="muted">${p.reason?esc(p.reason)+' · ':''}${st}</div></div><div style="text-align:right">${acts}${cancel}</div></div>`}).join('');
- const consent=(b,d)=>busy(b,async()=>{const r=await rpc('cuentas_proposal_consent',{p_proposal:b.dataset.ap||b.dataset.rj,p_hash:b.dataset.h,p_decision:d});await openGroup(gid);say('Registrado: '+r)});
+  return `<div class="item"><div><b>${kind}</b>: ${p.kind==='compensation'?esc(name(p.debtor))+' ← '+esc(name(p.creditor)):esc(p.description||'')} · ${money(p.amount_minor,p.currency)}<div class="muted">${p.reason?esc(p.reason)+' · ':''}${st}</div></div><div style="text-align:right">${acts}${cancel}</div></div>`}).join('');
+ const consent=(b,d)=>busy(b,async()=>{const r=await rpc('cuentas_proposal_consent',{p_proposal:b.dataset.ap||b.dataset.rj,p_hash:b.dataset.h,p_decision:d});await openGroup(gid);say(r==='stale'?'Quedó desactualizada: los saldos cambiaron y no se aplicó nada. Hay que proponerla de nuevo.':r==='approved'?'Aprobada y aplicada.':'Registrado: '+r)});
  $('props').querySelectorAll('[data-ap]').forEach(b=>b.onclick=consent(b,'approve'));
  $('props').querySelectorAll('[data-rj]').forEach(b=>b.onclick=consent(b,'reject'));
  $('props').querySelectorAll('[data-pc]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_cancel',{p_proposal:b.dataset.pc});await openGroup(gid);say('Propuesta cancelada.')}));
@@ -225,20 +249,23 @@ async function openGroup(id){
  $('pTo').innerHTML=active.filter(m=>m.user_id!==myId).map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('eParts').innerHTML=active.map(m=>`<label class="chk"><input type="checkbox" value="${m.user_id}" checked><span class="nm">${esc(name(m.user_id))}</span><input class="amt" inputmode="decimal" placeholder="0,00" data-u="${m.user_id}"></label>`).join('');
  $('eMode').value='eq';syncMode();
- const rows=mv.filter(m=>m.kind==='expense'||m.kind==='payment').slice().reverse();
+ const rows=mv.filter(m=>m.kind==='expense'||m.kind==='payment'||m.kind==='compensation').slice().reverse();
  $('moves').innerHTML=rows.length?rows.map(m=>{
   const isE=m.kind==='expense';
-  const st=m.voided?'<span class="tag">anulado</span>':(!isE?(m.confirmed?'<span class="tag">confirmado</span>':'<span class="tag">pendiente</span>'):'');
+  const isC=m.kind==='compensation';
+  const st=m.voided?'<span class="tag">anulado</span>':(isC?(m.reversed?'<span class="tag">revertida</span>':'<span class="tag">compensación</span>'):(!isE?(m.reversed?'<span class="tag">revertido</span>':(m.confirmed?'<span class="tag">confirmado</span>':'<span class="tag">pendiente</span>')):''));
   const who=isE?`Pagó ${esc(name(m.from_user))}`:`${esc(name(m.from_user))} → ${esc(name(m.to_user))}`;
   let act='';
   if(!m.voided){
    if(isE&&(m.created_by===myId||(me&&me.role==='admin')))act=`<button class="sec" style="width:auto;margin:0" data-void="${m.id}">Anular</button>`;
-   if(!isE&&!m.confirmed&&m.from_user===myId)act=`<button class="sec" style="width:auto;margin:0" data-pcancel="${m.id}">Cancelar pago</button>`;
-   if(!isE&&m.confirmed&&(m.from_user===myId||m.to_user===myId))act=`<button class="sec" style="width:auto;margin:0" data-prev="${m.id}">Proponer anular</button>`;
-   if(!isE&&!m.confirmed&&m.to_user===myId)act=`<button style="width:auto;margin:0" data-conf="${m.id}">Confirmar</button>`;
+   if(isC&&!m.reversed&&(m.from_user===myId||m.to_user===myId))act=`<button class="sec" style="width:auto;margin:0" data-crev="${m.id}">Proponer revertir</button>`;
+   if(!isE&&!isC&&!m.confirmed&&m.from_user===myId)act=`<button class="sec" style="width:auto;margin:0" data-pcancel="${m.id}">Cancelar pago</button>`;
+   if(!isE&&!isC&&m.confirmed&&!m.reversed&&(m.from_user===myId||m.to_user===myId))act=`<button class="sec" style="width:auto;margin:0" data-prev="${m.id}">Proponer anular</button>`;
+   if(!isE&&!isC&&!m.confirmed&&m.to_user===myId)act=`<button style="width:auto;margin:0" data-conf="${m.id}">Confirmar</button>`;
   }
   return `<div class="item"><div><b>${esc(m.description||(isE?'Gasto':'Pago'))}</b> ${st}<div class="muted">${who} · ${esc(m.occurred_on||'')}</div>${isE&&m.shares&&Object.keys(m.shares).length?`<div class="muted">Reparto: ${Object.entries(m.shares).map(([u,v])=>esc(name(u))+' '+money(v,m.currency)).join(', ')}</div>`:''}</div><div style="text-align:right"><b>${money(m.amount_minor,m.currency)}</b><div>${act}</div></div></div>`}).join(''):'<p class="muted">Sin movimientos.</p>';
  $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{try{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}catch(e){if(!/propuesta/i.test(e.message))throw e;await rpc('cuentas_proposal_create',{p_kind:'void_expense',p_target:b.dataset.void,p_reason:null});await openGroup(gid);say('Este gasto ya tiene pagos confirmados: creé una propuesta de anulación que necesita la aprobación de los afectados.')}}));
+ $('moves').querySelectorAll('[data-crev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_compensation_reverse_propose',{p_compensation:b.dataset.crev,p_reason:null});await openGroup(gid);say('Propuesta de reversión creada: necesita la aprobación de las dos personas.')}));
  $('moves').querySelectorAll('[data-pcancel]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_cancel',{p_payment:b.dataset.pcancel});await openGroup(gid);say('Pago cancelado: no llegó a afectar saldos.')}));
  $('moves').querySelectorAll('[data-prev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_create',{p_kind:'reverse_payment',p_target:b.dataset.prev,p_reason:null});await openGroup(gid);say('Propuesta creada: necesita la aprobación de todos los afectados.')}));
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
@@ -344,6 +371,10 @@ async function openFormer(g){
  $('fTitle').textContent=g.name;
  $('fBal').innerHTML=bal.length?bal.map(b=>`<div class="item"><span>Tu saldo</span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(b.balance_minor,b.currency)}</b></div>`).join(''):'<p class="muted">No tenés saldo pendiente.</p>';
 }
+$('btnPairReq').onclick=busy($('btnPairReq'),async()=>{
+ if(!$('pairWith').value)throw Error('No hay a quién pedirle');
+ await rpc('cuentas_pair_request',{p_group:gid,p_other:$('pairWith').value});await openGroup(gid);say('Solicitud enviada. Se activa cuando la otra persona acepte.');
+});
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 
 $('btnLogin').onclick=busy($('btnLogin'),async()=>{
