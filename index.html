@@ -72,6 +72,11 @@ label{font-size:.9rem;color:var(--muted)}
  <button id="btnAccept">Aceptar invitación</button>
 </section>
 
+<section id="vFormer" hidden>
+ <button class="sec" id="btnBackF">← Mis grupos</button>
+ <div class="card"><h2 id="fTitle"></h2><p class="muted">Ya no sos parte de este grupo. Solo ves tu propio saldo; tus obligaciones y el historial se mantienen.</p><div id="fBal"></div></div>
+</section>
+
 <section id="vGroup" hidden>
  <button class="sec" id="btnBack">← Mis grupos</button>
  <div class="card"><h2 id="gTitle"></h2><div id="gMeta" class="muted"></div><div id="gMembers" class="muted"></div>
@@ -80,6 +85,15 @@ label{font-size:.9rem;color:var(--muted)}
  </div>
  <div class="card"><h2>Miembros</h2><div id="mList"></div>
   <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div></div>
+ <div class="card" id="cDeleg" hidden><h2>Coadministración</h2><p class="muted">Delegación expresa, revocable y auditada. Reabrir y archivar quedan solo para quien administra.</p><div id="dList"></div>
+  <label for="dUser">Delegar en</label><select id="dUser"></select>
+  <div id="dScopes"><label class="chk"><input type="checkbox" value="invite"><span>Invitar</span></label><label class="chk"><input type="checkbox" value="close"><span>Cerrar grupo</span></label><label class="chk"><input type="checkbox" value="void"><span>Anular gastos ajenos</span></label><label class="chk"><input type="checkbox" value="link"><span>Vincular eventos</span></label></div>
+  <button id="btnGrant">Delegar</button></div>
+ <div class="card"><h2>Viajes y eventos vinculados</h2><p class="muted">Eliminar un viaje o evento nunca borra deudas, pagos ni historial.</p><div id="lList"></div>
+  <div id="lForm"><label for="lType">Tipo</label><select id="lType"><option value="escapada_trip">Viaje (Escapada)</option><option value="juntada">Evento (Juntada)</option></select>
+  <label for="lRef">ID del viaje o evento</label><input id="lRef" placeholder="uuid" autocapitalize="none">
+  <div id="lOrgW" hidden><label for="lOrg">Código de organizador (Juntada)</label><input id="lOrg" placeholder="uuid" autocapitalize="none"></div>
+  <button class="sec" id="btnLink">Vincular</button><p class="muted">Provisorio: más adelante se elige desde la lista de tus viajes y eventos.</p></div></div>
  <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
  <div class="card" id="cProps" hidden><h2>Propuestas pendientes</h2><p class="muted">Leer no es consentir: tu decisión queda ligada a esta versión exacta de la propuesta.</p><div id="props"></div></div>
  <div class="card"><h2>Saldos</h2><p class="muted">Positivo: te deben. Negativo: debés.</p><div id="balances"></div>
@@ -140,21 +154,21 @@ async function rpc(fn,args){
  if(!(await fresh()))throw Error('Iniciá sesión para continuar');
  return req('/rest/v1/rpc/'+fn,args||{},session.access_token);
 }
-function show(v){['vLogin','vHome','vInvite','vGroup'].forEach(x=>$(x).hidden=x!==v)}
+function show(v){['vLogin','vHome','vInvite','vGroup','vFormer'].forEach(x=>$(x).hidden=x!==v)}
 function busy(btn,fn){return async()=>{btn.disabled=true;try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
 
 async function home(){
  gid=null;show('vHome');
  if(token)$('vInvite').hidden=false;
  loadPayout().catch(()=>{});
- const gs=await rpc('cuentas_my_groups');
+ const gs=(await rpc('cuentas_my_groups_all')).filter(g=>g.status!=='archived');
  $('noGroups').hidden=gs.length>0;
- $('groups').innerHTML=gs.map(g=>`<div class="item"><div><b>${esc(g.name)}</b><div class="muted">${esc(g.reference_currency)} · ${g.status==='open'?'abierto':'cerrado'}</div></div><button class="sec" style="width:auto" data-g="${g.id}">Abrir</button></div>`).join('');
- $('groups').querySelectorAll('button').forEach(b=>b.onclick=()=>openGroup(b.dataset.g).catch(e=>say(e.message,true)));
+ $('groups').innerHTML=gs.map(g=>`<div class="item"><div><b>${esc(g.name)}</b><div class="muted">${esc(g.reference_currency)} · ${g.member_status==='former'?'ex miembro':(g.status==='open'?'abierto':'cerrado')}</div></div><button class="sec" style="width:auto" data-g="${g.id}">${g.member_status==='former'?'Ver mi saldo':'Abrir'}</button></div>`).join('');
+ $('groups').querySelectorAll('button').forEach(b=>b.onclick=()=>{const g=gs.find(x=>x.id===b.dataset.g);(g.member_status==='former'?openFormer(g):openGroup(g.id)).catch(e=>say(e.message,true))});
 }
 async function openGroup(id){
  gid=id;
- const [g,bal,mv,pay,props]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id})]);
+ const [g,bal,mv,pay,props,dels,links]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id})]);
  group=g;show('vGroup');say('');
  const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
  const active=g.members.filter(m=>m.status==='active');
@@ -169,6 +183,16 @@ async function openGroup(id){
  $('mList').innerHTML=active.map(m=>`<div class="item"><span>${esc(name(m.user_id))} <span class="tag">${roleEs[m.role]}</span></span>${isAdmin&&m.user_id!==myId?`<button class="sec" style="width:auto;margin:0" data-rm="${m.user_id}">Quitar</button>`:''}</div>`).join('');
  $('mList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: quitar';say('Quitar a alguien no borra sus deudas ni el historial. Tocá de nuevo para confirmar.');return}await rpc('cuentas_member_remove',{p_group:gid,p_user:b.dataset.rm});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')}));
  $('btnArchive').hidden=!(isAdmin&&g.status==='closed');
+ const dBy={};(dels||[]).forEach(d=>dBy[d.delegate_id]=d);
+ const scEs={invite:'invitar',close:'cerrar',void:'anular',link:'vincular'};
+ $('cDeleg').hidden=!isAdmin;
+ $('dList').innerHTML=(dels||[]).length?dels.map(d=>`<div class="item"><span>${esc(name(d.delegate_id))}: ${d.scopes.map(x=>scEs[x]||x).join(', ')}</span><button class="sec" style="width:auto;margin:0" data-rv="${d.delegate_id}">Revocar</button></div>`).join(''):'<p class="muted">Sin delegaciones.</p>';
+ $('dUser').innerHTML=active.filter(m=>m.role!=='admin'&&!dBy[m.user_id]).map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
+ $('dList').querySelectorAll('[data-rv]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_delegate_revoke',{p_group:gid,p_user:b.dataset.rv});await openGroup(gid);say('Delegación revocada.')}));
+ const canLink=isAdmin||(me&&dBy[myId]&&dBy[myId].scopes.includes('link'));
+ $('lForm').hidden=!canLink;
+ $('lList').innerHTML=(links||[]).length?links.map(l=>`<div class="item"><span>${esc(l.name||'(eliminado)')} <span class="tag">${l.ref_type==='juntada'?'evento':'viaje'}</span> <span class="tag">${l.status==='active'?'vinculado':'desvinculado'}</span></span>${l.status==='active'&&canLink?`<button class="sec" style="width:auto;margin:0" data-ul="${l.id}">Desvincular</button>`:''}</div>`).join(''):'<p class="muted">Sin vínculos.</p>';
+ $('lList').querySelectorAll('[data-ul]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('core_link_remove',{p_link:b.dataset.ul});await openGroup(gid);say('Desvinculado. Las deudas y el historial se mantienen.')}));
  const payBy={};(pay||[]).forEach(x=>payBy[x.user_id]=x);
  $('payouts').innerHTML=(pay&&pay.length)?pay.map(x=>`<div class="item"><div><b>${esc(name(x.user_id))}</b>${x.holder_name?`<div class="muted">${esc(x.holder_name)}${x.bank?' · '+esc(x.bank):''}</div>`:(x.bank?`<div class="muted">${esc(x.bank)}</div>`:'')}${x.alias?`<div>Alias: <b>${esc(x.alias)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.alias)}">Copiar</button></div>`:''}${x.cbu?`<div>CBU/CVU: <b>${esc(x.cbu)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.cbu)}">Copiar</button></div>`:''}</div></div>`).join(''):'<p class="muted">Nadie compartió datos de cobro todavía. Cargá los tuyos en «Mis grupos».</p>';
  $('payouts').querySelectorAll('[data-copy]').forEach(b=>b.onclick=copyBtn(b));
@@ -288,6 +312,24 @@ $('btnArchive').onclick=busy($('btnArchive'),async()=>{
  const b=$('btnArchive');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: archivar';say('Archivar oculta el grupo de la lista; el historial se conserva. Tocá de nuevo para confirmar.');return}
  b.dataset.armed='';b.textContent='Archivar grupo';await rpc('cuentas_group_archive',{p_group:gid});await home();say('Grupo archivado.');
 });
+$('lType').onchange=()=>{$('lOrgW').hidden=$('lType').value!=='juntada'};
+$('btnGrant').onclick=busy($('btnGrant'),async()=>{
+ const sc=[...$('dScopes').querySelectorAll('input:checked')].map(i=>i.value);
+ if(!$('dUser').value)throw Error('No hay a quién delegar');if(!sc.length)throw Error('Elegí al menos un permiso');
+ await rpc('cuentas_delegate_grant',{p_group:gid,p_user:$('dUser').value,p_scopes:sc});await openGroup(gid);say('Delegación otorgada.');
+});
+$('btnLink').onclick=busy($('btnLink'),async()=>{
+ const ref=$('lRef').value.trim();if(!/^[0-9a-f-]{36}$/i.test(ref))throw Error('Pegá el ID (uuid) del viaje o evento');
+ const org=$('lType').value==='juntada'?($('lOrg').value.trim()||null):null;
+ if($('lType').value==='juntada'&&!org)throw Error('Para Juntada hace falta el código de organizador');
+ await rpc('core_link_create',{p_group:gid,p_ref_type:$('lType').value,p_ref_id:ref,p_organizer:org});$('lRef').value='';$('lOrg').value='';await openGroup(gid);say('Vinculado.');
+});
+$('btnBackF').onclick=()=>home().catch(e=>say(e.message,true));
+async function openFormer(g){
+ const bal=await rpc('cuentas_my_balance',{p_group:g.id});show('vFormer');say('');
+ $('fTitle').textContent=g.name;
+ $('fBal').innerHTML=bal.length?bal.map(b=>`<div class="item"><span>Tu saldo</span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(b.balance_minor,b.currency)}</b></div>`).join(''):'<p class="muted">No tenés saldo pendiente.</p>';
+}
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 
 $('btnLogin').onclick=busy($('btnLogin'),async()=>{
