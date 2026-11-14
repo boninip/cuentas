@@ -133,11 +133,11 @@ details.card[open]>summary{margin-bottom:10px}
    <button id="btnGrant">Delegar</button></details>
   <details class="card"><summary>Viajes y eventos vinculados</summary><p class="muted">Eliminar un viaje o evento nunca borra deudas, pagos ni historial.</p><div id="lList"></div>
    <div id="lForm"><label for="lType">Tipo</label><select id="lType"><option value="escapada_trip">Viaje (Escapada)</option><option value="juntada">Evento (Juntada)</option></select>
-   <div id="lRefW"><label for="lRef">ID del viaje</label><input id="lRef" placeholder="uuid" autocapitalize="none"></div>
+   <div id="lRefW"><label for="lTrip">Tus viajes</label><select id="lTrip"></select></div>
    <div id="lEvW" hidden><label for="lEv">Tus eventos</label><select id="lEv"></select>
     <details><summary class="muted">¿No aparece tu evento? Reclamalo</summary><p class="muted">Pegá el ID y el código de organizador de Juntada una sola vez: el evento queda a tu nombre y después lo elegís de la lista.</p>
     <input id="lClaimId" placeholder="ID del evento (uuid)" autocapitalize="none"><input id="lClaimOrg" placeholder="Código de organizador (uuid)" autocapitalize="none"><button class="sec" id="btnClaim">Reclamar evento</button></details></div>
-   <button class="sec" id="btnLink">Vincular</button><p class="muted">Eventos: se eligen de tu lista. Viajes: provisorio, por ahora se pega el ID.</p></div></details>
+   <button class="sec" id="btnLink">Vincular</button><p class="muted">Elegí de tu lista. Los viajes que organizás aparecen solos; los eventos hay que reclamarlos una vez.</p></div></details>
   <details class="card"><summary>Cuenta compartida (pareja / familia)</summary><p class="muted">Dos personas que comparten gastos. Agrupa saldos, no reemplaza las deudas de cada una. Una compensación solo se aplica si las dos la aprueban. Provisorio: aún no aprobado para producción.</p><div id="pairs"></div><div id="pairNew" hidden><label for="pairWith">Pedirle una cuenta compartida a</label><select id="pairWith"></select><button class="sec" id="btnPairReq">Enviar solicitud</button></div></details>
  </div>
 </section>
@@ -260,6 +260,7 @@ async function openGroup(id){
  $('props').querySelectorAll('[data-rj]').forEach(b=>b.onclick=consent(b,'reject'));
  $('props').querySelectorAll('[data-pc]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_cancel',{p_proposal:b.dataset.pc});await openGroup(gid);say('Propuesta cancelada.')}));
  $('btnStatus').textContent=g.status==='open'?'Cerrar grupo':'Reabrir grupo';
+ loadTrips().catch(()=>{});
  $('cEmpty').hidden=!(active.length<2&&g.status==='open');
  $('cExpense').hidden=g.status!=='open';$('cExpense').open=false;
  const mine=bal.filter(b=>b.user_id===myId);
@@ -368,11 +369,15 @@ $('btnArchive').onclick=busy($('btnArchive'),async()=>{
  const b=$('btnArchive');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: archivar';say('Archivar oculta el grupo de la lista; el historial se conserva. Tocá de nuevo para confirmar.');return}
  b.dataset.armed='';b.textContent='Archivar grupo';await rpc('cuentas_group_archive',{p_group:gid});await home();say('Grupo archivado.');
 });
+async function loadTrips(){
+ const t=await rpc('core_organizable_trips');
+ $('lTrip').innerHTML=t.length?t.map(x=>`<option value="${x.id}">${esc(x.name)}${x.destination?' · '+esc(x.destination):''}</option>`).join(''):'<option value="">Todavía no organizás ningún viaje</option>';
+}
 async function loadEvents(){
  const ev=await rpc('juntada_mis_eventos');
  $('lEv').innerHTML=ev.length?ev.map(e=>`<option value="${e.id}">${esc(e.nombre)}${e.fecha_texto?' · '+esc(e.fecha_texto):''}</option>`).join(''):'<option value="">Todavía no tenés eventos</option>';
 }
-$('lType').onchange=async()=>{const j=$('lType').value==='juntada';$('lRefW').hidden=j;$('lEvW').hidden=!j;if(j)try{await loadEvents()}catch(e){say(e.message,true)}};
+$('lType').onchange=async()=>{const j=$('lType').value==='juntada';$('lRefW').hidden=j;$('lEvW').hidden=!j;try{j?await loadEvents():await loadTrips()}catch(e){say(e.message,true)}};
 $('btnClaim').onclick=busy($('btnClaim'),async()=>{
  const id=$('lClaimId').value.trim(),org=$('lClaimOrg').value.trim();
  if(!/^[0-9a-f-]{36}$/i.test(id)||!/^[0-9a-f-]{36}$/i.test(org))throw Error('Pegá el ID y el código de organizador (uuid)');
@@ -385,9 +390,9 @@ $('btnGrant').onclick=busy($('btnGrant'),async()=>{
 });
 $('btnLink').onclick=busy($('btnLink'),async()=>{
  const j=$('lType').value==='juntada';
- const ref=j?$('lEv').value:$('lRef').value.trim();
- if(!/^[0-9a-f-]{36}$/i.test(ref))throw Error(j?'Elegí un evento (o reclamá uno)':'Pegá el ID (uuid) del viaje');
- await rpc('core_link_create',{p_group:gid,p_ref_type:$('lType').value,p_ref_id:ref,p_organizer:null});$('lRef').value='';await openGroup(gid);say('Vinculado.');
+ const ref=j?$('lEv').value:$('lTrip').value;
+ if(!/^[0-9a-f-]{36}$/i.test(ref))throw Error(j?'Elegí un evento (o reclamá uno)':'Elegí un viaje');
+ await rpc('core_link_create',{p_group:gid,p_ref_type:$('lType').value,p_ref_id:ref,p_organizer:null});await openGroup(gid);say('Vinculado.');
 });
 $('btnBackF').onclick=()=>home().catch(e=>say(e.message,true));
 let fGroup=null,fPayees=[];
