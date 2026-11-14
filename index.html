@@ -22,7 +22,7 @@ button:disabled{opacity:.5}
 .item{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
 .item:first-child{border-top:0}
 .tag{font-size:.75rem;border:1px solid var(--line);border-radius:99px;padding:1px 8px;color:var(--muted)}
-#msg{min-height:1.4em;overflow-wrap:anywhere}
+#msg{min-height:1.4em;overflow-wrap:anywhere;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;margin:0}#msg.bad{font-weight:600}
 [hidden]{display:none!important}
 label{font-size:.9rem;color:var(--muted)}
 .chk{display:flex;gap:8px;align-items:center}.chk input[type=checkbox]{width:auto;margin:0}
@@ -182,7 +182,7 @@ async function rpc(fn,args){
 function setTab(t){tab=t;document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'))}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 function show(v){['vLogin','vHome','vInvite','vGroup','vFormer'].forEach(x=>$(x).hidden=x!==v)}
-function busy(btn,fn){return async()=>{btn.disabled=true;try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
+function busy(btn,fn){return async()=>{btn.disabled=true;say('Guardando…');try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
 
 async function home(){
  gid=null;tab='gastos';show('vHome');
