@@ -25,7 +25,8 @@ button:disabled{opacity:.5}
 #msg{min-height:1.4em;overflow-wrap:anywhere}
 [hidden]{display:none!important}
 label{font-size:.9rem;color:var(--muted)}
-.chk{display:flex;gap:8px;align-items:center}.chk input{width:auto;margin:0}
+.chk{display:flex;gap:8px;align-items:center}.chk input[type=checkbox]{width:auto;margin:0}
+.chk .amt{flex:0 0 7.5em;margin:2px 0 2px auto;display:none}.exact .chk .amt{display:block}.chk .nm{flex:1}
 </style>
 </head>
 <body>
@@ -72,7 +73,10 @@ label{font-size:.9rem;color:var(--muted)}
   <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300">
   <div class="row"><div><label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00"></div>
   <div><label for="ePayer">Pagó</label><select id="ePayer"></select></div></div>
-  <label>Dividir en partes iguales entre</label><div id="eParts"></div>
+  <label for="eMode">Cómo dividir</label>
+  <select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option></select>
+  <label>Entre quiénes</label><div id="eParts"></div>
+  <p id="eSum" class="muted" hidden></p>
   <button id="btnExpense">Guardar gasto</button>
  </div>
  <div class="card"><h2>Registrar pago</h2>
@@ -150,7 +154,8 @@ async function openGroup(id){
  const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('ePayer').innerHTML=opts;$('ePayer').value=myId;
  $('pTo').innerHTML=active.filter(m=>m.user_id!==myId).map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
- $('eParts').innerHTML=active.map(m=>`<label class="chk"><input type="checkbox" value="${m.user_id}" checked> ${esc(name(m.user_id))}</label>`).join('');
+ $('eParts').innerHTML=active.map(m=>`<label class="chk"><input type="checkbox" value="${m.user_id}" checked><span class="nm">${esc(name(m.user_id))}</span><input class="amt" inputmode="decimal" placeholder="0,00" data-u="${m.user_id}"></label>`).join('');
+ $('eMode').value='eq';syncMode();
  const rows=mv.filter(m=>m.kind==='expense'||m.kind==='payment').slice().reverse();
  $('moves').innerHTML=rows.length?rows.map(m=>{
   const isE=m.kind==='expense';
@@ -164,6 +169,26 @@ async function openGroup(id){
   return `<div class="item"><div><b>${esc(m.description||(isE?'Gasto':'Pago'))}</b> ${st}<div class="muted">${who} · ${esc(m.occurred_on||'')}</div></div><div style="text-align:right"><b>${money(m.amount_minor,m.currency)}</b><div>${act}</div></div></div>`}).join(''):'<p class="muted">Sin movimientos.</p>';
  $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}));
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
+}
+function syncMode(){
+ const ex=$('eMode').value==='ex';
+ $('eParts').classList.toggle('exact',ex);$('eSum').hidden=!ex;updSum();
+}
+function exactShares(){
+ const o={};let sum=0;
+ $('eParts').querySelectorAll('label').forEach(l=>{
+  if(!l.querySelector('input[type=checkbox]').checked)return;
+  const v=l.querySelector('.amt').value.trim();const m=v?toMinor(v):0;
+  if(v&&m===null)throw Error('Importe inválido en un participante');
+  if(m>0){o[l.querySelector('.amt').dataset.u]=m;sum+=m}
+ });
+ return {o,sum};
+}
+function updSum(){
+ if($('eMode').value!=='ex')return;
+ try{const a=toMinor($('eAmt').value)||0;const {sum}=exactShares();const cur=group?group.reference_currency:'ARS';
+  const d=a-sum;$('eSum').textContent=d===0&&a>0?'Suma correcta.':'Falta asignar '+money(d,cur)+' (total '+money(a,cur)+').';
+ }catch(e){$('eSum').textContent=e.message}
 }
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 
@@ -196,11 +221,16 @@ $('btnInvite').onclick=busy($('btnInvite'),async()=>{
 $('btnStatus').onclick=busy($('btnStatus'),async()=>{
  await rpc('cuentas_group_set_status',{p_group:gid,p_status:group.status==='open'?'closed':'open'});await openGroup(gid);
 });
+$('eMode').onchange=syncMode;
+$('eAmt').oninput=updSum;$('eParts').addEventListener('input',updSum);$('eParts').addEventListener('change',updSum);
 $('btnExpense').onclick=busy($('btnExpense'),async()=>{
  const amt=toMinor($('eAmt').value);if(!amt)throw Error('Importe inválido');
- const parts=[...$('eParts').querySelectorAll('input:checked')].map(i=>i.value);
- if(!parts.length)throw Error('Elegí al menos una persona');
- await rpc('cuentas_expense_add',{p_group:gid,p_currency:group.reference_currency,p_amount_minor:amt,p_payer:$('ePayer').value,p_participants:parts,p_shares:null,p_description:$('eDesc').value.trim()||null,p_occurred_on:today(),p_key:newKey()});
+ const ex=$('eMode').value==='ex';
+ const parts=[...$('eParts').querySelectorAll('input[type=checkbox]:checked')].map(i=>i.value);
+ let shares=null;
+ if(ex){const r=exactShares();if(r.sum!==amt)throw Error('Los importes por persona tienen que sumar el total del gasto');shares=r.o}
+ else if(!parts.length)throw Error('Elegí al menos una persona');
+ await rpc('cuentas_expense_add',{p_group:gid,p_currency:group.reference_currency,p_amount_minor:amt,p_payer:$('ePayer').value,p_participants:ex?null:parts,p_shares:shares,p_description:$('eDesc').value.trim()||null,p_occurred_on:today(),p_key:newKey()});
  $('eDesc').value='';$('eAmt').value='';await openGroup(gid);say('Gasto guardado.');
 });
 $('btnPay').onclick=busy($('btnPay'),async()=>{
