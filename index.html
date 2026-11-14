@@ -90,7 +90,9 @@ details.card[open]>summary{margin-bottom:10px}
 
 <section id="vGroup" hidden>
  <button class="sec" id="btnBack">← Mis grupos</button>
- <div class="card"><h2 id="gTitle"></h2><div id="gSum"></div><div id="gMeta" class="muted"></div><div id="gMembers" hidden></div></div>
+ <div class="card"><h2 id="gTitle"></h2><div id="gSum"></div><div id="gMeta" class="muted"></div><div id="gMembers" hidden></div>
+  <button id="btnInvite">+ Agregar personas</button>
+  <input id="inviteLink" readonly hidden aria-label="Link de invitación"></div>
  <nav class="tabs" role="tablist"><button role="tab" data-tab="gastos">Gastos</button><button role="tab" data-tab="saldos">Saldos</button><button role="tab" data-tab="mas">Más</button></nav>
 
  <div data-pane="gastos">
@@ -122,8 +124,7 @@ details.card[open]>summary{margin-bottom:10px}
 
  <div data-pane="mas" hidden>
   <div class="card"><h2>Miembros</h2><div id="mList"></div>
-   <div class="row"><button class="sec" id="btnInvite">Crear link de invitación</button><button class="sec" id="btnStatus"></button></div>
-   <input id="inviteLink" readonly hidden aria-label="Link de invitación">
+   <button class="sec" id="btnStatus"></button>
    <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div></div>
   <details class="card" id="cDeleg" hidden><summary>Coadministración</summary><p class="muted">Delegación expresa, revocable y auditada. Reabrir y archivar quedan solo para quien administra.</p><div id="dList"></div>
    <label for="dUser">Delegar en</label><select id="dUser"></select>
@@ -422,7 +423,8 @@ $('btnInvite').onclick=busy($('btnInvite'),async()=>{
  const t=await rpc('cuentas_invite_create',{p_group:gid,p_hours:168,p_max_uses:20});
  const u=new URL(location.pathname,location.origin);u.searchParams.set('invite',t);
  const f=$('inviteLink');f.value=u.toString();f.hidden=false;f.select();
- try{await navigator.clipboard.writeText(f.value);say('Link copiado. Vale 7 días.')}catch(_){say('Copiá el link del campo.')}
+ if(navigator.share){try{await navigator.share({title:'Sumate al grupo '+group.name+' en Cuentas',url:f.value});return}catch(e){if(e&&e.name==='AbortError')return}}
+ try{await navigator.clipboard.writeText(f.value);say('Link copiado: pegalo en WhatsApp. Vale 7 días.')}catch(_){say('Copiá el link del campo.')}
 });
 $('btnStatus').onclick=busy($('btnStatus'),async()=>{
  await rpc('cuentas_group_set_status',{p_group:gid,p_status:group.status==='open'?'closed':'open'});await openGroup(gid);
