@@ -52,6 +52,7 @@ details.card[open]>summary{margin-bottom:10px}
 </section>
 
 <section id="vHome" hidden>
+ <details class="card" id="cProfile"><summary id="profSum">Mi nombre</summary><p class="muted">Así te ven las otras personas en los grupos.</p><label for="pName">Tu nombre</label><input id="pName" maxlength="40" placeholder="Ej. Pau" autocomplete="given-name"><button id="btnProfile">Guardar nombre</button></details>
  <div class="card" id="cPending" hidden><h2>Te están esperando</h2><div id="pending"></div></div>
  <div class="card">
   <h2>Mis grupos</h2>
@@ -192,11 +193,17 @@ async function home(){
  if(token)$('vInvite').hidden=false;
  loadPayout().catch(()=>{});
  loadPending().catch(()=>{});
+ loadProfile().catch(()=>{});
  const gs=(await rpc('cuentas_my_groups_all')).filter(g=>g.status!=='archived');
  $('noGroups').hidden=gs.length>0;
  $('groups').innerHTML=gs.map(g=>`<div class="item"><div><b>${esc(g.name)}</b><div class="muted">${esc(g.reference_currency)} · ${g.member_status==='former'?'ex miembro':(g.status==='open'?'abierto':'cerrado')}</div></div><button class="sec" style="width:auto" data-g="${g.id}">${g.member_status==='former'?'Ver mi saldo':'Abrir'}</button></div>`).join('');
  $('groups').querySelectorAll('button').forEach(b=>b.onclick=()=>{const g=gs.find(x=>x.id===b.dataset.g);(g.member_status==='former'?openFormer(g):openGroup(g.id)).catch(e=>say(e.message,true))});
 }
+async function loadProfile(){
+ const p=await rpc('core_profile_get');const n=(p&&p.display_name)||'';
+ $('pName').value=n;$('profSum').textContent=n?'Mi nombre: '+n:'Poné tu nombre (así te ven en los grupos)';$('cProfile').open=!n;
+}
+$('btnProfile').onclick=busy($('btnProfile'),async()=>{const n=$('pName').value.trim();if(!n)throw Error('Escribí tu nombre');await rpc('core_profile_set',{p_name:n});await loadProfile();say('Nombre guardado.')});
 async function loadPending(){
  const p=await rpc('cuentas_my_pending');
  $('cPending').hidden=!p.length;
