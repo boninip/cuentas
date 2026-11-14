@@ -75,7 +75,7 @@ label{font-size:.9rem;color:var(--muted)}
   <div class="row"><div><label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00"></div>
   <div><label for="ePayer">Pagó</label><select id="ePayer"></select></div></div>
   <label for="eMode">Cómo dividir</label>
-  <select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option></select>
+  <select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select>
   <label>Entre quiénes</label><div id="eParts"></div>
   <p id="eSum" class="muted" hidden></p>
   <button id="btnExpense">Guardar gasto</button>
@@ -177,8 +177,9 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
 function syncMode(){
- const ex=$('eMode').value==='ex';
- $('eParts').classList.toggle('exact',ex);$('eSum').hidden=!ex;updSum();
+ const ex=$('eMode').value!=='eq';
+ $('eParts').classList.toggle('exact',ex);$('eSum').hidden=!ex;
+ $('eParts').querySelectorAll('.amt').forEach(i=>i.placeholder=$('eMode').value==='pc'?'0 %':'0,00');updSum();
 }
 function exactShares(){
  const o={};let sum=0;
@@ -190,7 +191,23 @@ function exactShares(){
  });
  return {o,sum};
 }
+function pctShares(total){
+ const rows=[];
+ $('eParts').querySelectorAll('label').forEach(l=>{
+  if(!l.querySelector('input[type=checkbox]').checked)return;
+  const v=l.querySelector('.amt').value.trim();if(!v)return;
+  const n=Number(v.replace(',','.'));if(!isFinite(n)||n<0)throw Error('Porcentaje inválido');
+  if(n>0)rows.push({u:l.querySelector('.amt').dataset.u,bp:Math.round(n*100)});
+ });
+ const bpSum=rows.reduce((a,r)=>a+r.bp,0);
+ if(bpSum!==10000)return {o:null,pct:bpSum/100};
+ let used=0;rows.forEach(r=>{r.m=Math.floor(total*r.bp/10000);used+=r.m});
+ rows.slice().sort((a,b)=>a.u<b.u?-1:1).forEach((r,i)=>{if(i<total-used)r.m+=1});
+ const o={};rows.forEach(r=>{if(r.m>0)o[r.u]=r.m});
+ return {o,pct:100};
+}
 function updSum(){
+ if($('eMode').value==='pc'){try{const r=pctShares(toMinor($('eAmt').value)||0);$('eSum').textContent=r.o?'Suma 100 %.':'Suman '+r.pct+' % (tienen que sumar 100 %).'}catch(e){$('eSum').textContent=e.message}return}
  if($('eMode').value!=='ex')return;
  try{const a=toMinor($('eAmt').value)||0;const {sum}=exactShares();const cur=group?group.reference_currency:'ARS';
   const d=a-sum;$('eSum').textContent=d===0&&a>0?'Suma correcta.':'Falta asignar '+money(d,cur)+' (total '+money(a,cur)+').';
@@ -248,10 +265,11 @@ $('eMode').onchange=syncMode;
 $('eAmt').oninput=updSum;$('eParts').addEventListener('input',updSum);$('eParts').addEventListener('change',updSum);
 $('btnExpense').onclick=busy($('btnExpense'),async()=>{
  const amt=toMinor($('eAmt').value);if(!amt)throw Error('Importe inválido');
- const ex=$('eMode').value==='ex';
+ const mode=$('eMode').value;const ex=mode!=='eq';
  const parts=[...$('eParts').querySelectorAll('input[type=checkbox]:checked')].map(i=>i.value);
  let shares=null;
- if(ex){const r=exactShares();if(r.sum!==amt)throw Error('Los importes por persona tienen que sumar el total del gasto');shares=r.o}
+ if(mode==='ex'){const r=exactShares();if(r.sum!==amt)throw Error('Los importes por persona tienen que sumar el total del gasto');shares=r.o}
+ else if(mode==='pc'){const r=pctShares(amt);if(!r.o)throw Error('Los porcentajes tienen que sumar 100 %');shares=r.o}
  else if(!parts.length)throw Error('Elegí al menos una persona');
  await rpc('cuentas_expense_add',{p_group:gid,p_currency:group.reference_currency,p_amount_minor:amt,p_payer:$('ePayer').value,p_participants:ex?null:parts,p_shares:shares,p_description:$('eDesc').value.trim()||null,p_occurred_on:today(),p_key:newKey()});
  $('eDesc').value='';$('eAmt').value='';await openGroup(gid);say('Gasto guardado.');
