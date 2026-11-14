@@ -79,8 +79,11 @@ details.card[open]>summary{margin-bottom:10px}
 </section>
 
 <section id="vInvite" class="card" hidden>
- <h2>Te invitaron a un grupo de Cuentas</h2>
- <button id="btnAccept">Aceptar invitación</button>
+ <h2>Te invitaron a un grupo</h2>
+ <p><b id="invGroup"></b></p><p id="invBy" class="muted"></p>
+ <div id="invNameW" hidden><label for="invName2">¿Cómo te llamamos? (así te ven en el grupo)</label><input id="invName2" maxlength="40" autocomplete="given-name"></div>
+ <button id="btnAccept">Unirme al grupo</button>
+ <button class="sec" id="btnDecline">Ahora no</button>
 </section>
 
 <section id="vFormer" hidden>
@@ -155,7 +158,7 @@ const STORE='cuentas_auth_v1';
 const $=id=>document.getElementById(id);
 const url=new URL(location.href);
 const inv=url.searchParams.get('invite');
-const token=/^[a-f0-9]{64}$/.test(inv||'')?inv:null;
+let token=/^[a-f0-9]{64}$/.test(inv||'')?inv:null;
 let session=null,group=null,gid=null,myId=null,tab='gastos',editId=null,editDate=null;
 try{const r=JSON.parse(localStorage.getItem(STORE)||'null');if(r&&r.access_token&&r.refresh_token)session=r}catch(_){}
 const say=(t,bad)=>{const m=$('msg');m.textContent=t||'';m.className=bad?'bad':'muted'};
@@ -190,7 +193,6 @@ function busy(btn,fn){return async()=>{btn.disabled=true;say('Guardando…');try
 
 async function home(){
  gid=null;tab='gastos';show('vHome');
- if(token)$('vInvite').hidden=false;
  loadPayout().catch(()=>{});
  loadPending().catch(()=>{});
  loadProfile().catch(()=>{});
@@ -462,11 +464,13 @@ $('btnCreate').onclick=busy($('btnCreate'),async()=>{
  const id=await rpc('cuentas_group_create',{p_name:name,p_currency:$('gCur').value.trim().toUpperCase()});
  $('gName').value='';await openGroup(id);say('Grupo creado.');
 });
+function dropToken(){token=null;const u=new URL(location.href);u.searchParams.delete('invite');history.replaceState(null,'',u)}
 $('btnAccept').onclick=busy($('btnAccept'),async()=>{
+ if(!$('invNameW').hidden){const n=$('invName2').value.trim();if(!n)throw Error('Escribí tu nombre para que te reconozcan en el grupo');await rpc('core_profile_set',{p_name:n})}
  const id=await rpc('cuentas_invite_accept',{p_token:token});
- const u=new URL(location.href);u.searchParams.delete('invite');history.replaceState(null,'',u);
- $('vInvite').hidden=true;await openGroup(id);say('¡Ya sos parte del grupo!');
+ dropToken();await openGroup(id);say('¡Ya sos parte del grupo!');
 });
+$('btnDecline').onclick=()=>{dropToken();home().catch(e=>say(e.message,true))};
 $('btnInvite').onclick=busy($('btnInvite'),async()=>{
  const t=await rpc('cuentas_invite_create',{p_group:gid,p_hours:168,p_max_uses:20});
  const u=new URL(location.pathname,location.origin);u.searchParams.set('invite',t);
@@ -514,8 +518,17 @@ async function start(){
  if(!(await fresh())){show('vLogin');if(token)say('Ingresá para aceptar la invitación.');$('who').textContent='';return}
  myId=decodeSub(session.access_token);
  $('who').textContent=session.email||'';
+ if(token){
+  try{
+   const p=await rpc('cuentas_invite_preview',{p_token:token});
+   if(!p.valid){dropToken();await home();say('La invitación venció o no es válida. Pedile un link nuevo a quien te invitó.',true);return}
+   if(p.already_member){dropToken();await openGroup(p.group_id);say('Ya sos parte de este grupo.');return}
+   const me=await rpc('core_profile_get');const hasName=!!(me&&me.display_name);
+   $('invGroup').textContent=p.name;$('invBy').textContent=(p.invited_by?p.invited_by+' te invitó':'Te invitaron')+' · '+p.members+(Number(p.members)===1?' persona':' personas')+' en el grupo';
+   $('invNameW').hidden=hasName;show('vInvite');return;
+  }catch(e){say(e.message,true)}
+ }
  try{await home()}catch(e){say(e.message,true)}
- if(token){$('vInvite').hidden=false}
 }
 start();
 })();
