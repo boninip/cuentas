@@ -202,7 +202,7 @@ async function openGroup(id){
  const me=g.members.find(m=>m.user_id===myId);
  const cur=g.reference_currency;
  $('gTitle').textContent=g.name;
- $('gMeta').textContent=`${cur} · ${g.status==='open'?'abierto':'cerrado: no admite gastos nuevos'} · ${active.length} miembros`;
+ $('gMeta').textContent=`${cur} · ${g.status==='open'?'abierto':'cerrado: no admite gastos nuevos'} · ${active.length} ${active.length===1?'miembro':'miembros'}`;
  const roleEs={admin:'administra',coadmin:'coadministra',member:'miembro'};
  $('gMembers').textContent='Miembros: '+active.map(m=>name(m.user_id)+(m.role!=='member'?' ('+roleEs[m.role]+')':'')).join(', ');
  $('btnStatus').hidden=!(me&&me.role==='admin');
@@ -261,7 +261,7 @@ async function openGroup(id){
  $('props').querySelectorAll('[data-pc]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_cancel',{p_proposal:b.dataset.pc});await openGroup(gid);say('Propuesta cancelada.')}));
  $('btnStatus').textContent=g.status==='open'?'Cerrar grupo':'Reabrir grupo';
  loadTrips().catch(()=>{});
- $('cEmpty').hidden=!(active.length<2&&g.status==='open');
+ $('cEmpty').hidden=!(active.length<2&&g.status==='open');$('btnInvite').hidden=!$('cEmpty').hidden;
  $('cExpense').hidden=g.status!=='open';$('cExpense').open=false;
  const mine=bal.filter(b=>b.user_id===myId);
  $('gSum').innerHTML=mine.length&&mine.some(b=>Number(b.balance_minor)!==0)?mine.filter(b=>Number(b.balance_minor)!==0).map(b=>Number(b.balance_minor)>0?`<span class="good">Te deben ${money(b.balance_minor,b.currency)}</span>`:`<span class="bad">Debés ${money(-Number(b.balance_minor),b.currency)}</span>`).join(' · '):'<span class="muted">Estás al día</span>';
