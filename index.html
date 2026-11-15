@@ -403,7 +403,8 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const hue=k=>{let h=0;for(const ch of String(k))h=(h*31+ch.charCodeAt(0))%97;return ['','c1','c2','c3'][h%4]};
 const fmtD=d=>d?String(d).slice(8,10)+'/'+String(d).slice(5,7):'';
 const money=(m,c)=>{try{return new Intl.NumberFormat('es-AR',{style:'currency',currency:c}).format(Number(m)/100)}catch(_){return (Number(m)/100).toFixed(2)+' '+c}};
-const toMinor=s=>{const n=Number(String(s).trim().replace(/\./g,'').replace(',','.'));if(!isFinite(n)||n<=0)return null;return Math.round(n*100)};
+const ZERO_DEC=['CLP','PYG','JPY','KRW','VND','ISK','UGX'],UNIT=c=>ZERO_DEC.includes(c)?100:1,curNow=()=>{const e=document.getElementById('eCur');return (e&&e.value)||(group&&group.reference_currency)||'ARS'};
+const toMinor=(s,c)=>{const n=Number(String(s).trim().replace(/\./g,'').replace(',','.'));if(!isFinite(n)||n<=0)return null;return UNIT(c)>1?Math.round(n)*100:Math.round(n*100)};
 const newKey=()=>crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2);
 function decodeSub(t){try{return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub}catch(_){return null}}
 function save(d){
@@ -544,7 +545,8 @@ const wOf=u=>{const m=group&&group.members.find(x=>x.user_id===u);const w=m&&m.w
 const wardsOf=u=>{const w=group.members.filter(m=>m.guardian===u);return w.length?' · incluye a '+w.map(m=>esc(nm(m.user_id))).join(', '):''};
 const fmtW=w=>w===0.5?'½':w===0.25?'¼':w===0.75?'¾':String(w).replace('.',',');
 const weightsDiffer=ids=>new Set(ids.map(u=>Math.round(wOf(u)*100))).size>1;
-function weightedShares(total,ids){
+function weightedShares(total,ids,cur){
+ const U=UNIT(cur);if(U>1){const o=weightedShares(total/U,ids);if(o)for(const k in o)o[k]*=U;return o}
  const ws=ids.map(u=>[u,Math.round(wOf(u)*100)]).filter(x=>x[1]>0),W=ws.reduce((a,x)=>a+x[1],0);if(!W)return null;
  const b=ws.map(([u,w])=>{const e=total*w/W,f=Math.floor(e);return {u,f,r:e-f}});
  let left=total-b.reduce((a,x)=>a+x.f,0);
@@ -648,6 +650,7 @@ async function openGroup(id){
  $('mList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: quitar';say(guestIds.has(b.dataset.rm)?'Si todavía no tiene gastos, se quita del grupo. Tocá de nuevo para confirmar.':'Quitar a alguien no borra sus deudas ni el historial. Tocá de nuevo para confirmar.');return}if(guestIds.has(b.dataset.rm))await rpc('cuentas_guest_remove',{p_group:gid,p_guest:b.dataset.rm});else await rpc('cuentas_member_remove',{p_group:gid,p_user:b.dataset.rm});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')}));
  $('btnArchive').hidden=!(isAdmin&&g.status==='closed');
  const dBy={};(dels||[]).forEach(d=>dBy[d.delegate_id]=d);
+ const canVoid=!!(me&&(me.role==='admin'||(dBy[myId]&&dBy[myId].scopes.includes('void'))));
  const scEs={invite:'invitar',close:'cerrar',void:'anular',link:'vincular'};
  $('cDeleg').hidden=!isAdmin;
  $('dList').innerHTML=(dels||[]).length?dels.map(d=>`<div class="item"><span>${esc(name(d.delegate_id))}: ${d.scopes.map(x=>scEs[x]||x).join(', ')}</span><button class="sec" style="width:auto;margin:0" data-rv="${d.delegate_id}">Revocar</button></div>`).join(''):'<p class="muted">Sin delegaciones.</p>';
@@ -733,6 +736,7 @@ async function openGroup(id){
    if(!isE&&!isC&&!m.confirmed&&m.from_user===myId)act=`<button class="sec" style="width:auto;margin:0" data-pcancel="${m.id}">Cancelar pago</button>`;
    if(!isE&&!isC&&m.confirmed&&!m.reversed&&(m.from_user===myId||m.to_user===myId))act=`<button class="sec" style="width:auto;margin:0" data-prev="${m.id}">Proponer anular</button>`;
    if(!isE&&!isC&&!m.confirmed&&m.to_user===myId)act=`<button style="width:auto;margin:0" data-conf="${m.id}">Confirmar</button>`;
+   if(!isE&&!isC&&!m.reversed&&canVoid&&!(m.from_user===myId&&!m.confirmed))act+=` <button class="sec" style="width:auto;margin:0" data-pcancel="${m.id}" data-adm="1">Anular pago</button>`;
   }
   const dt=m.occurred_on?esc(String(m.occurred_on).slice(5).split('-').reverse().join('/')):'';
   const ym=String(m.occurred_on||'').slice(0,7);let hd='';
@@ -765,7 +769,7 @@ async function openGroup(id){
   say('Editando un gasto: al guardar, el anterior queda anulado y se crea el corregido.');$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});
  });
  $('moves').querySelectorAll('[data-crev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_compensation_reverse_propose',{p_compensation:b.dataset.crev,p_reason:null});await openGroup(gid);say('Propuesta de reversión creada: necesita la aprobación de las dos personas.')}));
- $('moves').querySelectorAll('[data-pcancel]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_cancel',{p_payment:b.dataset.pcancel});await openGroup(gid);say('Pago cancelado: no llegó a afectar saldos.')}));
+ $('moves').querySelectorAll('[data-pcancel]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_cancel',{p_payment:b.dataset.pcancel});await openGroup(gid);say(b.dataset.adm?'Pago anulado. Queda registrado quién lo hizo.':'Pago cancelado: no llegó a afectar saldos.')}));
  $('moves').querySelectorAll('[data-prev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_create',{p_kind:'reverse_payment',p_target:b.dataset.prev,p_reason:null});await openGroup(gid);say('Propuesta creada: necesita la aprobación de todos los afectados.')}));
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
@@ -787,13 +791,14 @@ function exactShares(){
  const o={};let sum=0;
  $('eParts').querySelectorAll('label').forEach(l=>{
   if(!l.querySelector('input[type=checkbox]').checked)return;
-  const v=l.querySelector('.amt').value.trim();const m=v?toMinor(v):0;
+  const v=l.querySelector('.amt').value.trim();const m=v?toMinor(v,curNow()):0;
   if(v&&m===null)throw Error('Importe inválido en un participante');
   if(m>0){o[l.querySelector('.amt').dataset.u]=m;sum+=m}
  });
  return {o,sum};
 }
-function pctShares(total){
+function pctShares(total,cur){
+ const U=UNIT(cur);if(U>1){const r=pctShares(total/U);if(r.o)for(const k in r.o)r.o[k]*=U;return r}
  const rows=[];
  $('eParts').querySelectorAll('label').forEach(l=>{
   if(!l.querySelector('input[type=checkbox]').checked)return;
@@ -809,9 +814,9 @@ function pctShares(total){
  return {o,pct:100};
 }
 function updSum(){
- if($('eMode').value==='pc'){try{const r=pctShares(toMinor($('eAmt').value)||0);$('eSum').textContent=r.o?'Suma 100 %.':'Suman '+r.pct+' % (tienen que sumar 100 %).'}catch(e){$('eSum').textContent=e.message}return}
+ if($('eMode').value==='pc'){try{const r=pctShares(toMinor($('eAmt').value,curNow())||0,curNow());$('eSum').textContent=r.o?'Suma 100 %.':'Suman '+r.pct+' % (tienen que sumar 100 %).'}catch(e){$('eSum').textContent=e.message}return}
  if($('eMode').value!=='ex')return;
- try{const a=toMinor($('eAmt').value)||0;const {sum}=exactShares();const cur=group?group.reference_currency:'ARS';
+ try{const a=toMinor($('eAmt').value,curNow())||0;const {sum}=exactShares();const cur=curNow();
   const d=a-sum;$('eSum').textContent=d===0&&a>0?'Suma correcta.':'Falta asignar '+money(d,cur)+' (total '+money(a,cur)+').';
  }catch(e){$('eSum').textContent=e.message}
 }
@@ -1333,13 +1338,13 @@ $('btnExpClose').onclick=()=>{$('fab').hidden=false;resetEdit();$('eDesc').value
 $('btnEditCancel').onclick=()=>{$('fab').hidden=false;resetEdit();$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;say('Edición cancelada.')};
 $('eAmt').oninput=updSum;$('eParts').addEventListener('input',updSum);$('eParts').addEventListener('change',updSum);
 $('btnExpense').onclick=busy($('btnExpense'),async()=>{
- const amt=toMinor($('eAmt').value);if(!amt)throw Error('Importe inválido');
+ const amt=toMinor($('eAmt').value,curNow());if(!amt)throw Error('Importe inválido');
  const mode=$('eMode').value;const ex=mode!=='eq';
  const parts=[...$('eParts').querySelectorAll('input[type=checkbox]:checked')].map(i=>i.value);
  let shares=null;
  if(mode==='ex'){const r=exactShares();if(r.sum!==amt)throw Error('Los importes por persona tienen que sumar el total del gasto');shares=r.o}
- else if(mode==='pc'){const r=pctShares(amt);if(!r.o)throw Error('Los porcentajes tienen que sumar 100 %');shares=r.o}
- else{if(!parts.length)throw Error('Elegí al menos una persona');if(weightsDiffer(parts)){shares=weightedShares(amt,parts);if(!shares)throw Error('Todos los elegidos tienen peso 0: nadie paga este gasto.')}}
+ else if(mode==='pc'){const r=pctShares(amt,curNow());if(!r.o)throw Error('Los porcentajes tienen que sumar 100 %');shares=r.o}
+ else{if(!parts.length)throw Error('Elegí al menos una persona');if(weightsDiffer(parts)){shares=weightedShares(amt,parts,curNow());if(!shares)throw Error('Todos los elegidos tienen peso 0: nadie paga este gasto.')}}
  const curX=$('eCur').value,refC=group.reference_currency;let fx=null;
  if(curX!==refC){fx=Number(String($('eFx').value).replace(/\./g,'').replace(',','.'));if(!(fx>0))throw Error('Poné la cotización: cuántos '+refC+' vale 1 '+curX);try{localStorage.setItem(fxKey(curX),String($('eFx').value))}catch(_){}}
  const wasEdit=!!editId;

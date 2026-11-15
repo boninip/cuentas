@@ -5,7 +5,7 @@ const URL='file://'+path.resolve(__dirname,'../../index.html');
 const ME='11111111-1111-1111-1111-111111111111',BR='22222222-2222-2222-2222-222222222222',G='33333333-3333-3333-3333-333333333333',TOK='a'.repeat(64);
 let fails=0;const ok=(c,m)=>{if(!c){fails++;console.log('FALLA:',m)}else console.log('ok   ',m)};
 const LU='44444444-4444-4444-4444-444444444444';
-async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false}={}){
+async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false,pay=false}={}){
  const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();
  const jwt='x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y';
  await page.addInitScript(([j])=>{localStorage.setItem('cuentas_auth_v1',JSON.stringify({access_token:j,refresh_token:'r',expires_at:Date.now()+3600000,email:'b@test.com'}))},[jwt]);
@@ -35,7 +35,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_recurring_save':case 'cuentas_recurring_set_status':return J(null);
    case 'cuentas_activity_list':return J(fam?[{id:1,action:'expense_added',actor:ME,created_at:'2026-11-14T10:00:00Z',amount_minor:20000,currency:'ARS',description:'Asado'},{id:2,action:'member_weight_set',actor:ME,target:BR,weight:0.5,created_at:'2026-11-14T09:00:00Z'}]:[]);
    case 'cuentas_member_set_weight':case 'cuentas_category_save':return J(null);
-   case 'cuentas_movements_list':if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
+   case 'cuentas_movements_list':if(pay)return J([{id:'p1',kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:LU,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false},{id:'p2',kind:'payment',amount_minor:'50000',currency:'ARS',from_user:ME,to_user:BR,occurred_on:'2026-11-14',created_by:ME,confirmed:true,reversed:false}]);if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
    case 'cuentas_proposals_list':case 'cuentas_delegations_list':case 'core_links_list':case 'cuentas_pairs_list':case 'core_organizable_trips':return J([]);
    default:return J(null);}});
  const errs=[];page.on('pageerror',e=>errs.push(e.message));
@@ -242,6 +242,20 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('[data-rs$="|paused"]');await t.page.waitForTimeout(250);
  ok(t.calls.some(c=>c.startsWith('cuentas_recurring_set_status')&&c.includes('paused')),'repetidos: se puede pausar');
  ok(t.errs.length===0,'repetidos: sin errores de JS');
+ // pagos: anulación por la administración
+ t=await mk(b,{pay:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ await t.page.evaluate(()=>{document.querySelectorAll('#moves details.mv').forEach(d=>d.open=true)});
+ ok((await t.page.locator('[data-pcancel][data-adm]').count())===2,'pagos: la administración puede anular un pago de otros y uno confirmado propio');
+ await t.page.locator('[data-pcancel][data-adm]').first().click();await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('cuentas_payment_cancel')),'pagos: llama a anular');
+ ok(/Pago anulado/.test(await t.page.textContent('#msg')),'pagos: avisa que quedó registrado quién lo hizo');
+ ok(t.errs.length===0,'pagos: sin errores de JS');
+ // moneda sin decimales
+ t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eAdv').open=true});
+ await t.page.selectOption('#eCur','CLP');await t.page.fill('#eFx','1,2');await t.page.fill('#eDesc','Pizza');await t.page.fill('#eAmt','1000,60');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
+ ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')&&c.includes('"p_amount_minor":100100')&&c.includes('"p_currency":"CLP"')),'sin decimales: CLP se redondea a unidades enteras');
+ ok(t.errs.length===0,'sin decimales: sin errores de JS');
  // importar de Splitwise
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  await t.page.click('#btnGear');await t.page.evaluate(()=>{document.getElementById('cImp').open=true});
