@@ -55,7 +55,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('#btnSettle');await t.page.click('[data-pay]');ok((await t.page.inputValue('#pAmt'))==='2500,00','liquidar: monto prellenado');
  await t.page.click('#btnPay');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_payment_add')&&c.includes('250000')),'liquidar: registra pago por 250000');
- await t.page.click('#fab');await t.page.fill('#eDesc','Coca');await t.page.fill('#eAmt','200');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
+ await t.page.click('#btnGAdd');await t.page.fill('#eDesc','Coca');await t.page.fill('#eAmt','200');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')),'gasto: se guarda desde el botón flotante');
  ok(t.errs.length===0,'sin errores de JS');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
