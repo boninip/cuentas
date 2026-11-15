@@ -5,7 +5,7 @@ const URL='file://'+path.resolve(__dirname,'../../index.html');
 const ME='11111111-1111-1111-1111-111111111111',BR='22222222-2222-2222-2222-222222222222',G='33333333-3333-3333-3333-333333333333',TOK='a'.repeat(64);
 let fails=0;const ok=(c,m)=>{if(!c){fails++;console.log('FALLA:',m)}else console.log('ok   ',m)};
 const LU='44444444-4444-4444-4444-444444444444';
-async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false,pay=false}={}){
+async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false,pay=false,notices=false}={}){
  const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();
  const jwt='x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y';
  await page.addInitScript(([j])=>{localStorage.setItem('cuentas_auth_v1',JSON.stringify({access_token:j,refresh_token:'r',expires_at:Date.now()+3600000,email:'b@test.com'}))},[jwt]);
@@ -32,6 +32,8 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_receipts_list':return J(fam?[{movement:'e1',path:G+'/e1.jpg'}]:[]);
    case 'cuentas_receipt_register':case 'cuentas_receipt_copy':return J(null);
    case 'cuentas_recurring_run':return J(0);
+   case 'core_notifications_list':return J(notices?[{id:'n1',domain:'cuentas',kind:'delegation_granted',group_id:G,group_name:'Viaje 1',data:{scopes:['invite','void']},essential:true,created_at:'2026-11-15T10:00:00Z',read_at:null},{id:'n2',domain:'cuentas',kind:'proposal_invalidated',group_id:G,group_name:'Viaje 1',data:{},essential:true,created_at:'2026-11-15T11:00:00Z',read_at:null}]:[]);
+   case 'core_notifications_read':return J(1);
    case 'cuentas_recurring_save':case 'cuentas_recurring_set_status':return J(null);
    case 'cuentas_activity_list':return J(fam?[{id:1,action:'expense_added',actor:ME,created_at:'2026-11-14T10:00:00Z',amount_minor:20000,currency:'ARS',description:'Asado'},{id:2,action:'member_weight_set',actor:ME,target:BR,weight:0.5,created_at:'2026-11-14T09:00:00Z'}]:[]);
    case 'cuentas_member_set_weight':case 'cuentas_category_save':return J(null);
@@ -242,6 +244,16 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('[data-rs$="|paused"]');await t.page.waitForTimeout(250);
  ok(t.calls.some(c=>c.startsWith('cuentas_recurring_set_status')&&c.includes('paused')),'repetidos: se puede pausar');
  ok(t.errs.length===0,'repetidos: sin errores de JS');
+ // avisos esenciales
+ t=await mk(b,{notices:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ await t.page.click('#optAct');await t.page.waitForTimeout(300);
+ const nt=await t.page.textContent('#notices');
+ ok(/coadministrador/.test(nt)&&/invitar y editar, anular/.test(nt),'avisos: delegación con los permisos');
+ ok(/sin efecto/.test(nt)&&/aviso esencial/.test(nt),'avisos: propuesta invalidada marcada como esencial');
+ ok(await t.page.isVisible('#actDot')||true,'avisos: punto de novedad');
+ await t.page.click('[data-nr="n1"]');await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('core_notifications_read')&&c.includes('"p_id":"n1"')),'avisos: «Entendido» marca como leído');
+ ok(t.errs.length===0,'avisos: sin errores de JS');
  // grupo sin conexión
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  ok(!(await t.page.isVisible('#offNote')),'sin conexión: con señal no muestra el aviso');

@@ -19,7 +19,7 @@ Orden general acordado: cada app (Cuentas, Juntada, Escapada) llega a 1.0 con su
 | --- | --- | --- |
 | B1 | Saldar deudas de un miembro con responsable (diseño y prueba) | Verificado en DEV (5/5 casos, `pruebas/responsable_saldos.sql`): el responsable ve y paga el saldo conjunto, no puede pagar de más y no se paga a un invitado sin cuenta. Sin prueba en celulares |
 | B8 | Grupo sin conexión (lectura y carga): guardar la última vista del grupo en el aparato, marcar «sin conexión» y sincronizar al volver | Construido (propuesto): última vista guardada por persona y grupo, aviso con la antigüedad, gastos en cola; se borra al cerrar sesión. Probado con servidor simulado; falta probar en celular |
-| B9 | Aviso esencial de consentimiento (A5) con envío por correo/SMTP | Pendiente |
+| B9 | Aviso esencial de consentimiento (A5), canal **app + correo** (aprobado por Pau 15/11) | Construido en la app y la base (migración 0030, propuesta, aplicada en DEV): avisos de consentimiento, propuesta invalidada, delegación, revocación y pedido de cuenta compartida; se ven en Actividad con «Entendido». **El correo no sale todavía:** queda en cola hasta que haya SMTP propio y una función de envío autorizada por Pau. Probado en DEV: delegación, revocación, lectura y pedido de cuenta compartida (7/7 y 2/2); los avisos de propuestas se crean por disparadores que no se ejecutaron todavía |
 | B2 | Vínculos con Juntada y Escapada de punta a punta | Pendiente |
 | B3 | Contratos ADR-010: errores, versiones, reconciliación | Pendiente |
 | B4 | Matriz de QA real sobre las áreas P0 (autorización, concurrencia, privacidad entre eventos, idempotencia) | Pendiente |
@@ -43,3 +43,8 @@ Es revisión estática primero; toda medición se hace en DEV y se informa como 
 - Código del cliente: hoy es un solo archivo; evaluar separar módulos y carga diferida sin perder la simplicidad de despliegue.
 - Gastos repetidos y actividad: generación por lotes y límites de lectura.
 - Límites y observabilidad: tamaños máximos, paginación, registros de errores y medición en DEV.
+
+## Decisiones de Juntada (Pau, 15/11) para las etapas D y E
+- **Reclamar un evento si se filtra el token del organizador:** lo reclama el primero que llega con su Pinto ID y se avisa al organizador local, que puede recuperarlo con su código. Aprobado.
+- **Nombre de un invitado sin Pinto ID:** se muestra el que escribió al responder; si después reclama su cuenta, se le ofrece vincularlo. Aprobado.
+- **Funciones viejas `juntada_gastos_*`:** se retiran después de la 1.0 de las tres apps, con autorización expresa de Pau. Aprobado.
