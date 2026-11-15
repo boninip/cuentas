@@ -64,4 +64,23 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('#btnGAdd');await t.page.fill('#eDesc','Coca');await t.page.fill('#eAmt','200');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')),'gasto: se guarda desde el botón flotante');
  ok(t.errs.length===0,'sin errores de JS');
+ // robustez: sin conexión
+ t=await mk(b);
+ await t.page.route('**/rest/v1/rpc/**',r=>r.abort('failed'));
+ await t.page.goto(URL);await t.page.waitForTimeout(700);
+ ok(/conexi/i.test(await t.page.textContent('#msg')),'sin conexión: mensaje claro');
+ ok(await t.page.evaluate(()=>!!localStorage.getItem('cuentas_auth_v1')),'sin conexión: no cierra la sesión');
+ // robustez: 401 una vez -> renueva y reintenta
+ t=await mk(b);let first=true,refreshed=0;
+ await t.page.route('**/auth/v1/token**',r=>{refreshed++;r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({access_token:'x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y',refresh_token:'r2',expires_in:3600})})});
+ await t.page.route('**/rest/v1/rpc/cuentas_my_groups_all',r=>{if(first){first=false;return r.fulfill({status:401,contentType:'application/json',body:JSON.stringify({message:'JWT expired'})})}return r.fallback()});
+ await t.page.goto(URL);await t.page.waitForTimeout(800);
+ ok(refreshed>=1&&await t.page.isVisible('[data-g]'),'401: renueva la sesión y reintenta');
+ // robustez: sesión realmente vencida -> login
+ t=await mk(b);
+ await t.page.route('**/rest/v1/rpc/cuentas_my_groups_all',r=>r.fulfill({status:401,contentType:'application/json',body:JSON.stringify({message:'JWT expired'})}));
+ await t.page.route('**/auth/v1/token**',r=>r.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error_description:'Invalid Refresh Token'})}));
+ await t.page.goto(URL);await t.page.waitForTimeout(800);
+ ok((await views(t.page)).join()==='vLogin'&&/venci/i.test(await t.page.textContent('#msg')),'sesión vencida: vuelve al login con aviso');
+
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
