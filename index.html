@@ -23,6 +23,10 @@ button:disabled{opacity:.5}
 .item{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
 .item:first-child{border-top:0}
 .tag{font-size:.75rem;border:1px solid var(--line);border-radius:99px;padding:1px 8px;color:var(--muted)}
+#bnav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding:6px max(8px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px));z-index:9}
+#bnav button{flex:1;margin:0;background:transparent;color:var(--muted);border:0;display:flex;flex-direction:column;align-items:center;gap:0;font-size:1.2rem;padding:4px;position:relative;line-height:1.2}
+#bnav button span{font-size:.75rem}#bnav button[aria-selected=true]{color:var(--accent)}
+#bnav i{position:absolute;top:2px;right:30%;width:9px;height:9px;border-radius:50%;background:var(--warm)}
 #msg{min-height:1.4em;overflow-wrap:anywhere;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;margin:0}#msg.bad{font-weight:600}
 [hidden]{display:none!important}
 label{font-size:.9rem;color:var(--muted)}
@@ -36,7 +40,7 @@ details.card[open]>summary{margin-bottom:10px}
 #cExpense>summary{background:var(--accent);color:var(--accent-fg);text-align:center;padding:14px;border-radius:12px;font-size:1.05rem}
 #cExpense{padding:10px}#cExpense[open]>summary{margin-bottom:12px}
 #gSum{font-size:1.15rem;font-weight:700;margin:6px 0}
-.actions{flex-wrap:nowrap;gap:8px}.actions>*{min-width:0;margin:6px 0 0}
+.actions{gap:8px}.topbar{flex-wrap:nowrap;gap:8px}.topbar>*{margin:0 0 4px;min-width:0}.actions>*{min-width:0;margin:6px 0 0}
 .fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:auto;margin:0;padding:14px 20px;border-radius:99px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:8;font-size:1.05rem}
 main{padding-bottom:96px}
 #cExpense:not([open]){display:none}#cExpense>summary{display:none}
@@ -61,8 +65,7 @@ main{padding-bottom:96px}
 </section>
 
 <section id="vHome" hidden>
- <details class="card" id="cProfile"><summary id="profSum">Mi nombre</summary><p class="muted">Así te ven las otras personas en los grupos.</p><label for="pName">Tu nombre</label><input id="pName" maxlength="40" placeholder="Ej. Pau" autocomplete="given-name"><button id="btnProfile">Guardar nombre</button></details>
- <div class="card" id="cPending" hidden><h2>Te están esperando</h2><div id="pending"></div></div>
+<div data-hp="grupos">
  <div class="card">
   <h2>Mis grupos</h2>
   <div id="groups"></div>
@@ -74,6 +77,14 @@ main{padding-bottom:96px}
   <label for="gCur">Moneda (código de 3 letras)</label><input id="gCur" value="ARS" maxlength="3">
   <button id="btnCreate">Crear grupo</button>
  </details>
+</div>
+<div data-hp="actividad" hidden>
+ <h2>Actividad</h2>
+ <div class="card" id="cPending"><p id="noPending" class="muted" hidden>No tenés nada pendiente. 🎉</p><div id="pending"></div></div>
+</div>
+<div data-hp="cuenta" hidden>
+ <h2>Cuenta</h2><p id="who2" class="muted"></p>
+ <details class="card" id="cProfile"><summary id="profSum">Mi nombre</summary><p class="muted">Así te ven las otras personas en los grupos.</p><label for="pName">Tu nombre</label><input id="pName" maxlength="40" placeholder="Ej. Pau" autocomplete="given-name"><button id="btnProfile">Guardar nombre</button></details>
  <details class="card" id="cPayout">
   <summary>Mis datos de cobro (alias / CBU)</summary>
   <p class="muted">Para que tus amigos te transfieran. Los ven solo los miembros activos de tus grupos y podés dejar de compartirlos cuando quieras. Cuentas no mueve plata.</p>
@@ -85,7 +96,10 @@ main{padding-bottom:96px}
   <div class="row"><button id="btnPayoutSave">Guardar</button><button class="sec" id="btnPayoutClear">Borrar mis datos</button></div>
  </details>
  <button class="sec" id="btnLogout">Cerrar sesión</button>
+</div>
 </section>
+
+<nav id="bnav" hidden><button data-hp-btn="grupos" aria-selected="true">👥<span>Grupos</span></button><button data-hp-btn="actividad">🔔<span>Actividad</span><i id="actDot" hidden></i></button><button data-hp-btn="cuenta">👤<span>Cuenta</span></button></nav>
 
 <section id="vInvite" class="card" hidden>
  <h2>Te invitaron a un grupo</h2>
@@ -117,12 +131,12 @@ main{padding-bottom:96px}
 </section>
 <section id="vGroup" hidden>
  <button class="fab" id="fab" hidden>+ Añadir gasto</button>
- <button class="sec" id="btnBack">← Mis grupos</button>
+ <div class="row topbar"><button class="sec" id="btnBack">← Grupos</button><button class="sec" id="btnGear" aria-label="Ajustes del grupo">⚙ Ajustes</button></div>
  <div class="card"><h2 id="gTitle"></h2><div id="gSum"></div><div id="gMeta" class="muted"></div><div id="gMembers" hidden></div>
   <div class="row actions"><button id="btnSettle" class="warm" hidden>Liquidar deudas</button>
-  <button id="btnInvite" class="sec">+ Personas</button></div>
+  <button id="btnSaldos" class="sec">Saldos</button><button id="btnInvite" class="sec">+ Personas</button></div>
   <input id="inviteLink" readonly hidden aria-label="Link de invitación"></div>
- <nav class="tabs" role="tablist"><button role="tab" data-tab="gastos">Gastos</button><button role="tab" data-tab="saldos">Saldos</button><button role="tab" data-tab="mas">Más</button></nav>
+
 
  <div data-pane="gastos">
   <div class="card" id="cEmpty" hidden><h2>Sumá a tu grupo</h2><p class="muted">Cuentas sirve para dividir gastos entre varias personas. Invitalas con un link.</p><button id="btnInvite2">+ Agregar personas</button></div>
@@ -143,12 +157,14 @@ main{padding-bottom:96px}
  </div>
 
  <div data-pane="saldos" hidden>
+  <button class="sec" data-goto="gastos">← Volver a gastos</button>
   <div class="card"><h2>Saldos</h2><p class="muted">Positivo: te deben. Negativo: debés.</p><div id="balances"></div>
   </div>
    <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
  </div>
 
  <div data-pane="mas" hidden>
+  <button class="sec" data-goto="gastos">← Volver a gastos</button>
   <div class="card"><h2>Miembros</h2><div id="mList"></div>
    <button class="sec" id="btnStatus"></button>
    <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div></div>
@@ -205,8 +221,12 @@ async function rpc(fn,args){
  return req('/rest/v1/rpc/'+fn,args||{},session.access_token);
 }
 function setTab(t){tab=t;const f=$('fab');if(f)f.hidden=!(t==='gastos'&&group&&group.status==='open'&&!$('vGroup').hidden);document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'))}
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
-function show(v){['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v)}
+document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{setTab(b.dataset.goto);window.scrollTo(0,0)});
+$('btnSaldos').onclick=()=>{setTab('saldos');window.scrollTo(0,0)};$('btnGear').onclick=()=>{setTab('mas');window.scrollTo(0,0)};
+let hp='grupos';
+function setHp(t){hp=t;document.querySelectorAll('[data-hp]').forEach(p=>p.hidden=p.dataset.hp!==t);document.querySelectorAll('#bnav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.hpBtn===t?'true':'false'))}
+document.querySelectorAll('#bnav button').forEach(b=>b.onclick=()=>{say('');setHp(b.dataset.hpBtn);window.scrollTo(0,0)});
+function show(v){$('bnav').hidden=v!=='vHome';if(v==='vHome')setHp(hp);['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v)}
 function busy(btn,fn){return async()=>{btn.disabled=true;say('Guardando…');try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
 
 async function home(){
@@ -226,7 +246,7 @@ async function loadProfile(){
 $('btnProfile').onclick=busy($('btnProfile'),async()=>{const n=$('pName').value.trim();if(!n)throw Error('Escribí tu nombre');await rpc('core_profile_set',{p_name:n});await loadProfile();say('Nombre guardado.')});
 async function loadPending(){
  const p=await rpc('cuentas_my_pending');
- $('cPending').hidden=!p.length;
+ $('noPending').hidden=p.length>0;$('actDot').hidden=!p.length;
  $('pending').innerHTML=p.map(x=>{const t=[];const n=(c,s,pl)=>{if(Number(c))t.push(c+' '+(Number(c)===1?s:pl))};n(x.payments,'pago por confirmar','pagos por confirmar');n(x.proposals,'propuesta por decidir','propuestas por decidir');n(x.pairs,'solicitud de cuenta compartida','solicitudes de cuenta compartida');
   return `<div class="item"><div><b>${esc(x.name)}</b><div class="muted">${t.join(' · ')}</div></div><button style="width:auto;margin:0" data-pg="${x.group_id}">Ver</button></div>`}).join('');
  $('pending').querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>openGroup(b.dataset.pg).catch(e=>say(e.message,true)));
@@ -568,7 +588,7 @@ async function start(){
  }
  if(!(await fresh())){show('vLogin');if(token)say('Ingresá para aceptar la invitación.');$('who').textContent='';return}
  myId=decodeSub(session.access_token);
- $('who').textContent=session.email||'';
+ $('who').textContent='';$('who2').textContent=session.email||'';
  if(token){
   try{
    const p=await rpc('cuentas_invite_preview',{p_token:token});
