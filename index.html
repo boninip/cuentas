@@ -724,6 +724,20 @@ $('btnPay').onclick=busy($('btnPay'),async()=>{
  $('pAmt').value='';await openGroup(gid);setTab('gastos');say('Pago registrado: queda pendiente hasta que lo confirme quien cobra.');
 });
 
+// Refresco automático: al volver a la app y cada 30 s, sin pisar lo que estás escribiendo.
+let lastRef=Date.now();
+function busyEditing(){const a=document.activeElement;return (!$('cExpense').hidden&&$('cExpense').open)||(a&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName))||!$('drawer').hidden||!$('pick').hidden||!$('vSettle').hidden}
+async function autoRefresh(force){
+ if(document.hidden||!session||(!force&&Date.now()-lastRef<25000)||busyEditing())return;
+ lastRef=Date.now();
+ try{
+  if(!$('vGroup').hidden&&gid){const t=tab;await openGroup(gid);setTab(t)}
+  else if(!$('vHome').hidden){const h=hp;await home();setHp(h)}
+ }catch(_){}
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoRefresh(true)});
+setInterval(()=>autoRefresh(false),30000);
+
 async function start(){
  const h=new URLSearchParams(location.hash.replace(/^#/,''));
  if(h.has('access_token')&&h.has('refresh_token')){
