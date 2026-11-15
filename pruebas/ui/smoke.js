@@ -181,6 +181,9 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  await t.page.click('#fab');
  ok((await t.page.locator('#eCats .chip').count())===2,'categorías: chips en el formulario');
+ await t.page.fill('#eDesc','Asado con amigos');ok((await t.page.getAttribute('#eCats [data-ck=comida]','aria-pressed'))==='true','categoría automática: sugiere por la descripción');
+ await t.page.click('#eCats [data-ck=comida]');ok((await t.page.getAttribute('#eCats [data-ck=comida]','aria-pressed'))==='false','categoría automática: se puede sacar a mano');
+ await t.page.fill('#eDesc','Cena');ok((await t.page.getAttribute('#eCats [data-ck=comida]','aria-pressed'))==='false','categoría automática: respeta la elección manual');
  await t.page.click('#eCats [data-ck=comida]');ok((await t.page.getAttribute('#eCats [data-ck=comida]','aria-pressed'))==='true','categorías: se elige una');
  await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','300');
  await t.page.evaluate(()=>{document.getElementById('eAdv').open=true});await t.page.selectOption('#eCur','USD');ok(await t.page.isVisible('#eFx'),'moneda: otra moneda pide cotización');

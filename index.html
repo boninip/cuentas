@@ -529,7 +529,7 @@ async function loadPending(){
   return `<div class="item"><div><b>${esc(x.name)}</b><div class="muted">${t.join(' · ')}</div></div><button style="width:auto;margin:0" data-pg="${x.group_id}">Ver</button></div>`}).join('');
  $('pending').querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>openGroup(b.dataset.pg).catch(e=>say(e.message,true)));
 }
-let cats=[],catsAll=[],catSel=null,catEdit=null;
+let cats=[],catsAll=[],catSel=null,catEdit=null,catAuto=true;
 const catBy=k=>catsAll.find(c=>c.key===k);
 const wOf=u=>{const m=group&&group.members.find(x=>x.user_id===u);const w=m&&m.weight!=null?Number(m.weight):1;return isFinite(w)?w:1};
 const wardsOf=u=>{const w=group.members.filter(m=>m.guardian===u);return w.length?' · incluye a '+w.map(m=>esc(nm(m.user_id))).join(', '):''};
@@ -542,10 +542,20 @@ function weightedShares(total,ids){
  b.slice().sort((x,y)=>y.r-x.r||(x.u<y.u?-1:1)).forEach(x=>{if(left>0){x.f++;left--}});
  const o={};b.forEach(x=>{o[x.u]=x.f});return o;
 }
+function suggestCat(desc){
+ const d=anNorm(desc).trim();if(d.length<3||!cats.length)return null;
+ const h=mvAll.filter(m=>m.kind==='expense'&&!m.voided&&m.category&&anNorm(m.description).trim()===d&&cats.some(c=>c.key===m.category));
+ if(h.length){const n={};h.forEach(m=>n[m.category]=(n[m.category]||0)+1);return Object.keys(n).sort((a,b)=>n[b]-n[a])[0]}
+ const i=catOf(desc);if(i<0)return null;const c=cats.find(x=>anNorm(x.name)===anNorm(CATS[i][0]));return c?c.key:null;
+}
+function autoCat(){
+ if(!catAuto||editId)return;const k=suggestCat($('eDesc').value);
+ if(k!==catSel){catSel=k;renderCats()}
+}
 function renderCats(){
  $('eCatsLbl').hidden=$('eCats').hidden=!cats.length;
  $('eCats').innerHTML=cats.map(c=>`<button type="button" class="chip${catSel===c.key?' on':''}" data-ck="${esc(c.key)}" aria-pressed="${catSel===c.key}" style="--ck:${KCOL(c.color)}"><span class="ci">${ic(c.icon,16)}</span>${esc(c.name)}</button>`).join('');
- $('eCats').querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>{catSel=catSel===b.dataset.ck?null:b.dataset.ck;renderCats()});
+ $('eCats').querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>{catSel=catSel===b.dataset.ck?null:b.dataset.ck;catAuto=false;renderCats()});
 }
 const CUR_LIST=['USD','EUR','BRL','ARS','CLP','UYU','MXN','GBP'];
 function fillCur(sel){
@@ -692,7 +702,7 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
   const m=mv.find(x=>x.id===b.dataset.edit);if(!m)return;
   editId=m.id;editDate=m.occurred_on||null;
-  $('cExpense').open=true;$('fab').hidden=true;$('eAdv').open=true;$('eDesc').value=m.description||'';$('eAmt').value=(Number(m.amount_minor)/100).toFixed(2).replace('.',',');$('ePayer').value=m.from_user;fillCur(m.currency);$('eFx').value=m.fx_rate?String(Number(m.fx_rate)).replace('.',','):'';catSel=m.category&&cats.some(c=>c.key===m.category)?m.category:null;renderCats();syncFx();
+  $('cExpense').open=true;$('fab').hidden=true;$('eAdv').open=true;$('eDesc').value=m.description||'';$('eAmt').value=(Number(m.amount_minor)/100).toFixed(2).replace('.',',');$('ePayer').value=m.from_user;fillCur(m.currency);$('eFx').value=m.fx_rate?String(Number(m.fx_rate)).replace('.',','):'';catSel=m.category&&cats.some(c=>c.key===m.category)?m.category:null;catAuto=false;renderCats();syncFx();
   const sh=m.shares||{};const ids=Object.keys(sh);const vals=ids.map(k=>Number(sh[k]));
   const wsh=weightsDiffer(ids)?weightedShares(Number(m.amount_minor),ids):null;
   const equal=(vals.length>0&&Math.max(...vals)-Math.min(...vals)<=1)||!!(wsh&&ids.every(k=>Math.abs((wsh[k]||0)-Number(sh[k]))<=1));
@@ -706,7 +716,7 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-prev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_create',{p_kind:'reverse_payment',p_target:b.dataset.prev,p_reason:null});await openGroup(gid);say('Propuesta creada: necesita la aprobación de todos los afectados.')}));
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
-function resetEdit(){editId=null;editDate=null;catSel=null;try{renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true}
+function resetEdit(){editId=null;editDate=null;catSel=null;catAuto=true;try{renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true}
 function updAdv(){
  const p=$('ePayer');const pn=p.selectedOptions[0]?p.selectedOptions[0].textContent:'';
  const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')];const n=cs.filter(c=>c.checked).length;
@@ -1167,7 +1177,7 @@ $('btnStatus').onclick=busy($('btnStatus'),async()=>{
 });
 $('eMode').onchange=syncMode;
 $('fab').onclick=()=>{if(!$('vHome').hidden){$('btnHomeAdd').onclick();return}$('fab').hidden=true;resetEdit();$('cExpense').open=true;$('eAdv').open=false;$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});$('eDesc').focus()};
-$('eCur').addEventListener('change',()=>{$('eFx').value='';syncFx()});$('eFx').addEventListener('input',fxNote);$('eAmt').addEventListener('input',fxNote);$('ePayer').addEventListener('change',updAdv);$('eParts').addEventListener('change',updAdv);
+$('eDesc').addEventListener('input',autoCat);$('eCur').addEventListener('change',()=>{$('eFx').value='';syncFx()});$('eFx').addEventListener('input',fxNote);$('eAmt').addEventListener('input',fxNote);$('ePayer').addEventListener('change',updAdv);$('eParts').addEventListener('change',updAdv);
 $('btnExpClose').onclick=()=>{$('fab').hidden=false;resetEdit();$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;say('')};
 $('btnEditCancel').onclick=()=>{$('fab').hidden=false;resetEdit();$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;say('Edición cancelada.')};
 $('eAmt').oninput=updSum;$('eParts').addEventListener('input',updSum);$('eParts').addEventListener('change',updSum);
