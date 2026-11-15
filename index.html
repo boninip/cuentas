@@ -532,6 +532,7 @@ async function loadPending(){
 let cats=[],catsAll=[],catSel=null,catEdit=null;
 const catBy=k=>catsAll.find(c=>c.key===k);
 const wOf=u=>{const m=group&&group.members.find(x=>x.user_id===u);const w=m&&m.weight!=null?Number(m.weight):1;return isFinite(w)?w:1};
+const wardsOf=u=>{const w=group.members.filter(m=>m.guardian===u);return w.length?' · incluye a '+w.map(m=>esc(nm(m.user_id))).join(', '):''};
 const fmtW=w=>w===0.5?'½':w===0.25?'¼':w===0.75?'¾':String(w).replace('.',',');
 const weightsDiffer=ids=>new Set(ids.map(u=>Math.round(wOf(u)*100))).size>1;
 function weightedShares(total,ids){
@@ -647,7 +648,7 @@ async function openGroup(id){
   $('gStats').classList.toggle('minus',net<0);$('gStats').classList.toggle('zero',net===0);
   $('gSub').textContent=(pos>0&&neg>0)?'A favor '+moneyS(pos,cur)+' · Debés '+moneyS(neg,cur):(net===0?(()=>{const ne=mvAll.filter(m=>m.kind==='expense'&&!m.voided).length;return 'No tenés saldos pendientes'+(ne?' · '+ne+(ne===1?' gasto cargado':' gastos cargados'):'')})():'')}
  $('inviteLink').hidden=true;$('cGuest').hidden=true;
- $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(b.user_id).charAt(0).toUpperCase())}</span><span><b>${esc(name(b.user_id))}</b><div class="muted">${Number(b.balance_minor)===0?'al día':(Number(b.balance_minor)>0?'le deben':'debe')}</div></span></span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(Math.abs(Number(b.balance_minor)),b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
+ $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(b.user_id).charAt(0).toUpperCase())}</span><span><b>${esc(name(b.user_id))}</b><div class="muted">${Number(b.balance_minor)===0?'al día':(Number(b.balance_minor)>0?'le deben':'debe')}${wardsOf(b.user_id)}</div></span></span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(Math.abs(Number(b.balance_minor)),b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
  sug=settleSuggestions(bal);
  $('btnSettle').hidden=g.status!=='open'||active.length<2;$('btnSaldos').hidden=active.length<2;
 
