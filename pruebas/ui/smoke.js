@@ -71,7 +71,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  // invitados por nombre
  t=await mk(b,{guest:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
  await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);
- await t.page.click('#btnGuest');await t.page.fill('#guName','Lucía');await t.page.click('#btnGuestAdd');await t.page.waitForTimeout(300);
+ await t.page.click('#btnInvite');await t.page.waitForSelector('#pick:not([hidden])');await t.page.click('#pkL [data-k="1"]');await t.page.fill('#guName','Lucía');await t.page.click('#btnGuestAdd');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_guest_add')&&c.includes('Lucía')),'invitado: se agrega por nombre');
  await t.page.click('#btnGear');await t.page.waitForTimeout(150);
  ok(/pendiente/.test(await t.page.textContent('#mList')),'invitado: aparece como pendiente');
