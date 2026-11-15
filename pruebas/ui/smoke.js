@@ -244,6 +244,14 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('[data-rs$="|paused"]');await t.page.waitForTimeout(250);
  ok(t.calls.some(c=>c.startsWith('cuentas_recurring_set_status')&&c.includes('paused')),'repetidos: se puede pausar');
  ok(t.errs.length===0,'repetidos: sin errores de JS');
+ // botón Nuevo grupo arriba
+ t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ ok(await t.page.isVisible('#btnNewTop'),'nuevo grupo: botón arriba, junto a «Mis grupos»');
+ ok(!(await t.page.isVisible('#optNew')),'nuevo grupo: con grupos no se repite la fila de abajo');
+ await t.page.click('#btnNewTop');await t.page.waitForTimeout(300);
+ ok(await t.page.evaluate(()=>document.getElementById('cNew').open),'nuevo grupo: el botón abre el formulario');
+ await t.page.screenshot({path:'/tmp/home_nuevo.png'});
+ ok(t.errs.length===0,'nuevo grupo: sin errores de JS');
  // avisos esenciales
  t=await mk(b,{notices:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
  await t.page.click('#optAct');await t.page.waitForTimeout(300);
