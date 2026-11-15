@@ -5,7 +5,7 @@ const URL='file://'+path.resolve(__dirname,'../../index.html');
 const ME='11111111-1111-1111-1111-111111111111',BR='22222222-2222-2222-2222-222222222222',G='33333333-3333-3333-3333-333333333333',TOK='a'.repeat(64);
 let fails=0;const ok=(c,m)=>{if(!c){fails++;console.log('FALLA:',m)}else console.log('ok   ',m)};
 const LU='44444444-4444-4444-4444-444444444444';
-async function mk(b,{preview,profile=true,owe=true,guest=false}={}){
+async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false}={}){
  const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();
  const jwt='x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y';
  await page.addInitScript(([j])=>{localStorage.setItem('cuentas_auth_v1',JSON.stringify({access_token:j,refresh_token:'r',expires_at:Date.now()+3600000,email:'b@test.com'}))},[jwt]);
@@ -26,7 +26,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false}={}){
    case 'cuentas_group_payouts':return J([{user_id:BR,alias:'bruno.cuentas',cbu:null,holder_name:'Bruno',bank:'MP'}]);
    case 'cuentas_payment_add':debt=false;return J('p1');
    case 'cuentas_expense_add':return J('e1');
-   case 'cuentas_movements_list':return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}]);
+   case 'cuentas_movements_list':if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}]);
    case 'cuentas_proposals_list':case 'cuentas_delegations_list':case 'core_links_list':case 'cuentas_pairs_list':case 'core_organizable_trips':return J([]);
    default:return J(null);}});
  const errs=[];page.on('pageerror',e=>errs.push(e.message));
@@ -71,7 +71,9 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  // invitados por nombre
  t=await mk(b,{guest:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
  await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);
- await t.page.click('#btnInvite');await t.page.waitForSelector('#pick:not([hidden])');await t.page.click('#pkL [data-k="1"]');await t.page.fill('#guName','Lucía');await t.page.click('#btnGuestAdd');await t.page.waitForTimeout(300);
+ await t.page.click('#btnInvite');await t.page.waitForSelector('#pick:not([hidden])');await t.page.click('#pkL [data-k="1"]');await t.page.fill('#guName','Lucía');await t.page.click('#btnGuestAdd');await t.page.waitForTimeout(400);
+ ok(await t.page.isVisible('#pick:not([hidden])'),'invitado: pregunta si incluirlo en gastos anteriores');
+ await t.page.click('#pkL [data-k="1"]');await t.page.waitForTimeout(200);
  ok(t.calls.some(c=>c.startsWith('cuentas_guest_add')&&c.includes('Lucía')),'invitado: se agrega por nombre');
  await t.page.click('#btnGear');await t.page.waitForTimeout(150);
  ok(/pendiente/.test(await t.page.textContent('#mList')),'invitado: aparece como pendiente');
@@ -80,6 +82,15 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.evaluate(()=>document.querySelector('[data-goto]').click());await t.page.waitForTimeout(150);
  await t.page.click('#btnSettle');await t.page.waitForTimeout(250);
  ok((await t.page.$$('#sList [data-pay]')).length===1&&/todavía no aceptó/.test(await t.page.textContent('#sList')),'saldar: no ofrece pagarle al invitado pendiente');
+
+ // incluir al nuevo en gastos anteriores (automático)
+ t=await mk(b,{guest:true,eqExp:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);
+ await t.page.click('#btnInvite');await t.page.waitForSelector('#pick:not([hidden])');await t.page.click('#pkL [data-k="1"]');
+ await t.page.fill('#guName','Lucía');await t.page.click('#btnGuestAdd');await t.page.waitForTimeout(400);
+ ok(/Sí, automático/.test(await t.page.textContent('#pkL')),'incluir: ofrece automático para gastos a partes iguales');
+ await t.page.click('#pkL [data-k="0"]');await t.page.waitForTimeout(500);
+ ok(t.calls.some(c=>c.startsWith('cuentas_expense_edit')&&c.includes(LU)&&c.includes('"p_shares":null')),'incluir: edita el gasto sumando al nuevo, a partes iguales');
  // apariencia
  t=await mk(b);await t.page.goto(URL);await t.page.waitForTimeout(500);
  await t.page.evaluate(()=>document.querySelector('[data-d="cuenta"]').click?.());

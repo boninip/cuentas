@@ -230,7 +230,7 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
    <button class="sec" id="btnExpClose">Cancelar</button>
   </details>
   <div class="card" id="cProps" hidden><h2>Propuestas pendientes</h2><p class="muted">Leer no es consentir: tu decisión queda ligada a esta versión exacta de la propuesta.</p><div id="props"></div></div>
-  <div class="card"><h2>Movimientos</h2><div id="moves"></div></div>
+  <div class="card"><h2>Movimientos</h2><div id="moves"></div><button class="lnk" id="btnVoided" hidden></button></div>
  </div>
 
  <div data-pane="saldos" hidden>
@@ -275,6 +275,7 @@ let session=null,group=null,gid=null,myId=null,tab='gastos',editId=null,editDate
 try{const r=JSON.parse(localStorage.getItem(STORE)||'null');if(r&&r.access_token&&r.refresh_token)session=r}catch(_){}
 const say=(t,bad)=>{const m=$('msg');m.textContent=t||'';m.className=bad?'bad':'muted'};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtD=d=>d?String(d).slice(8,10)+'/'+String(d).slice(5,7):'';
 const money=(m,c)=>{try{return new Intl.NumberFormat('es-AR',{style:'currency',currency:c}).format(Number(m)/100)}catch(_){return (Number(m)/100).toFixed(2)+' '+c}};
 const toMinor=s=>{const n=Number(String(s).trim().replace(/\./g,'').replace(',','.'));if(!isFinite(n)||n<=0)return null;return Math.round(n*100)};
 const newKey=()=>crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2);
@@ -407,6 +408,7 @@ async function openGroup(id){
  const [g,bal,mv,pay,props,dels,links,pairs]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id})]);
  group=g;show('vGroup');say('');setTab(tab);
  const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
+ mvAll=mv;
  const active=g.members.filter(m=>m.status==='active');guestIds=new Set(g.members.filter(m=>m.guest&&m.status==='active').map(m=>m.user_id));
  const me=g.members.find(m=>m.user_id===myId);
  const cur=g.reference_currency;
@@ -416,7 +418,8 @@ async function openGroup(id){
  $('gMembers').textContent='Miembros: '+active.map(m=>name(m.user_id)+(m.role!=='member'?' ('+roleEs[m.role]+')':'')).join(', ');
  $('btnStatus').hidden=!(me&&me.role==='admin');
  const isAdmin=!!(me&&me.role==='admin');
- $('mList').innerHTML=active.map(m=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><span>${esc(name(m.user_id))} <span class="tag">${m.guest?'pendiente':roleEs[m.role]}</span></span></span>${m.guest?`<button class="sec" style="width:auto;margin:0" data-gl="${m.user_id}">Link</button>`:''}${isAdmin&&m.user_id!==myId?`<button class="sec" style="width:auto;margin:0" data-rm="${m.user_id}">Quitar</button>`:''}</div>`).join('');
+ $('mList').innerHTML=active.map(m=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><span>${esc(name(m.user_id))} <span class="tag">${m.guest?'pendiente':roleEs[m.role]}</span></span></span>${m.guest?`<button class="sec" style="width:auto;margin:0" data-gl="${m.user_id}">Link</button>`:''}${pastFor(m.user_id).length?`<button class="sec" style="width:auto;margin:0" data-past="${m.user_id}">Gastos previos</button>`:''}${isAdmin&&m.user_id!==myId?`<button class="sec" style="width:auto;margin:0" data-rm="${m.user_id}">Quitar</button>`:''}</div>`).join('');
+ $('mList').querySelectorAll('[data-past]').forEach(b=>b.onclick=()=>includeInPast(b.dataset.past));
  $('mList').querySelectorAll('[data-gl]').forEach(b=>b.onclick=busy(b,()=>guestLink(b.dataset.gl)));
  $('mList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: quitar';say(guestIds.has(b.dataset.rm)?'Si todavía no tiene gastos, se quita del grupo. Tocá de nuevo para confirmar.':'Quitar a alguien no borra sus deudas ni el historial. Tocá de nuevo para confirmar.');return}if(guestIds.has(b.dataset.rm))await rpc('cuentas_guest_remove',{p_group:gid,p_guest:b.dataset.rm});else await rpc('cuentas_member_remove',{p_group:gid,p_user:b.dataset.rm});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')}));
  $('btnArchive').hidden=!(isAdmin&&g.status==='closed');
@@ -485,7 +488,10 @@ async function openGroup(id){
  $('ePayer').innerHTML=opts;$('ePayer').value=myId;
  $('eParts').innerHTML=active.map(m=>`<label class="chk"><input type="checkbox" value="${m.user_id}" checked><span class="nm">${esc(name(m.user_id))}</span><input class="amt" inputmode="decimal" placeholder="0,00" data-u="${m.user_id}"></label>`).join('');
  $('eMode').value='eq';syncMode();resetEdit();
- const rows=mv.filter(m=>m.kind==='expense'||m.kind==='payment'||m.kind==='compensation').slice().reverse();
+ const allRows=mv.filter(m=>m.kind==='expense'||m.kind==='payment'||m.kind==='compensation').slice().reverse();
+ const nVoid=allRows.filter(m=>m.voided).length;
+ const rows=allRows.filter(m=>showVoided||!m.voided);
+ {const vb=$('btnVoided');vb.hidden=!nVoid;vb.textContent=showVoided?'Ocultar anulados':'Ver anulados ('+nVoid+')'}
  let lastYm=null;
  $('moves').innerHTML=rows.length?rows.map(m=>{
   const isE=m.kind==='expense';
@@ -687,6 +693,31 @@ const inviteByLink=busy($('btnInvite'),async()=>{
  if(navigator.share){try{await navigator.share({title:'Sumate al grupo '+group.name+' en Cuentas',url:f.value});return}catch(e){if(e&&e.name==='AbortError')return}}
  try{await navigator.clipboard.writeText(f.value);say('Link copiado: pegalo en WhatsApp. Vale 7 días.')}catch(_){say('Copiá el link del campo.')}
 });
+$('btnVoided').onclick=()=>{showVoided=!showVoided;openGroup(gid).catch(e=>say(e.message,true))};
+const isEqual=sh=>{const v=Object.values(sh||{}).map(Number);return v.length>0&&Math.max(...v)-Math.min(...v)<=1};
+function pastFor(uid){return mvAll.filter(m=>m.kind==='expense'&&!m.voided&&m.shares&&!(uid in m.shares)&&Object.keys(m.shares).length>0&&!(uid===m.from_user))}
+async function includeInPast(uid){
+ const cand=pastFor(uid),eq=cand.filter(m=>isEqual(m.shares)),who=nm(uid);
+ if(!cand.length){say(who+' ya figura en todos los gastos.');return}
+ const opts=[];
+ if(eq.length)opts.push({name:'Sí, automático',sub:'Repartir de nuevo '+eq.length+(eq.length===1?' gasto':' gastos')+' entre todos, a partes iguales'+(cand.length>eq.length?' ('+(cand.length-eq.length)+' con importes distintos quedan para revisar a mano)':''),icon:'✨',k:'auto'});
+ opts.push({name:'Uno a uno',sub:'Elijo en qué gastos entra '+who,icon:'☑️',k:'manual'},{name:'No, solo de ahora en más',sub:'Los gastos anteriores quedan como están',icon:'⏭',k:'no'});
+ pickGroup('¿Incluir a '+who+' en los gastos anteriores?',opts,async o=>{
+  if(o.k==='no'){say('Listo: '+who+' entra solo en los gastos nuevos. Si cambiás de idea, está en Ajustes → Miembros → Gastos previos.');return}
+  if(o.k==='manual'){
+   pickGroup('¿En cuál gasto entra '+who+'?',cand.map(m=>({name:m.description||'Gasto',sub:fmtD(m.occurred_on)+' · '+money(Number(m.amount_minor),m.currency),icon:'🧾',id:m.id})),x=>{
+    setTab('gastos');
+    const b=document.querySelector('[data-edit="'+x.id+'"]');if(b){b.click();const cb=$('eParts').querySelector('input[type=checkbox][value="'+uid+'"]');if(cb){cb.checked=true;if($('eMode').value==='eq'){updSum();updAdv()}}say('Marcá a '+who+' y guardá. Repetí con los demás gastos desde Ajustes → Miembros → Gastos previos.')}
+   });return}
+  say('Actualizando '+eq.length+'…');let n=0;
+  try{
+   for(const m of eq.slice().sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)))){
+    await rpc('cuentas_expense_edit',{p_expense:m.id,p_currency:m.currency,p_amount_minor:Number(m.amount_minor),p_payer:m.from_user,p_participants:[...Object.keys(m.shares),uid],p_shares:null,p_description:m.description||null,p_occurred_on:m.occurred_on,p_key:newKey()});n++;
+   }
+   await openGroup(gid);say(who+' quedó incluido en '+n+(n===1?' gasto':' gastos')+'. Los originales quedan como «anulados» (podés verlos abajo).');
+  }catch(e){await openGroup(gid).catch(()=>{});say((n?'Incluí a '+who+' en '+n+' de '+eq.length+'. ':'')+(/confirmad|propuesta/i.test(e.message)?'No se puede seguir: hay pagos confirmados en el grupo.':e.message),true)}
+ });
+}
 const openAdd=()=>pickGroup('¿Cómo sumás a alguien?',[
  {name:'Compartir link del grupo',sub:'Quien lo abra se une con su cuenta',icon:'🔗',k:'link'},
  {name:'Agregar por nombre',sub:'Queda en el grupo desde ya; su link se lo mandás cuando quieras',icon:'＋',k:'name'}],o=>{o.k==='link'?inviteByLink():openGuest()});
@@ -706,8 +737,9 @@ $('btnGuestCancel').onclick=()=>{$('cGuest').hidden=true};
 $('guName').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('btnGuestAdd').click()}};
 $('btnGuestAdd').onclick=busy($('btnGuestAdd'),async()=>{
  const n=$('guName').value.trim();if(!n){say('Poné un nombre.',true);return}
- await rpc('cuentas_guest_add',{p_group:gid,p_name:n});$('cGuest').hidden=true;await openGroup(gid);
- say(n+' ya está en el grupo. Podés sumarlo a los gastos; después mandale su link desde Ajustes → Miembros.');
+ const newId=await rpc('cuentas_guest_add',{p_group:gid,p_name:n});$('cGuest').hidden=true;await openGroup(gid);
+ say(n+' ya está en el grupo. Después mandale su link desde Ajustes → Miembros.');
+ if(pastFor(newId).length)includeInPast(newId);
 });
 $('btnStatus').onclick=busy($('btnStatus'),async()=>{
  await rpc('cuentas_group_set_status',{p_group:gid,p_status:group.status==='open'?'closed':'open'});await openGroup(gid);
@@ -731,7 +763,7 @@ $('btnExpense').onclick=busy($('btnExpense'),async()=>{
  if(wasEdit){try{await rpc('cuentas_expense_edit',{p_expense:editId,...args})}catch(e){if(/confirmad|propuesta|anul/i.test(e.message))throw Error('Este gasto ya tiene pagos confirmados y no se puede editar directo. Anulalo con una propuesta (aprobada por los afectados) y cargá el corregido.');throw e}}else await rpc('cuentas_expense_add',{p_group:gid,...args});
  $('eDesc').value='';$('eAmt').value='';await openGroup(gid);say(wasEdit?'Gasto editado: el anterior quedó anulado.':'Gasto guardado.');
 });
-let sug=[],payBy={},guestIds=new Set();
+let sug=[],payBy={},guestIds=new Set(),mvAll=[],showVoided=false;
 const nm=u=>{const m=group.members.find(x=>x.user_id===u);return (m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
 function openSettle(){
  const pend=sug.filter(x=>x.from===myId&&guestIds.has(x.to));
