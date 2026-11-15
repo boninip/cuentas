@@ -36,6 +36,15 @@ details.card[open]>summary{margin-bottom:10px}
 #cExpense>summary{background:var(--accent);color:var(--accent-fg);text-align:center;padding:14px;border-radius:12px;font-size:1.05rem}
 #cExpense{padding:10px}#cExpense[open]>summary{margin-bottom:12px}
 #gSum{font-size:1.15rem;font-weight:700;margin:6px 0}
+.actions{flex-wrap:nowrap;gap:8px}.actions>*{min-width:0;margin:6px 0 0}
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:auto;margin:0;padding:14px 20px;border-radius:99px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:8;font-size:1.05rem}
+main{padding-bottom:96px}
+#cExpense:not([open]){display:none}#cExpense>summary{display:none}
+.mv{border-top:1px solid var(--line)}.mv:first-child{border-top:0}
+.mv>summary{display:flex;justify-content:space-between;gap:8px;padding:10px 0;font-weight:400}
+.mv .mvbody{padding:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mv .mvbody>*{margin:0}
+.mv .mvbody button{width:auto;padding:8px 14px}
+.mon{font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 0 2px;font-weight:600}
 </style>
 </head>
 <body>
@@ -107,10 +116,11 @@ details.card[open]>summary{margin-bottom:10px}
  </div>
 </section>
 <section id="vGroup" hidden>
+ <button class="fab" id="fab" hidden>+ Añadir gasto</button>
  <button class="sec" id="btnBack">← Mis grupos</button>
  <div class="card"><h2 id="gTitle"></h2><div id="gSum"></div><div id="gMeta" class="muted"></div><div id="gMembers" hidden></div>
-  <button id="btnSettle" class="warm" hidden>Liquidar deudas</button>
-  <button id="btnInvite">+ Agregar personas</button>
+  <div class="row actions"><button id="btnSettle" class="warm" hidden>Liquidar deudas</button>
+  <button id="btnInvite" class="sec">+ Personas</button></div>
   <input id="inviteLink" readonly hidden aria-label="Link de invitación"></div>
  <nav class="tabs" role="tablist"><button role="tab" data-tab="gastos">Gastos</button><button role="tab" data-tab="saldos">Saldos</button><button role="tab" data-tab="mas">Más</button></nav>
 
@@ -126,6 +136,7 @@ details.card[open]>summary{margin-bottom:10px}
    <p id="eSum" class="muted" hidden></p>
    <button id="btnExpense">Guardar gasto</button>
    <button class="sec" id="btnEditCancel" hidden>Cancelar edición</button>
+   <button class="sec" id="btnExpClose">Cancelar</button>
   </details>
   <div class="card" id="cProps" hidden><h2>Propuestas pendientes</h2><p class="muted">Leer no es consentir: tu decisión queda ligada a esta versión exacta de la propuesta.</p><div id="props"></div></div>
   <div class="card"><h2>Movimientos</h2><div id="moves"></div></div>
@@ -193,7 +204,7 @@ async function rpc(fn,args){
  if(!(await fresh()))throw Error('Iniciá sesión para continuar');
  return req('/rest/v1/rpc/'+fn,args||{},session.access_token);
 }
-function setTab(t){tab=t;document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'))}
+function setTab(t){tab=t;const f=$('fab');if(f)f.hidden=!(t==='gastos'&&group&&group.status==='open'&&!$('vGroup').hidden);document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'))}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 function show(v){['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v)}
 function busy(btn,fn){return async()=>{btn.disabled=true;say('Guardando…');try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
@@ -302,6 +313,7 @@ async function openGroup(id){
  $('eParts').innerHTML=active.map(m=>`<label class="chk"><input type="checkbox" value="${m.user_id}" checked><span class="nm">${esc(name(m.user_id))}</span><input class="amt" inputmode="decimal" placeholder="0,00" data-u="${m.user_id}"></label>`).join('');
  $('eMode').value='eq';syncMode();resetEdit();
  const rows=mv.filter(m=>m.kind==='expense'||m.kind==='payment'||m.kind==='compensation').slice().reverse();
+ let lastYm=null;
  $('moves').innerHTML=rows.length?rows.map(m=>{
   const isE=m.kind==='expense';
   const isC=m.kind==='compensation';
@@ -316,15 +328,18 @@ async function openGroup(id){
    if(!isE&&!isC&&!m.confirmed&&m.to_user===myId)act=`<button style="width:auto;margin:0" data-conf="${m.id}">Confirmar</button>`;
   }
   const dt=m.occurred_on?esc(String(m.occurred_on).slice(5).split('-').reverse().join('/')):'';
+  const ym=String(m.occurred_on||'').slice(0,7);let hd='';
+  if(ym!==lastYm){lastYm=ym;const [yy,mm]=ym.split('-');const MN=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];hd=ym?`<div class="mon">${MN[Number(mm)-1]||''} ${esc(yy)}</div>`:''}
   if(!isE&&!isC){
    const who2=`${esc(name(m.from_user))} pagó a ${esc(name(m.to_user))}`;
-   return `<div class="item mv-pay"><div><span class="muted">${dt}</span> 💵 ${who2} <b>${money(m.amount_minor,m.currency)}</b> ${st}</div><div>${act}</div></div>`;
+   return hd+`<details class="mv"><summary><span><span class="muted">${dt}</span> 💵 ${who2}<div>${st}</div></span><b>${money(m.amount_minor,m.currency)}</b></summary>${act?`<div class="mvbody">${act}</div>`:''}</details>`;
   }
   let mineTxt='';
   if(isE&&!m.voided&&m.shares){const sh=Number(m.shares[myId]||0);
    if(m.from_user===myId){const d=Number(m.amount_minor)-sh;if(d>0)mineTxt=`<div class="good">pediste ${money(d,m.currency)}</div>`}
    else if(sh>0)mineTxt=`<div class="bad">debés ${money(sh,m.currency)}</div>`}
-  return `<div class="item"><div><b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b> ${st}<div class="muted">${dt} · ${who}${isE?' '+money(m.amount_minor,m.currency):''}</div>${isE&&m.shares&&Object.keys(m.shares).length?`<details class="muted"><summary>Ver reparto</summary>${Object.entries(m.shares).map(([u,v])=>esc(name(u))+' '+money(v,m.currency)).join(', ')}</details>`:''}</div><div style="text-align:right">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}<div>${act}</div></div></div>`}).join(''):'<p class="muted">Sin movimientos.</p>';
+  const rep=isE&&m.shares&&Object.keys(m.shares).length?`<div class="muted" style="flex-basis:100%">Reparto: ${Object.entries(m.shares).map(([u,v])=>esc(name(u))+' '+money(v,m.currency)).join(', ')}</div>`:'';
+  return hd+`<details class="mv"><summary><span><span class="muted">${dt}</span> <b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b> ${st}<div class="muted">${who}${isE?' '+money(m.amount_minor,m.currency):''}</div></span><span style="text-align:right">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}</span></summary><div class="mvbody">${rep}${act}</div></details>`}).join(''):'<p class="muted">Sin movimientos.</p>';
  $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{try{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}catch(e){if(!/propuesta/i.test(e.message))throw e;await rpc('cuentas_proposal_create',{p_kind:'void_expense',p_target:b.dataset.void,p_reason:null});await openGroup(gid);say('Este gasto ya tiene pagos confirmados: creé una propuesta de anulación que necesita la aprobación de los afectados.')}}));
  $('moves').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
   const m=mv.find(x=>x.id===b.dataset.edit);if(!m)return;
@@ -497,6 +512,8 @@ $('btnStatus').onclick=busy($('btnStatus'),async()=>{
  await rpc('cuentas_group_set_status',{p_group:gid,p_status:group.status==='open'?'closed':'open'});await openGroup(gid);
 });
 $('eMode').onchange=syncMode;
+$('fab').onclick=()=>{resetEdit();$('cExpense').open=true;$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});$('eDesc').focus()};
+$('btnExpClose').onclick=()=>{resetEdit();$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;say('')};
 $('btnEditCancel').onclick=()=>{resetEdit();$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;say('Edición cancelada.')};
 $('eAmt').oninput=updSum;$('eParts').addEventListener('input',updSum);$('eParts').addEventListener('change',updSum);
 $('btnExpense').onclick=busy($('btnExpense'),async()=>{
