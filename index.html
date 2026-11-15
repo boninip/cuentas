@@ -916,12 +916,12 @@ function famMenu(uid){
 }
 document.querySelectorAll('[data-ic]').forEach(e=>{e.innerHTML=ic(e.dataset.ic,22)});
 /* ===== Actividad del grupo ===== */
-const ACT_TXT={expense_added:'cargó un gasto',expense_edited:'editó un gasto',expense_voided:'anuló un gasto',group_created:'creó el grupo',invite_created:'generó un link de invitación',guest_added:'sumó a alguien por nombre'};
+const ACT_TXT={expense_added:'cargó un gasto',expense_edited:'editó un gasto',expense_voided:'anuló un gasto',group_created:'creó el grupo',group_archived:'archivó el grupo',invite_created:'generó un link de invitación',guest_added:'sumó a alguien por nombre',guest_claimed:'se unió con su cuenta',guest_invite_created:'generó un link para un invitado',guest_removed:'sacó a un invitado',member_joined:'se unió al grupo',member_left:'salió del grupo',member_removed:'quitó a un miembro',member_weight_set:'cambió cuánto cuenta',member_guardian_set:'cambió quién paga por',category_saved:'guardó una categoría',category_archived:'ocultó o mostró una categoría',payment_added:'registró un pago',payment_confirmed:'confirmó un pago',payment_cancelled:'canceló un pago',delegation_granted:'delegó permisos',delegation_revoked:'revocó una delegación',link_created:'vinculó un viaje o evento',link_removed:'desvinculó un viaje o evento',pair_requested:'pidió una cuenta compartida',pair_activated:'activó una cuenta compartida',pair_rejected:'rechazó una cuenta compartida',proposal_created:'creó una propuesta',proposal_applied:'una propuesta se aplicó',proposal_cancelled:'canceló una propuesta',proposal_stale:'una propuesta quedó desactualizada'};
 function renderActivity(a){
  const L=Array.isArray(a)?a:[];
  $('actList').innerHTML=L.length?'<div class="toplist">'+L.slice(0,30).map(x=>{
   const d=x.created_at?new Date(x.created_at):null,dt=d?String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'';
-  const who=x.actor===myId?'Vos':nm(x.actor),t=ACT_TXT[x.action]||'hizo un cambio';
+  const who=x.actor===myId?'Vos':nm(x.actor);let t=ACT_TXT[x.action]||'hizo un cambio';const tg=x.target?(x.target===myId?'vos':nm(x.target)):'';if(x.action==='member_weight_set'&&tg)t+=' '+tg+(x.weight!=null?' ('+fmtW(Number(x.weight))+')':'');else if(x.action==='member_guardian_set'&&tg)t+=' '+tg;
   const extra=x.description?' · '+esc(x.description):x.name?' · '+esc(x.name):'';
   return `<div class="trow"><span><b>${esc(who)} ${esc(t)}</b><small>${dt}${extra}</small></span>${x.amount_minor?`<b>${money(x.amount_minor,x.currency||group.reference_currency)}</b>`:''}</div>`}).join('')+'</div>':'<p class="muted">Todavía no hay actividad.</p>';
 }

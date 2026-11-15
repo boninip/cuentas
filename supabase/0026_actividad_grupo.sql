@@ -8,7 +8,7 @@ begin
   raise exception 'No sos miembro de este grupo'; end if;
  return coalesce((select jsonb_agg(x order by (x->>'created_at') desc) from (
   select jsonb_build_object('id',a.id,'action',a.action,'actor',cuentas.eff(a.group_id,a.actor_id),'created_at',a.created_at,
-   'amount_minor',a.detail->'amount_minor','currency',a.detail->'currency','name',a.detail->'name',
+   'amount_minor',a.detail->'amount_minor','currency',a.detail->'currency','name',a.detail->'name','weight',a.detail->'weight','target',case when a.detail->>'user' ~ '^[0-9a-f-]{36}$' then cuentas.eff(a.group_id,(a.detail->>'user')::uuid) end,
    'description',(select mv.description from cuentas.movements mv where mv.id=nullif(coalesce(a.detail->>'movement',a.detail->>'new',a.detail->>'expense'),'')::uuid)) x
   from cuentas.audit_log a where a.group_id=p_group order by a.created_at desc, a.id desc limit least(greatest(coalesce(p_limit,40),1),100)) q),'[]'::jsonb);
 end $$;
