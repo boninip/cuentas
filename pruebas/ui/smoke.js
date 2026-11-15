@@ -244,13 +244,11 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('[data-rs$="|paused"]');await t.page.waitForTimeout(250);
  ok(t.calls.some(c=>c.startsWith('cuentas_recurring_set_status')&&c.includes('paused')),'repetidos: se puede pausar');
  ok(t.errs.length===0,'repetidos: sin errores de JS');
- // botón Nuevo grupo arriba
+ // fila Nuevo grupo arriba de la lista
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
- ok(await t.page.isVisible('#btnNewTop'),'nuevo grupo: botón arriba, junto a «Mis grupos»');
- ok(!(await t.page.isVisible('#optNew')),'nuevo grupo: con grupos no se repite la fila de abajo');
- await t.page.click('#btnNewTop');await t.page.waitForTimeout(300);
- ok(await t.page.evaluate(()=>document.getElementById('cNew').open),'nuevo grupo: el botón abre el formulario');
- await t.page.screenshot({path:'/tmp/home_nuevo.png'});
+ ok(await t.page.evaluate(()=>{const n=document.getElementById('optNew'),g=document.getElementById('groups');return !n.hidden&&!!(n.compareDocumentPosition(g)&Node.DOCUMENT_POSITION_FOLLOWING)}),'nuevo grupo: la fila queda arriba de la lista de grupos');
+ await t.page.click('#optNew');await t.page.waitForTimeout(300);
+ ok(await t.page.evaluate(()=>document.getElementById('cNew').open),'nuevo grupo: la fila abre el formulario');
  ok(t.errs.length===0,'nuevo grupo: sin errores de JS');
  // avisos esenciales
  t=await mk(b,{notices:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
