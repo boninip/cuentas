@@ -97,6 +97,13 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);
  await t.page.click('#btnAna');await t.page.waitForTimeout(200);
  ok(/Total gastado/.test(await t.page.textContent('#anBody'))&&await t.page.isVisible('#anBody .bars'),'análisis: muestra totales y barras por persona');
+ ok(await t.page.locator('#anBody [data-av]').count()===4,'análisis: 4 vistas seleccionables');
+ await t.page.click('[data-av="tiempo"]');await t.page.click('[data-as="acum"]');await t.page.waitForTimeout(100);
+ ok(await t.page.isVisible('#anBody svg.line'),'análisis: gráfico de línea acumulada');
+ await t.page.click('[data-av="categorias"]');await t.page.click('.lrow[data-sel="0"]');await t.page.waitForTimeout(100);
+ ok(/Comida y bebida/.test(await t.page.textContent('#anBody .an-det'))&&/Asado/.test(await t.page.textContent('#anBody .an-det')),'análisis: dona por categoría estimada y detalle al tocar');
+ await t.page.click('[data-av="saldos"]');await t.page.waitForTimeout(100);
+ ok(await t.page.isVisible('#anBody .dvs'),'análisis: balance divergente');
  await t.page.goBack();await t.page.waitForTimeout(300);
  ok(await t.page.isVisible('#gTop'),'análisis: atrás vuelve a gastos');
 
