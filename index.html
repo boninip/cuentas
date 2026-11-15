@@ -207,12 +207,13 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
  <div id="gTop">
  <div class="stats" id="gStats"><span class="st pos"><span>A favor</span><b id="gPos">–</b></span><span class="st neg"><span>Debés</span><b id="gNeg">–</b></span><span class="st net"><span>Balance neto</span><b id="gNet">–</b></span></div>
  <div class="cta"><button id="btnGAdd">＋ Agregar gasto</button><button class="sec" id="btnSettle" hidden><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h15M15 4l4 4-4 4M20 16H5M9 12l-4 4 4 4"/></svg> Saldar deuda</button></div>
- <div class="row actions chips"><button id="btnSaldos" class="sec">¿Quién debe a quién?</button><button id="btnInvite" class="sec">＋ Personas</button></div>
+ <div class="row actions chips"><button id="btnSaldos" class="sec">¿Quién debe a quién?</button><button id="btnInvite" class="sec">＋ Personas</button><button id="btnGuest" class="sec">＋ Por nombre</button></div>
+ <div class="card" id="cGuest" hidden><h2>Agregar por nombre</h2><p class="muted">Queda en el grupo desde ya y podés sumarlo a los gastos. Cuando quieras, mandale su link personal para que se una con su cuenta.</p><label for="guName">Nombre</label><input id="guName" maxlength="40" placeholder="Ej. Bruno" autocomplete="off"><button id="btnGuestAdd">Agregar</button><button class="sec" id="btnGuestCancel">Cancelar</button></div>
  <input id="inviteLink" readonly hidden aria-label="Link de invitación">
  </div>
 
  <div data-pane="gastos">
-  <div class="card" id="cEmpty" hidden><h2>Sumá a tu grupo</h2><p class="muted">Cuentas sirve para dividir gastos entre varias personas. Invitalas con un link.</p><button id="btnInvite2">+ Agregar personas</button></div>
+  <div class="card" id="cEmpty" hidden><h2>Sumá a tu grupo</h2><p class="muted">Cuentas sirve para dividir gastos entre varias personas. Invitalas con un link.</p><button id="btnInvite2">+ Agregar personas</button><button class="sec" id="btnGuest2">+ Agregar por nombre</button></div>
   <details class="card" id="cExpense"><summary>+ Agregar gasto</summary>
    <h2>Nuevo gasto</h2>
    <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300" placeholder="Ej. Asado, Nafta, Vinos">
@@ -406,7 +407,7 @@ async function openGroup(id){
  const [g,bal,mv,pay,props,dels,links,pairs]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id})]);
  group=g;show('vGroup');say('');setTab(tab);
  const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
- const active=g.members.filter(m=>m.status==='active');
+ const active=g.members.filter(m=>m.status==='active');guestIds=new Set(g.members.filter(m=>m.guest&&m.status==='active').map(m=>m.user_id));
  const me=g.members.find(m=>m.user_id===myId);
  const cur=g.reference_currency;
  $('gTitle').textContent=g.name;
@@ -415,8 +416,9 @@ async function openGroup(id){
  $('gMembers').textContent='Miembros: '+active.map(m=>name(m.user_id)+(m.role!=='member'?' ('+roleEs[m.role]+')':'')).join(', ');
  $('btnStatus').hidden=!(me&&me.role==='admin');
  const isAdmin=!!(me&&me.role==='admin');
- $('mList').innerHTML=active.map(m=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><span>${esc(name(m.user_id))} <span class="tag">${roleEs[m.role]}</span></span></span>${isAdmin&&m.user_id!==myId?`<button class="sec" style="width:auto;margin:0" data-rm="${m.user_id}">Quitar</button>`:''}</div>`).join('');
- $('mList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: quitar';say('Quitar a alguien no borra sus deudas ni el historial. Tocá de nuevo para confirmar.');return}await rpc('cuentas_member_remove',{p_group:gid,p_user:b.dataset.rm});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')}));
+ $('mList').innerHTML=active.map(m=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><span>${esc(name(m.user_id))} <span class="tag">${m.guest?'pendiente':roleEs[m.role]}</span></span></span>${m.guest?`<button class="sec" style="width:auto;margin:0" data-gl="${m.user_id}">Link</button>`:''}${isAdmin&&m.user_id!==myId?`<button class="sec" style="width:auto;margin:0" data-rm="${m.user_id}">Quitar</button>`:''}</div>`).join('');
+ $('mList').querySelectorAll('[data-gl]').forEach(b=>b.onclick=busy(b,()=>guestLink(b.dataset.gl)));
+ $('mList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: quitar';say(guestIds.has(b.dataset.rm)?'Si todavía no tiene gastos, se quita del grupo. Tocá de nuevo para confirmar.':'Quitar a alguien no borra sus deudas ni el historial. Tocá de nuevo para confirmar.');return}if(guestIds.has(b.dataset.rm))await rpc('cuentas_guest_remove',{p_group:gid,p_guest:b.dataset.rm});else await rpc('cuentas_member_remove',{p_group:gid,p_user:b.dataset.rm});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')}));
  $('btnArchive').hidden=!(isAdmin&&g.status==='closed');
  const dBy={};(dels||[]).forEach(d=>dBy[d.delegate_id]=d);
  const scEs={invite:'invitar',close:'cerrar',void:'anular',link:'vincular'};
@@ -474,7 +476,7 @@ async function openGroup(id){
  const mine=bal.filter(b=>b.user_id===myId);
  {const cur=group.reference_currency;let pos=0,neg=0;mine.forEach(b=>{const v=Number(b.balance_minor);if(v>0)pos+=v;else neg+=-v});const net=pos-neg;
   $('gPos').textContent=moneyS(pos,cur);$('gNeg').textContent=moneyS(neg,cur);$('gNet').textContent=(net>0?'+ ':net<0?'− ':'')+moneyS(Math.abs(net),cur);$('gNet').parentElement.classList.toggle('minus',net<0)}
- $('inviteLink').hidden=true;
+ $('inviteLink').hidden=true;$('cGuest').hidden=true;
  $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(b.user_id).charAt(0).toUpperCase())}</span><span><b>${esc(name(b.user_id))}</b><div class="muted">${Number(b.balance_minor)===0?'al día':(Number(b.balance_minor)>0?'le deben':'debe')}</div></span></span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(Math.abs(Number(b.balance_minor)),b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
  sug=settleSuggestions(bal);
  $('btnSettle').hidden=g.status!=='open'||active.length<2;$('btnSaldos').hidden=active.length<2;
@@ -686,6 +688,24 @@ $('btnInvite').onclick=busy($('btnInvite'),async()=>{
  try{await navigator.clipboard.writeText(f.value);say('Link copiado: pegalo en WhatsApp. Vale 7 días.')}catch(_){say('Copiá el link del campo.')}
 });
 $('btnInvite2').onclick=()=>$('btnInvite').click();
+async function shareLinkUrl(u,title){
+ const f=$('inviteLink');f.value=u;f.hidden=false;
+ if(navigator.share){try{await navigator.share({title,url:u});return}catch(e){if(e&&e.name==='AbortError')return}}
+ try{await navigator.clipboard.writeText(u);say('Link copiado: pegalo en WhatsApp. Vale 7 días y sirve para una sola persona.')}catch(_){f.select();say('Copiá el link del campo.')}
+}
+async function guestLink(gidGuest){
+ const t=await rpc('cuentas_guest_invite_create',{p_group:gid,p_guest:gidGuest,p_hours:168});
+ const u=new URL(location.pathname,location.origin);u.searchParams.set('invite',t);
+ await shareLinkUrl(u.toString(),'Sumate al grupo '+group.name+' en Cuentas');
+}
+const openGuest=()=>{$('cGuest').hidden=false;$('guName').value='';$('guName').focus();$('cGuest').scrollIntoView({behavior:'smooth',block:'center'})};
+$('btnGuest').onclick=openGuest;$('btnGuest2').onclick=openGuest;$('btnGuestCancel').onclick=()=>{$('cGuest').hidden=true};
+$('guName').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('btnGuestAdd').click()}};
+$('btnGuestAdd').onclick=busy($('btnGuestAdd'),async()=>{
+ const n=$('guName').value.trim();if(!n){say('Poné un nombre.',true);return}
+ await rpc('cuentas_guest_add',{p_group:gid,p_name:n});$('cGuest').hidden=true;await openGroup(gid);
+ say(n+' ya está en el grupo. Podés sumarlo a los gastos; después mandale su link desde Ajustes → Miembros.');
+});
 $('btnStatus').onclick=busy($('btnStatus'),async()=>{
  await rpc('cuentas_group_set_status',{p_group:gid,p_status:group.status==='open'?'closed':'open'});await openGroup(gid);
 });
@@ -708,12 +728,14 @@ $('btnExpense').onclick=busy($('btnExpense'),async()=>{
  if(wasEdit){try{await rpc('cuentas_expense_edit',{p_expense:editId,...args})}catch(e){if(/confirmad|propuesta|anul/i.test(e.message))throw Error('Este gasto ya tiene pagos confirmados y no se puede editar directo. Anulalo con una propuesta (aprobada por los afectados) y cargá el corregido.');throw e}}else await rpc('cuentas_expense_add',{p_group:gid,...args});
  $('eDesc').value='';$('eAmt').value='';await openGroup(gid);say(wasEdit?'Gasto editado: el anterior quedó anulado.':'Gasto guardado.');
 });
-let sug=[],payBy={};
+let sug=[],payBy={},guestIds=new Set();
 const nm=u=>{const m=group.members.find(x=>x.user_id===u);return (m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
 function openSettle(){
- const mine=sug.filter(x=>x.from===myId);
+ const pend=sug.filter(x=>x.from===myId&&guestIds.has(x.to));
+ const mine=sug.filter(x=>x.from===myId&&!guestIds.has(x.to));
  $('sPay').hidden=true;$('sPick').hidden=false;
- $('sList').innerHTML=mine.length?mine.map((x,k)=>`<button class="opt" data-pay="${k}"><span class="tile">${esc(nm(x.to).charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(nm(x.to))}</b><small class="bad">debés ${money(x.amount,x.currency)}</small></span><span class="chev">›</span></button>`).join(''):'<p class="muted">🎉 No tenés ningún saldo por liquidar en este grupo.</p>';
+ $('sList').innerHTML=mine.length?mine.map((x,k)=>`<button class="opt" data-pay="${k}"><span class="tile">${esc(nm(x.to).charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(nm(x.to))}</b><small class="bad">debés ${money(x.amount,x.currency)}</small></span><span class="chev">›</span></button>`).join(''):'<p class="muted">'+(pend.length?'Por ahora no podés saldar nada.':'🎉 No tenés ningún saldo por liquidar en este grupo.')+'</p>';
+ if(pend.length)$('sList').insertAdjacentHTML('beforeend','<p class="muted">'+esc(pend.map(x=>nm(x.to)).join(', '))+(pend.length>1?' todavía no aceptaron':' todavía no aceptó')+' la invitación: cuando lo hagan vas a poder saldarles.</p>');
  $('sList').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{
   const x=mine[Number(b.dataset.pay)],p=payBy[x.to];
   $('pTo').value=x.to;$('pAmt').value=(x.amount/100).toFixed(2).replace('.',',');
@@ -768,8 +790,8 @@ async function start(){
    if(!p.valid){dropToken();await home();say('La invitación venció o no es válida. Pedile un link nuevo a quien te invitó.',true);return}
    if(p.already_member){dropToken();await openGroup(p.group_id);say('Ya sos parte de este grupo.');return}
    const me=await rpc('core_profile_get');const hasName=!!(me&&me.display_name);
-   $('invGroup').textContent=p.name;$('invBy').textContent=(p.invited_by?p.invited_by+' te invitó':'Te invitaron')+' · '+p.members+(Number(p.members)===1?' persona':' personas')+' en el grupo';
-   $('invNameW').hidden=hasName;show('vInvite');return;
+   $('invGroup').textContent=p.name;$('invBy').textContent=(p.guest_name?(p.invited_by||'Te')+' te sumó como «'+p.guest_name+'»':(p.invited_by?p.invited_by+' te invitó':'Te invitaron'))+' · '+p.members+(Number(p.members)===1?' persona':' personas')+' en el grupo';
+   $('invNameW').hidden=hasName;if(!hasName&&p.guest_name)$('invName2').value=p.guest_name;show('vInvite');return;
   }catch(e){say(e.message,true)}
  }
  try{await home()}catch(e){say(e.message,true)}

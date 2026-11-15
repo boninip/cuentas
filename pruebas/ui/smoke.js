@@ -4,7 +4,8 @@ const {chromium}=require('playwright');const path=require('path');
 const URL='file://'+path.resolve(__dirname,'../../index.html');
 const ME='11111111-1111-1111-1111-111111111111',BR='22222222-2222-2222-2222-222222222222',G='33333333-3333-3333-3333-333333333333',TOK='a'.repeat(64);
 let fails=0;const ok=(c,m)=>{if(!c){fails++;console.log('FALLA:',m)}else console.log('ok   ',m)};
-async function mk(b,{preview,profile=true,owe=true}={}){
+const LU='44444444-4444-4444-4444-444444444444';
+async function mk(b,{preview,profile=true,owe=true,guest=false}={}){
  const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();
  const jwt='x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y';
  await page.addInitScript(([j])=>{localStorage.setItem('cuentas_auth_v1',JSON.stringify({access_token:j,refresh_token:'r',expires_at:Date.now()+3600000,email:'b@test.com'}))},[jwt]);
@@ -18,8 +19,10 @@ async function mk(b,{preview,profile=true,owe=true}={}){
    case 'core_profile_set':prof={display_name:JSON.parse(body).p_name};return J(null);
    case 'cuentas_invite_accept':return J(G);
    case 'cuentas_my_groups_all':return J([{id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',member_status:'active'}]);
-   case 'cuentas_group_get':return J({id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',members:[{user_id:ME,role:'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno'}]});
-   case 'cuentas_balances':return J([{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
+   case 'cuentas_group_get':return J({id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',members:[{user_id:ME,role:'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno'}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])});
+   case 'cuentas_guest_add':return J(LU);
+   case 'cuentas_guest_invite_create':return J('c'.repeat(64));
+   case 'cuentas_balances':return J(guest?[{user_id:ME,balance_minor:'-250000',currency:'ARS'},{user_id:BR,balance_minor:'100000',currency:'ARS'},{user_id:LU,balance_minor:'150000',currency:'ARS'}]:[{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
    case 'cuentas_group_payouts':return J([{user_id:BR,alias:'bruno.cuentas',cbu:null,holder_name:'Bruno',bank:'MP'}]);
    case 'cuentas_payment_add':debt=false;return J('p1');
    case 'cuentas_expense_add':return J('e1');
@@ -64,6 +67,19 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('#btnGAdd');await t.page.fill('#eDesc','Coca');await t.page.fill('#eAmt','200');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')),'gasto: se guarda desde el botón flotante');
 
+
+ // invitados por nombre
+ t=await mk(b,{guest:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);
+ await t.page.click('#btnGuest');await t.page.fill('#guName','Lucía');await t.page.click('#btnGuestAdd');await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('cuentas_guest_add')&&c.includes('Lucía')),'invitado: se agrega por nombre');
+ await t.page.click('#btnGear');await t.page.waitForTimeout(150);
+ ok(/pendiente/.test(await t.page.textContent('#mList')),'invitado: aparece como pendiente');
+ await t.page.click('[data-gl]');await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('cuentas_guest_invite_create')),'invitado: genera su link personal');
+ await t.page.evaluate(()=>document.querySelector('[data-goto]').click());await t.page.waitForTimeout(150);
+ await t.page.click('#btnSettle');await t.page.waitForTimeout(250);
+ ok((await t.page.$$('#sList [data-pay]')).length===1&&/todavía no aceptó/.test(await t.page.textContent('#sList')),'saldar: no ofrece pagarle al invitado pendiente');
  // apariencia
  t=await mk(b);await t.page.goto(URL);await t.page.waitForTimeout(500);
  await t.page.evaluate(()=>document.querySelector('[data-d="cuenta"]').click?.());
