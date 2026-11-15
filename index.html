@@ -18,7 +18,7 @@ header{display:flex;justify-content:space-between;align-items:center;gap:8px;mar
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0;box-shadow:var(--shadow)}
 input,select,button{font:inherit;width:100%;margin:4px 0 10px;padding:12px 13px;border-radius:12px;border:1px solid var(--line);background:var(--field);color:var(--fg)}
 button{background:var(--accent);color:var(--accent-fg);border:0;font-weight:750;cursor:pointer;min-height:48px;box-shadow:0 4px 12px #1c385014}
-button[data-pay],button.warm{background:var(--warm);color:var(--warm-fg)}
+button.warm{background:var(--warm);color:var(--warm-fg)}
 button.sec{background:var(--card);color:var(--fg);border:1px solid var(--line);box-shadow:none}
 button:disabled{opacity:.5}
 .row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
@@ -85,12 +85,15 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 <header><h1>Cuentas<span>.</span></h1><button id="avatar" class="avatar" aria-label="Menú" hidden>P</button><div id="who" class="muted"></div></header>
 <p id="msg" class="muted" role="status" aria-live="polite"></p>
 
-<section id="vLogin" class="card" hidden>
+<section id="vLogin" hidden>
+ <div class="hero-img"><div class="kicker">● PINTO ID</div><div class="ht">Cuentas claras, amistades largas.</div></div>
+ <div class="card">
  <h2>Ingresá con Pinto ID</h2>
  <label for="email">Tu email</label>
  <input id="email" type="email" autocomplete="email" placeholder="nombre@correo.com">
  <button id="btnLogin">Recibir enlace de acceso</button>
  <p class="muted">No necesitás contraseña. Te llega un enlace por email.</p>
+ </div>
 </section>
 
 <section id="vHome" hidden>
@@ -144,12 +147,13 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 </nav></div>
 <nav id="bnav" hidden><button data-hp-btn="grupos" aria-selected="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.2c2.6 0 4.5 2 4.5 4.8"/></svg><span>Grupos</span></button><button data-hp-btn="actividad"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg><span>Actividad</span><i id="actDot" hidden></i></button><button data-hp-btn="cuenta"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span>Cuenta</span></button></nav>
 
-<section id="vInvite" class="card" hidden>
- <h2>Te invitaron a un grupo</h2>
- <p><b id="invGroup"></b></p><p id="invBy" class="muted"></p>
+<section id="vInvite" hidden>
+ <div class="hero-img"><div class="kicker">● INVITACIÓN</div><div class="ht" id="invGroup"></div><div id="invBy" style="margin-top:6px;color:#E3EBD6"></div></div>
+ <div class="card"><h2>Te invitaron a un grupo</h2>
  <div id="invNameW" hidden><label for="invName2">¿Cómo te llamamos? (así te ven en el grupo)</label><input id="invName2" maxlength="40" autocomplete="given-name"></div>
  <button id="btnAccept">Unirme al grupo</button>
  <button class="sec" id="btnDecline">Ahora no</button>
+ </div>
 </section>
 
 <section id="vFormer" hidden>
@@ -162,7 +166,7 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 
 <section id="vSettle" hidden>
  <button class="sec" id="btnSettleBack">← Volver al grupo</button>
- <div class="card" id="sPick"><h2>Seleccioná un saldo para liquidarlo</h2><div id="sList"></div></div>
+ <div class="card" id="sPick"><h2>¿A quién le pagaste?</h2><div id="sList" class="opts"></div></div>
  <div class="card" id="sPay" hidden>
   <h2 id="sTitle"></h2>
   <div id="sInfo" class="muted"></div>
@@ -616,7 +620,7 @@ const nm=u=>{const m=group.members.find(x=>x.user_id===u);return (m&&m.display_n
 function openSettle(){
  const mine=sug.filter(x=>x.from===myId);
  $('sPay').hidden=true;$('sPick').hidden=false;
- $('sList').innerHTML=mine.length?mine.map((x,k)=>`<div class="item"><span><b>${esc(nm(x.to))}</b></span><span><span class="bad">debés ${money(x.amount,x.currency)}</span> <button data-pay="${k}" style="width:auto;margin:0 0 0 8px;padding:6px 10px">Pagar</button></span></div>`).join(''):'<p class="muted">🎉 No tenés ningún saldo por liquidar en este grupo.</p>';
+ $('sList').innerHTML=mine.length?mine.map((x,k)=>`<button class="opt" data-pay="${k}"><span class="tile">${esc(nm(x.to).charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(nm(x.to))}</b><small class="bad">debés ${money(x.amount,x.currency)}</small></span><span class="chev">›</span></button>`).join(''):'<p class="muted">🎉 No tenés ningún saldo por liquidar en este grupo.</p>';
  $('sList').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{
   const x=mine[Number(b.dataset.pay)],p=payBy[x.to];
   $('pTo').value=x.to;$('pAmt').value=(x.amount/100).toFixed(2).replace('.',',');
