@@ -43,7 +43,7 @@ details.card[open]>summary{margin-bottom:10px}
 .hero{background:linear-gradient(135deg,var(--h1),var(--h2) 60%,var(--h3));color:#fff;border:0}.hero h2{font-size:1.7rem;letter-spacing:-.8px;color:#fff}
 .hero .muted{color:#F1F5E8}.hero .good,.hero .bad{color:#fff}.hero #gSum{font-size:1.2rem}
 .hero button.sec{background:#ffffff22;color:#fff;border:1px solid #ffffff44}.hero button.warm{background:var(--warm);color:var(--warm-fg)}
-.actions{gap:8px}.topbar{flex-wrap:nowrap;gap:8px}.topbar>*{margin:0 0 4px;min-width:0}.actions>*{min-width:0;margin:6px 0 0}
+.actions{gap:8px}.topbar{flex-wrap:nowrap;justify-content:space-between;gap:8px;margin-bottom:2px}.topbar>*{margin:0;min-width:0;flex:0 0 auto!important;padding:6px 2px}.actions>*{min-width:0;margin:6px 0 0}
 .fab{display:none!important;position:fixed;right:max(16px,calc(50% - 230px + 16px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:auto;margin:0;padding:14px 20px;border-radius:99px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:8;font-size:1.05rem}
 main{padding-bottom:96px}header{justify-content:flex-start}
 #cExpense:not([open]){display:none}#cExpense>summary{display:none}
@@ -197,13 +197,15 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 </section>
 <section id="vGroup" hidden>
  <button class="fab" id="fab" hidden>+ Añadir gasto</button>
- <div class="row topbar"><button class="sec" id="btnBack">← Grupos</button><button class="sec" id="btnGear" aria-label="Ajustes del grupo">⚙ Ajustes</button></div>
+ <div class="row topbar"><button class="lnk" id="btnBack">‹ Grupos</button><button class="lnk" id="btnGear" aria-label="Ajustes del grupo">⚙ Ajustes</button></div>
  <div class="ghead"><h2 id="gTitle"></h2><div id="gMeta" class="muted"></div></div>
  <div id="gSum" hidden></div><div id="gMembers" hidden></div>
+ <div id="gTop">
  <div class="stats" id="gStats"><span class="st pos"><span>A favor</span><b id="gPos">–</b></span><span class="st neg"><span>Debés</span><b id="gNeg">–</b></span><span class="st net"><span>Balance neto</span><b id="gNet">–</b></span></div>
  <div class="cta"><button id="btnGAdd">＋ Agregar gasto</button><button class="sec" id="btnSettle" hidden>Saldar deuda</button></div>
  <div class="row actions chips"><button id="btnSaldos" class="sec">Saldos</button><button id="btnInvite" class="sec">＋ Personas</button></div>
  <input id="inviteLink" readonly hidden aria-label="Link de invitación">
+ </div>
 
  <div data-pane="gastos">
   <div class="card" id="cEmpty" hidden><h2>Sumá a tu grupo</h2><p class="muted">Cuentas sirve para dividir gastos entre varias personas. Invitalas con un link.</p><button id="btnInvite2">+ Agregar personas</button></div>
@@ -227,14 +229,15 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
  </div>
 
  <div data-pane="saldos" hidden>
-  <button class="sec" data-goto="gastos">← Volver a gastos</button>
+  <button class="lnk" data-goto="gastos">‹ Volver a gastos</button>
   <div class="card"><h2>Saldos</h2><div id="balances"></div>
   </div>
    <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
  </div>
 
  <div data-pane="mas" hidden>
-  <button class="sec" data-goto="gastos">← Volver a gastos</button>
+  <button class="lnk" data-goto="gastos">‹ Volver a gastos</button>
+  <h2 style="margin:6px 0">Ajustes del grupo</h2>
   <div class="card"><h2>Miembros</h2><div id="mList"></div>
    <button class="sec" id="btnStatus"></button>
    <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div></div>
@@ -290,7 +293,7 @@ async function rpc(fn,args){
  if(!(await fresh()))throw Error('Iniciá sesión para continuar');
  return req('/rest/v1/rpc/'+fn,args||{},session.access_token);
 }
-function setTab(t){tab=t;const f=$('fab');if(f)f.hidden=!(t==='gastos'&&group&&group.status==='open'&&!$('vGroup').hidden);document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'))}
+function setTab(t){tab=t;const f=$('fab');if(f)f.hidden=!(t==='gastos'&&group&&group.status==='open'&&!$('vGroup').hidden);document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);if($('gTop'))$('gTop').hidden=t!=='gastos';document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'))}
 document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{setTab(b.dataset.goto);window.scrollTo(0,0)});
 $('btnGAdd').onclick=()=>$('fab').click();
 $('btnSaldos').onclick=()=>{setTab('saldos');window.scrollTo(0,0)};$('btnGear').onclick=()=>{setTab('mas');window.scrollTo(0,0)};
@@ -429,7 +432,7 @@ async function openGroup(id){
  $('pairs').querySelectorAll('[data-pend]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar';say('Desvincular es inmediato, invalida las propuestas abiertas y no borra deudas ni historial. Tocá de nuevo para confirmar.');return}await rpc('cuentas_pair_end',{p_account:b.dataset.pend});await openGroup(gid);say('Cuenta compartida desvinculada.')}));
  $('pairs').querySelectorAll('[data-cprop]').forEach(b=>b.onclick=busy(b,async()=>{const [acc,cur]=b.dataset.cprop.split('|');const amt=toMinor($('pairs').querySelector('[data-camt="'+b.dataset.cprop+'"]').value);if(!amt)throw Error('Importe inválido');await rpc('cuentas_compensation_propose',{p_account:acc,p_currency:cur,p_amount_minor:amt,p_reason:null});await openGroup(gid);say('Propuesta creada: se aplica solo si las dos personas la aprueban.')}));
  payBy={};(pay||[]).forEach(x=>payBy[x.user_id]=x);
- $('payouts').innerHTML=(pay&&pay.length)?pay.map(x=>`<div class="item"><div><b>${esc(name(x.user_id))}</b>${x.holder_name?`<div class="muted">${esc(x.holder_name)}${x.bank?' · '+esc(x.bank):''}</div>`:(x.bank?`<div class="muted">${esc(x.bank)}</div>`:'')}${x.alias?`<div>Alias: <b>${esc(x.alias)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.alias)}">Copiar</button></div>`:''}${x.cbu?`<div>CBU/CVU: <b>${esc(x.cbu)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.cbu)}">Copiar</button></div>`:''}</div></div>`).join(''):'<p class="muted">Nadie compartió datos de cobro todavía. Cargá los tuyos en «Mis grupos».</p>';
+ $('payouts').innerHTML=(pay&&pay.length)?pay.map(x=>`<div class="item"><div><b>${esc(name(x.user_id))}</b>${x.holder_name?`<div class="muted">${esc(x.holder_name)}${x.bank?' · '+esc(x.bank):''}</div>`:(x.bank?`<div class="muted">${esc(x.bank)}</div>`:'')}${x.alias?`<div>Alias: <b>${esc(x.alias)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.alias)}">Copiar</button></div>`:''}${x.cbu?`<div>CBU/CVU: <b>${esc(x.cbu)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.cbu)}">Copiar</button></div>`:''}</div></div>`).join(''):'<p class="muted">Nadie compartió datos de cobro todavía. Cargá los tuyos desde el menú, en «Mi perfil y datos de cobro».</p>';
  $('payouts').querySelectorAll('[data-copy]').forEach(b=>b.onclick=copyBtn(b));
  const openProps=(props||[]).filter(p=>p.status==='open');
  $('cProps').hidden=!openProps.length;
