@@ -195,7 +195,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(/convertidos/.test(await t.page.textContent('#anBody')),'análisis: incluye gastos en otra moneda convertidos');
  await t.page.click('[data-av=categorias]');await t.page.waitForTimeout(150);
  ok(/categoría elegida/.test(await t.page.textContent('#anBody')),'análisis: usa la categoría elegida');
- await t.page.click('#btnGear');ok((await t.page.locator('#catList .item').count())===2,'ajustes: lista de categorías');
+ await t.page.click('#btnGear');await t.page.evaluate(()=>document.querySelectorAll('[data-pane=mas] details.card').forEach(d=>d.open=true));ok((await t.page.locator('#catList .item').count())===2,'ajustes: lista de categorías');
  ok(/incluye a Bruno/.test(await t.page.textContent('#balances')),'responsable: su saldo muestra a quién incluye');
  ok(/lo paga (Pau|Vos)/.test(await t.page.textContent('#mList')),'responsable: etiqueta en el miembro');
  ok(/Vos cargó un gasto/.test(await t.page.textContent('#actList')),'actividad: muestra qué pasó en el grupo');

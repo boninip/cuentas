@@ -151,7 +151,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 .copick{display:flex;gap:12px;margin:0 0 14px}.copick button{margin:0;min-height:0;width:36px;height:36px;padding:0;border-radius:50%;border:3px solid transparent;box-shadow:none}.copick button.on{border-color:var(--fg)}
 .search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--field);border-radius:14px;padding:0 12px;margin:6px 0 8px}.search .si{display:grid;place-items:center;color:var(--muted)}.search input{border:0;background:transparent;box-shadow:none;margin:0;padding:12px 0;flex:1;min-width:0;font-size:1rem}.search input:focus{outline:0}
 .obx{margin:6px 0 0;padding:8px 12px;border-radius:12px;background:var(--neg-bg);color:var(--bad);font-size:.88rem;font-weight:600;display:flex;gap:8px;align-items:center}
-.tag.fam{background:var(--tile);color:var(--logo)}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}.tags .tag{white-space:nowrap}.tag.fam{background:var(--tile);color:var(--logo)}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F7F5EA" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#1B241A" media="(prefers-color-scheme: dark)">
@@ -312,17 +312,17 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  <div data-pane="mas" hidden>
   <button class="lnk" data-goto="gastos">‹ Volver a gastos</button>
   <h2 style="margin:6px 0">Ajustes del grupo</h2>
-  <div class="card" id="cAct"><h2>Actividad del grupo</h2><p class="muted" style="margin:0 0 8px">Lo último que pasó, para que no te enteres por otro lado.</p><div id="actList"></div></div>
-  <div class="card" id="cCats"><h2>Categorías</h2><p class="muted" style="margin:0 0 8px">Para ordenar los gastos y ver en qué se va la plata.</p><div id="catList"></div>
+  <div class="card"><h2>Miembros</h2><div id="mList"></div>
+   <button class="sec" id="btnStatus"></button>
+   <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div></div>
+  <details class="card" id="cCats"><summary class="srow"><span class="tile" data-ic="fork"></span><span class="ot"><b>Categorías</b><small>Para ver en qué se va la plata</small></span><span class="chev">›</span></summary><div id="catList"></div>
    <div id="catForm" hidden><label for="catName">Nombre</label><input id="catName" maxlength="30" placeholder="Ej. Mascotas">
     <label id="catIcLbl">Ícono</label><div id="catIcons" class="icopick" role="group" aria-labelledby="catIcLbl"></div>
     <label id="catCoLbl">Color</label><div id="catColors" class="copick" role="group" aria-labelledby="catCoLbl"></div>
     <button id="btnCatSave">Guardar categoría</button><div class="row"><button class="sec" id="btnCatHide" hidden></button><button class="sec" id="btnCatCancel">Cancelar</button></div></div>
-   <button class="sec" id="btnCatAdd" hidden>Agregar categoría</button></div>
-  <div class="card"><h2>Exportar</h2><p class="muted" style="margin:0 0 8px">Bajá todos los movimientos del grupo en un archivo para abrir en Excel o Google Sheets.</p><button class="sec" id="btnCsv"></button></div>
-  <div class="card"><h2>Miembros</h2><div id="mList"></div>
-   <button class="sec" id="btnStatus"></button>
-   <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div></div>
+   <button class="sec" id="btnCatAdd" hidden>Agregar categoría</button></details>
+  <details class="card" id="cAct"><summary class="srow"><span class="tile" data-ic="receipt"></span><span class="ot"><b>Actividad del grupo</b><small>Lo último que pasó</small></span><span class="chev">›</span></summary><div id="actList"></div></details>
+  <details class="card"><summary class="srow"><span class="tile" data-ic="download"></span><span class="ot"><b>Exportar</b><small>Todos los movimientos en un archivo</small></span><span class="chev">›</span></summary><p class="muted" style="margin:0 0 8px">Para abrir en Excel o Google Sheets.</p><button class="sec" id="btnCsv"></button></details>
   <details class="card" id="cDeleg" hidden><summary class="srow"><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M17 11l2 2 3-3"/></svg></span><span class="ot"><b>Coadministración</b><small>Delegar tareas con permiso revocable</small></span><span class="chev">›</span></summary><p class="muted">Delegación expresa, revocable y auditada. Reabrir y archivar quedan solo para quien administra.</p><div id="dList"></div>
    <label for="dUser">Delegar en</label><select id="dUser"></select>
    <div id="dScopes"><label class="chk"><input type="checkbox" value="invite"><span>Invitar</span></label><label class="chk"><input type="checkbox" value="close"><span>Cerrar grupo</span></label><label class="chk"><input type="checkbox" value="void"><span>Anular gastos ajenos</span></label><label class="chk"><input type="checkbox" value="link"><span>Vincular eventos</span></label></div>
@@ -581,7 +581,7 @@ async function openGroup(id){
  $('gMembers').textContent='Miembros: '+active.map(m=>name(m.user_id)+(m.role!=='member'?' ('+roleEs[m.role]+')':'')).join(', ');
  $('btnStatus').hidden=!(me&&me.role==='admin');
  const isAdmin=!!(me&&me.role==='admin');const canFam=!!(me&&(me.role==='admin'||me.role==='coadmin'));
- $('mList').innerHTML=active.map(m=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><span>${esc(name(m.user_id))} <span class="tag">${m.guest?'pendiente':roleEs[m.role]}</span>${Number(m.weight)!==1?` <span class="tag fam">cuenta ${fmtW(Number(m.weight))}</span>`:''}${m.guardian?` <span class="tag fam">lo paga ${esc(name(m.guardian))}</span>`:''}</span></span>${canFam?`<button class="sec" style="width:auto;margin:0" data-fam="${m.user_id}">Familia</button>`:''}${m.guest?`<button class="sec" style="width:auto;margin:0" data-gl="${m.user_id}">Link</button>`:''}${pastFor(m.user_id).length?`<button class="sec" style="width:auto;margin:0" data-past="${m.user_id}">Gastos previos</button>`:''}${isAdmin&&m.user_id!==myId?`<button class="sec" style="width:auto;margin:0" data-rm="${m.user_id}">Quitar</button>`:''}</div>`).join('');
+ $('mList').innerHTML=active.map(m=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><span style="min-width:0">${esc(name(m.user_id))}<div class="tags"><span class="tag">${m.guest?'pendiente':roleEs[m.role]}</span>${m.weight!=null&&isFinite(Number(m.weight))&&Number(m.weight)!==1?`<span class="tag fam">cuenta ${fmtW(Number(m.weight))}</span>`:''}${m.guardian?`<span class="tag fam">lo paga ${esc(name(m.guardian))}</span>`:''}</div></span></span>${canFam?`<button class="sec" style="width:auto;margin:0" data-fam="${m.user_id}">Familia</button>`:''}${m.guest?`<button class="sec" style="width:auto;margin:0" data-gl="${m.user_id}">Link</button>`:''}${pastFor(m.user_id).length?`<button class="sec" style="width:auto;margin:0" data-past="${m.user_id}">Gastos previos</button>`:''}${isAdmin&&m.user_id!==myId?`<button class="sec" style="width:auto;margin:0" data-rm="${m.user_id}">Quitar</button>`:''}</div>`).join('');
  $('mList').querySelectorAll('[data-fam]').forEach(b=>b.onclick=()=>famMenu(b.dataset.fam));
  $('mList').querySelectorAll('[data-past]').forEach(b=>b.onclick=()=>includeInPast(b.dataset.past));
  $('mList').querySelectorAll('[data-gl]').forEach(b=>b.onclick=busy(b,()=>guestLink(b.dataset.gl)));
@@ -904,6 +904,7 @@ function famMenu(uid){
    pickGroup('¿Quién paga por '+who+'?',cand.map(x=>({name:nm(x.user_id)===who?nm(x.user_id):nm(x.user_id),sub:'Su saldo se suma al de '+nm(x.user_id),icon:'person',k:'c',id:x.user_id})),x=>famSet('cuentas_member_set_guardian',{p_group:gid,p_user:uid,p_guardian:x.id},nm(x.id)+' paga por '+who+'. Los saldos se muestran juntos.'))}
  });
 }
+document.querySelectorAll('[data-ic]').forEach(e=>{e.innerHTML=ic(e.dataset.ic,22)});
 /* ===== Actividad del grupo ===== */
 const ACT_TXT={expense_added:'cargó un gasto',expense_edited:'editó un gasto',expense_voided:'anuló un gasto',group_created:'creó el grupo',invite_created:'generó un link de invitación',guest_added:'sumó a alguien por nombre'};
 function renderActivity(a){
