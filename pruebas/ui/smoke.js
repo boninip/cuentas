@@ -73,7 +73,24 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(await t.page.evaluate(()=>document.documentElement.dataset.theme==='light'),'apariencia: claro');
  await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="auto"]').click()});
  ok(await t.page.evaluate(()=>!document.documentElement.dataset.theme&&!localStorage.getItem('cuentas_theme')),'apariencia: automático sigue el sistema');
- ok(t.errs.length===0,'sin errores de JS');
+
+ // botón atrás del celular
+ t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ const vis=()=>t.page.evaluate(()=>[...document.querySelectorAll('section')].filter(s=>!s.hidden).map(s=>s.id).join());
+ await t.page.click('#burger');await t.page.waitForTimeout(100);
+ ok(!(await t.page.evaluate(()=>document.getElementById('drawer').hidden)),'atrás: menú abierto');
+ await t.page.goBack();await t.page.waitForTimeout(200);
+ ok(await t.page.evaluate(()=>document.getElementById('drawer').hidden)&&t.page.url().includes('index.html'),'atrás: cierra el menú sin salir de la app');
+ await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(200);
+ await t.page.click('#btnGear');await t.page.waitForTimeout(150);
+ await t.page.goBack();await t.page.waitForTimeout(250);
+ ok((await vis())==='vGroup'&&await t.page.isVisible('#gTop'),'atrás: de Ajustes vuelve a gastos del grupo');
+ await t.page.goBack();await t.page.waitForTimeout(400);
+ ok((await vis())==='vHome'&&t.page.url().includes('index.html'),'atrás: del grupo vuelve al inicio');
+ await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(200);
+ await t.page.click('header h1');await t.page.waitForTimeout(500);
+ ok((await vis())==='vHome','logo: vuelve al inicio');
+ if(t.errs.length)console.log('ERRS',t.errs);ok(t.errs.length===0,'sin errores de JS');
  // robustez: sin conexión
  t=await mk(b);
  await t.page.route('**/rest/v1/rpc/**',r=>r.abort('failed'));

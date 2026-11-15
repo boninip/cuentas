@@ -61,7 +61,7 @@ main{padding-bottom:96px}header{justify-content:flex-start}
 .stats{display:grid;grid-template-columns:1fr 1fr 1.1fr;width:100%;padding:0;border-radius:18px;overflow:hidden;margin:6px 0 14px;background:var(--card);border:1px solid var(--line);box-shadow:none;min-height:0;font-weight:400;color:var(--fg)}
 .st{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px;font-size:.85rem;font-weight:600}.st b{font-size:1.25rem;font-weight:800;letter-spacing:-.4px}
 .st.pos{background:var(--pos-bg);color:var(--good)}.st.neg{background:var(--neg-bg);color:var(--bad)}.st.net{background:var(--pos-bg);color:var(--good)}.st.net.minus{background:var(--neg-bg);color:var(--bad)}
-.cta{display:grid;grid-template-columns:1.1fr 1fr;gap:10px;margin:0 0 6px}.cta button{margin:0;min-height:54px;border-radius:16px;font-size:1.02rem;display:flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--accent)}.cta button.sec{color:var(--accent);background:var(--bg)}
+.cta>button:first-child:has(+button[hidden]){grid-column:1/-1}.cta{display:grid;grid-template-columns:1.1fr 1fr;gap:10px;margin:0 0 6px}.cta button{margin:0;min-height:54px;border-radius:16px;font-size:1.02rem;display:flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--accent)}.cta button.sec{color:var(--accent);background:var(--bg)}
 .sech{display:flex;justify-content:space-between;align-items:baseline;margin-top:16px}.sech h2{margin:0}.lnk{width:auto;margin:0;padding:4px 0;min-height:0;background:transparent;color:var(--accent);box-shadow:none;font-weight:700}
 .lnk2{background:transparent;color:var(--accent);box-shadow:none;border:0;font-weight:700;min-height:0;margin:8px 0 0}
 .pill{border-radius:99px;padding:6px 12px;font-weight:800;font-size:.95rem;white-space:nowrap}.pill.pos{background:var(--pos-bg);color:var(--good)}.pill.neg{background:var(--neg-bg);color:var(--bad)}.pill.zero{background:var(--card);color:var(--muted);border:1px solid var(--line);font-weight:600}
@@ -118,7 +118,7 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
  <button class="banner" id="optAct" hidden><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg></span><span class="ot"><b>Tenés cosas pendientes</b><small id="optActSub"></small></span><span class="chev">›</span></button>
  <h2 class="sec-h" style="margin-top:6px">Mi balance general</h2>
  <button class="stats" id="optBal" aria-label="Ver mi balance general: a favor, debés y balance neto"><span class="st pos"><span>A favor</span><b id="stPos">–</b></span><span class="st neg"><span>Debés</span><b id="stNeg">–</b></span><span class="st net"><span>Balance neto</span><b id="stNet">–</b></span></button>
- <div class="cta"><button id="btnHomeAdd">＋ Agregar gasto</button><button class="sec" id="btnHomeSettle"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l5-5 4 3 4-3 5 5-6 6-3-2-3 2z"/></svg> Saldar deuda</button></div>
+ <div class="cta"><button id="btnHomeAdd">＋ Agregar gasto</button><button class="sec" id="btnHomeSettle"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h15M15 4l4 4-4 4M20 16H5M9 12l-4 4 4 4"/></svg> Saldar deuda</button></div>
  <div class="sech"><h2>Mis grupos</h2><button class="lnk" id="btnAllG" hidden>Ver todos ›</button></div>
  <div class="opts" id="groups"></div>
  <p id="noGroups" class="muted" hidden>Todavía no tenés grupos. Creá el primero con “Nuevo grupo”.</p>
@@ -206,8 +206,8 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
  <div id="gSum" hidden></div><div id="gMembers" hidden></div>
  <div id="gTop">
  <div class="stats" id="gStats"><span class="st pos"><span>A favor</span><b id="gPos">–</b></span><span class="st neg"><span>Debés</span><b id="gNeg">–</b></span><span class="st net"><span>Balance neto</span><b id="gNet">–</b></span></div>
- <div class="cta"><button id="btnGAdd">＋ Agregar gasto</button><button class="sec" id="btnSettle" hidden>Saldar deuda</button></div>
- <div class="row actions chips"><button id="btnSaldos" class="sec">Saldos</button><button id="btnInvite" class="sec">＋ Personas</button></div>
+ <div class="cta"><button id="btnGAdd">＋ Agregar gasto</button><button class="sec" id="btnSettle" hidden><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h15M15 4l4 4-4 4M20 16H5M9 12l-4 4 4 4"/></svg> Saldar deuda</button></div>
+ <div class="row actions chips"><button id="btnSaldos" class="sec">¿Quién debe a quién?</button><button id="btnInvite" class="sec">＋ Personas</button></div>
  <input id="inviteLink" readonly hidden aria-label="Link de invitación">
  </div>
 
@@ -477,7 +477,7 @@ async function openGroup(id){
  $('inviteLink').hidden=true;
  $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(b.user_id).charAt(0).toUpperCase())}</span><span><b>${esc(name(b.user_id))}</b><div class="muted">${Number(b.balance_minor)===0?'al día':(Number(b.balance_minor)>0?'le deben':'debe')}</div></span></span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(Math.abs(Number(b.balance_minor)),b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
  sug=settleSuggestions(bal);
- $('btnSettle').hidden=g.status!=='open'||active.length<2;
+ $('btnSettle').hidden=g.status!=='open'||active.length<2;$('btnSaldos').hidden=active.length<2;
  $('btnGAdd').hidden=g.status!=='open';
  const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('ePayer').innerHTML=opts;$('ePayer').value=myId;
@@ -774,6 +774,46 @@ async function start(){
  }
  try{await home()}catch(e){say(e.message,true)}
 }
+// Botón «atrás» del celular: cada nivel de pantalla es una entrada del historial
+let navDepth=0,navIgnore=0,navQueued=false;
+function navLevel(){
+ let l=0;
+ if(!$('vHome').hidden)l=hp!=='grupos'?1:0;
+ else if(!$('vGroup').hidden)l=1+(tab!=='gastos'?1:0)+($('cExpense').open?1:0);
+ else if(!$('vSettle').hidden)l=2;
+ else if(!$('vFormer').hidden)l=1;
+ if(!$('drawer').hidden)l++;
+ if(!$('pick').hidden)l++;
+ return l;
+}
+function navSync(){
+ navQueued=false;const l=navLevel();
+ if(l>navDepth){while(navDepth<l){history.pushState({n:++navDepth},'')}}
+ else if(l<navDepth){const d=l-navDepth;navDepth=l;navIgnore++;history.go(d)}
+}
+function navUp(){
+ if(!$('pick').hidden){$('pick').hidden=true;return}
+ if(!$('drawer').hidden){closeDrawer();return}
+ if(!$('vSettle').hidden){show('vGroup');return}
+ if(!$('vGroup').hidden){
+  if($('cExpense').open){$('btnExpClose').click();return}
+  if(tab!=='gastos'){setTab('gastos');return}
+  home().catch(e=>say(e.message,true));return}
+ if(!$('vFormer').hidden){home().catch(e=>say(e.message,true));return}
+ if(!$('vHome').hidden&&hp!=='grupos'){setHp('grupos')}
+}
+window.addEventListener('popstate',()=>{
+ if(navIgnore>0){navIgnore--;return}
+ navDepth=Math.max(0,navDepth-1);
+ navUp();navSync();
+});
+new MutationObserver(()=>{if(!navQueued){navQueued=true;queueMicrotask(navSync)}}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden','open']});
+// tocar el logo vuelve al inicio
+const lg=document.querySelector('header h1');
+lg.setAttribute('role','link');lg.tabIndex=0;lg.style.cursor='pointer';lg.setAttribute('aria-label','Cuentas, ir al inicio');
+const goHome=()=>{if(!session)return;if(!$('drawer').hidden)closeDrawer();home().catch(e=>say(e.message,true))};
+lg.onclick=goHome;lg.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();goHome()}};
+
 start();
 })();
 </script>
