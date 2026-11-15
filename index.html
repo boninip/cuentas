@@ -28,6 +28,8 @@ button:disabled{opacity:.5}
 .tag{font-size:.75rem;border:1px solid var(--line);border-radius:99px;padding:1px 8px;color:var(--muted)}
 #msg{min-height:1.4em;overflow-wrap:anywhere;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;margin:0}#msg.bad{font-weight:600}
 #msg:empty{display:none}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}.hero-img :focus-visible{outline-color:#fff}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 label{font-size:.9rem;color:var(--muted)}
 .chk{display:flex;gap:8px;align-items:center}.chk input[type=checkbox]{width:auto;margin:0}
@@ -95,7 +97,7 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 </head>
 <body>
 <main>
-<header><button id="burger" class="burger" aria-label="Abrir menú" hidden><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><i id="actDot" hidden></i></button><h1>Cuentas<span>.</span></h1><button id="avatar" class="avatar" aria-label="Mi cuenta" hidden>P</button><div id="who" class="muted"></div></header>
+<header><button id="burger" class="burger" aria-label="Abrir menú" aria-haspopup="dialog" aria-expanded="false" hidden><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><i id="actDot" hidden></i></button><h1>Cuentas<span>.</span></h1><button id="avatar" class="avatar" aria-label="Mi cuenta" hidden>P</button><div id="who" class="muted"></div></header>
 <p id="msg" class="muted" role="status" aria-live="polite"></p>
 
 <section id="vLogin" hidden>
@@ -114,7 +116,7 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
  <div class="hero-img"><div class="kicker">● CUENTAS CLARAS.</div><div class="ht">Hagamos<br>las cuentas.</div></div>
  <button class="banner" id="optAct" hidden><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg></span><span class="ot"><b>Tenés cosas pendientes</b><small id="optActSub"></small></span><span class="chev">›</span></button>
  <h2 class="sec-h" style="margin-top:6px">Mi balance general</h2>
- <button class="stats" id="optBal" aria-label="Ver mi balance general"><span class="st pos"><span>A favor</span><b id="stPos">–</b></span><span class="st neg"><span>Debés</span><b id="stNeg">–</b></span><span class="st net"><span>Balance neto</span><b id="stNet">–</b></span></button>
+ <button class="stats" id="optBal" aria-label="Ver mi balance general: a favor, debés y balance neto"><span class="st pos"><span>A favor</span><b id="stPos">–</b></span><span class="st neg"><span>Debés</span><b id="stNeg">–</b></span><span class="st net"><span>Balance neto</span><b id="stNet">–</b></span></button>
  <div class="cta"><button id="btnHomeAdd">＋ Agregar gasto</button><button class="sec" id="btnHomeSettle"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l5-5 4 3 4-3 5 5-6 6-3-2-3 2z"/></svg> Saldar deuda</button></div>
  <div class="sech"><h2>Mis grupos</h2><button class="lnk" id="btnAllG" hidden>Ver todos ›</button></div>
  <div class="opts" id="groups"></div>
@@ -152,8 +154,8 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 </div>
 </section>
 
-<div id="pick" hidden><div class="scrim" id="pkScrim"></div><div class="sheet"><h2 id="pkT"></h2><div id="pkL" class="opts"></div><button class="sec" id="pkX">Cancelar</button></div></div>
-<div id="drawer" hidden><div class="scrim" id="dScrim"></div><nav aria-label="Menú">
+<div id="pick" hidden role="dialog" aria-modal="true" aria-labelledby="pkT"><div class="scrim" id="pkScrim"></div><div class="sheet"><h2 id="pkT"></h2><div id="pkL" class="opts"></div><button class="sec" id="pkX">Cancelar</button></div></div>
+<div id="drawer" hidden role="dialog" aria-modal="true" aria-label="Menú principal"><div class="scrim" id="dScrim"></div><nav aria-label="Menú">
  <div class="dh"><span>cuentas</span><button id="dClose" aria-label="Cerrar">✕</button></div>
  <button class="di" data-d="grupos"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9H4z"/></svg>Inicio</button>
  <button class="di" data-d="nuevo"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nuevo grupo</button>
@@ -298,7 +300,14 @@ document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{setTab(b.data
 $('btnGAdd').onclick=()=>$('fab').click();
 $('btnSaldos').onclick=()=>{setTab('saldos');window.scrollTo(0,0)};$('btnGear').onclick=()=>{setTab('mas');window.scrollTo(0,0)};
 
-function openDrawer(){$('drawer').hidden=false}function closeDrawer(){$('drawer').hidden=true}
+let lastFocus=null;
+function trap(el,e){if(e.key!=='Tab')return;const f=[...el.querySelectorAll('button:not([hidden]),a[href],input,select')].filter(x=>!x.disabled&&x.offsetParent!==null);if(!f.length)return;const a=f[0],z=f[f.length-1];if(e.shiftKey&&document.activeElement===a){e.preventDefault();z.focus()}else if(!e.shiftKey&&document.activeElement===z){e.preventDefault();a.focus()}}
+function openDrawer(){lastFocus=document.activeElement;$('drawer').hidden=false;$('burger').setAttribute('aria-expanded','true');const f=$('drawer').querySelector('.di');if(f)f.focus()}
+function closeDrawer(){$('drawer').hidden=true;$('burger').setAttribute('aria-expanded','false');if(lastFocus&&lastFocus.focus)lastFocus.focus()}
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape'){if(!$('drawer').hidden){closeDrawer();return}if(!$('pick').hidden){$('pick').hidden=true;if(lastFocus&&lastFocus.focus)lastFocus.focus()}}
+ if(!$('drawer').hidden)trap($('drawer'),e);else if(!$('pick').hidden)trap($('pick'),e);
+});
 $('burger').onclick=openDrawer;$('avatar').onclick=()=>{say('');home().then(()=>{setHp('cuenta');window.scrollTo(0,0)}).catch(e=>say(e.message,true))};$('dClose').onclick=closeDrawer;$('dScrim').onclick=closeDrawer;
 document.querySelectorAll('#drawer [data-d]').forEach(b=>b.onclick=()=>{closeDrawer();const d=b.dataset.d;say('');
  if(d==='salir'){save(null);start();return}
@@ -359,7 +368,7 @@ function pickGroup(title,list,cb){
  $('pkT').textContent=title;
  $('pkL').innerHTML=list.map((g,k)=>`<button class="opt" data-k="${k}"><span class="tile">${esc((g.name||'?').charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(g.name)}</b></span><span class="chev">›</span></button>`).join('');
  $('pkL').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{$('pick').hidden=true;cb(list[Number(b.dataset.k)])});
- $('pick').hidden=false;return true;
+ lastFocus=document.activeElement;$('pick').hidden=false;const f1=$('pkL').querySelector('button');if(f1)f1.focus();return true;
 }
 $('pkScrim').onclick=$('pkX').onclick=()=>{$('pick').hidden=true};
 $('btnHomeAdd').onclick=()=>{const l=gsAll.filter(g=>g.status==='open'&&g.member_status!=='former');

@@ -47,6 +47,11 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  // navegación + liquidar + gasto
  t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('#burger',{state:'visible'});
  ok(await t.page.isVisible('#actDot'),'inicio: punto de actividad en el menú');
+ await t.page.focus('#burger');await t.page.keyboard.press('Enter');await t.page.waitForTimeout(100);
+ ok(await t.page.evaluate(()=>!!document.activeElement.closest('#drawer')),'teclado: el foco entra al menú');
+ ok((await t.page.getAttribute('#burger','aria-expanded'))==='true','teclado: aria-expanded en la hamburguesa');
+ await t.page.keyboard.press('Escape');await t.page.waitForTimeout(100);
+ ok(!(await t.page.isVisible('#drawer'))&&(await t.page.evaluate(()=>document.activeElement.id))==='burger','teclado: Escape cierra y devuelve el foco');
  await t.page.click('#burger');await t.page.click('[data-d=actividad]');await t.page.waitForTimeout(300);ok(await t.page.isVisible('#pending'),'menú: Actividad');
  await t.page.click('#burger');await t.page.click('[data-d=balance]');await t.page.waitForTimeout(300);ok(/Debés/.test(await t.page.textContent('#balTot')),'balance general: total que debés');ok(/Viaje 1/.test(await t.page.textContent('#balGrp')),'balance general: por grupo');
  await t.page.click('#burger');await t.page.click('[data-d=grupos]');await t.page.waitForTimeout(300);ok(!(await t.page.isVisible('#bnav').catch(()=>false)),'sin barra inferior');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
