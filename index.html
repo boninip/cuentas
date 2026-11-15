@@ -15,7 +15,7 @@ header{display:flex;justify-content:space-between;align-items:center;gap:8px;mar
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
 input,select,button{font:inherit;width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--fg)}
 button{background:var(--accent);color:var(--accent-fg);border:0;font-weight:600;cursor:pointer}
-button[data-pay]{background:var(--warm);color:#2B1B08}
+button[data-pay],button.warm{background:var(--warm);color:#2B1B08}
 button.sec{background:transparent;color:var(--fg);border:1px solid var(--line)}
 button:disabled{opacity:.5}
 .row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
@@ -94,9 +94,22 @@ details.card[open]>summary{margin-bottom:10px}
   <label for="fAmt">Importe</label><input id="fAmt" inputmode="decimal" placeholder="0,00"><button id="btnFPay">Registrar pago</button></div>
 </section>
 
+<section id="vSettle" hidden>
+ <button class="sec" id="btnSettleBack">← Volver al grupo</button>
+ <div class="card" id="sPick"><h2>Seleccioná un saldo para liquidarlo</h2><div id="sList"></div></div>
+ <div class="card" id="sPay" hidden>
+  <h2 id="sTitle"></h2>
+  <div id="sInfo" class="muted"></div>
+  <label for="pAmt">Importe</label><input id="pAmt" inputmode="decimal" placeholder="0,00"><input type="hidden" id="pTo">
+  <p class="muted">Estás registrando un pago que se hizo fuera de Cuentas. No se mueve dinero. Cuenta en los saldos cuando quien cobra lo confirma.</p>
+  <button id="btnPay">Registrar un pago</button>
+  <button class="sec" id="btnPayBack">Elegir a otra persona</button>
+ </div>
+</section>
 <section id="vGroup" hidden>
  <button class="sec" id="btnBack">← Mis grupos</button>
  <div class="card"><h2 id="gTitle"></h2><div id="gSum"></div><div id="gMeta" class="muted"></div><div id="gMembers" hidden></div>
+  <button id="btnSettle" class="warm" hidden>Liquidar deudas</button>
   <button id="btnInvite">+ Agregar personas</button>
   <input id="inviteLink" readonly hidden aria-label="Link de invitación"></div>
  <nav class="tabs" role="tablist"><button role="tab" data-tab="gastos">Gastos</button><button role="tab" data-tab="saldos">Saldos</button><button role="tab" data-tab="mas">Más</button></nav>
@@ -120,14 +133,8 @@ details.card[open]>summary{margin-bottom:10px}
 
  <div data-pane="saldos" hidden>
   <div class="card"><h2>Saldos</h2><p class="muted">Positivo: te deben. Negativo: debés.</p><div id="balances"></div>
-   <h2 style="margin-top:14px">Cómo saldar</h2><div id="settle"></div></div>
-  <details class="card" id="cPay"><summary>Registrar un pago</summary>
-   <div class="row"><div><label for="pTo">Le pagaste a</label><select id="pTo"></select></div>
-   <div><label for="pAmt">Importe</label><input id="pAmt" inputmode="decimal" placeholder="0,00"></div></div>
-   <button id="btnPay">Registrar pago</button>
-   <p class="muted">El pago cuenta en los saldos cuando quien cobra lo confirma.</p>
-  </details>
-  <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
+  </div>
+   <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
  </div>
 
  <div data-pane="mas" hidden>
@@ -188,7 +195,7 @@ async function rpc(fn,args){
 }
 function setTab(t){tab=t;document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'))}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
-function show(v){['vLogin','vHome','vInvite','vGroup','vFormer'].forEach(x=>$(x).hidden=x!==v)}
+function show(v){['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v)}
 function busy(btn,fn){return async()=>{btn.disabled=true;say('Guardando…');try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
 
 async function home(){
@@ -263,7 +270,7 @@ async function openGroup(id){
  $('pairs').querySelectorAll('[data-pno]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_pair_respond',{p_account:b.dataset.pno,p_accept:false});await openGroup(gid);say('Solicitud rechazada.')}));
  $('pairs').querySelectorAll('[data-pend]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar';say('Desvincular es inmediato, invalida las propuestas abiertas y no borra deudas ni historial. Tocá de nuevo para confirmar.');return}await rpc('cuentas_pair_end',{p_account:b.dataset.pend});await openGroup(gid);say('Cuenta compartida desvinculada.')}));
  $('pairs').querySelectorAll('[data-cprop]').forEach(b=>b.onclick=busy(b,async()=>{const [acc,cur]=b.dataset.cprop.split('|');const amt=toMinor($('pairs').querySelector('[data-camt="'+b.dataset.cprop+'"]').value);if(!amt)throw Error('Importe inválido');await rpc('cuentas_compensation_propose',{p_account:acc,p_currency:cur,p_amount_minor:amt,p_reason:null});await openGroup(gid);say('Propuesta creada: se aplica solo si las dos personas la aprueban.')}));
- const payBy={};(pay||[]).forEach(x=>payBy[x.user_id]=x);
+ payBy={};(pay||[]).forEach(x=>payBy[x.user_id]=x);
  $('payouts').innerHTML=(pay&&pay.length)?pay.map(x=>`<div class="item"><div><b>${esc(name(x.user_id))}</b>${x.holder_name?`<div class="muted">${esc(x.holder_name)}${x.bank?' · '+esc(x.bank):''}</div>`:(x.bank?`<div class="muted">${esc(x.bank)}</div>`:'')}${x.alias?`<div>Alias: <b>${esc(x.alias)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.alias)}">Copiar</button></div>`:''}${x.cbu?`<div>CBU/CVU: <b>${esc(x.cbu)}</b> <button class="sec" style="width:auto;margin:0;padding:4px 8px" data-copy="${esc(x.cbu)}">Copiar</button></div>`:''}</div></div>`).join(''):'<p class="muted">Nadie compartió datos de cobro todavía. Cargá los tuyos en «Mis grupos».</p>';
  $('payouts').querySelectorAll('[data-copy]').forEach(b=>b.onclick=copyBtn(b));
  const openProps=(props||[]).filter(p=>p.status==='open');
@@ -287,13 +294,11 @@ async function openGroup(id){
  $('gSum').innerHTML=mine.length&&mine.some(b=>Number(b.balance_minor)!==0)?mine.filter(b=>Number(b.balance_minor)!==0).map(b=>Number(b.balance_minor)>0?`<span class="good">Te deben ${money(b.balance_minor,b.currency)}</span>`:`<span class="bad">Debés ${money(-Number(b.balance_minor),b.currency)}</span>`).join(' · '):'<span class="muted">Estás al día</span>';
  $('inviteLink').hidden=true;
  $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item"><span>${esc(name(b.user_id))}</span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(b.balance_minor,b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
- const sug=settleSuggestions(bal);
- $('settle').innerHTML=sug.length?sug.map((x,k)=>`<div class="item"><span>${esc(name(x.from))} le paga a ${esc(name(x.to))}${x.from===myId&&payBy[x.to]&&(payBy[x.to].alias||payBy[x.to].cbu)?`<div class="muted">Alias/CBU: ${esc(payBy[x.to].alias||payBy[x.to].cbu)} <button class="sec" style="width:auto;margin:0;padding:2px 8px" data-copy="${esc(payBy[x.to].alias||payBy[x.to].cbu)}">Copiar</button></div>`:''}</span><span><b>${money(x.amount,x.currency)}</b>${x.from===myId?` <button style="width:auto;margin:0 0 0 8px;padding:6px 10px" data-pay="${k}">Pagar</button>`:''}</span></div>`).join('')+'<p class="muted">Es una sugerencia con la menor cantidad de pagos. Los pagos pendientes de confirmar no cuentan todavía.</p>':'<p class="muted">Está todo saldado.</p>';
- $('settle').querySelectorAll('[data-copy]').forEach(b=>b.onclick=copyBtn(b));
- $('settle').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{const x=sug[Number(b.dataset.pay)];$('pTo').value=x.to;$('pAmt').value=(x.amount/100).toFixed(2).replace('.',',');setTab('saldos');$('cPay').open=true;$('pAmt').scrollIntoView({behavior:'smooth',block:'center'});$('pAmt').focus()});
+ sug=settleSuggestions(bal);
+ $('btnSettle').hidden=g.status!=='open'||active.length<2;
+ $('btnSettle').className=sug.some(x=>x.from===myId)?'warm':'sec';
  const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('ePayer').innerHTML=opts;$('ePayer').value=myId;
- $('pTo').innerHTML=active.filter(m=>m.user_id!==myId).map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('eParts').innerHTML=active.map(m=>`<label class="chk"><input type="checkbox" value="${m.user_id}" checked><span class="nm">${esc(name(m.user_id))}</span><input class="amt" inputmode="decimal" placeholder="0,00" data-u="${m.user_id}"></label>`).join('');
  $('eMode').value='eq';syncMode();resetEdit();
  const rows=mv.filter(m=>m.kind==='expense'||m.kind==='payment'||m.kind==='compensation').slice().reverse();
@@ -498,11 +503,31 @@ $('btnExpense').onclick=busy($('btnExpense'),async()=>{
  if(wasEdit)await rpc('cuentas_expense_edit',{p_expense:editId,...args});else await rpc('cuentas_expense_add',{p_group:gid,...args});
  $('eDesc').value='';$('eAmt').value='';await openGroup(gid);say(wasEdit?'Gasto editado: el anterior quedó anulado.':'Gasto guardado.');
 });
+let sug=[],payBy={};
+const nm=u=>{const m=group.members.find(x=>x.user_id===u);return (m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
+function openSettle(){
+ const mine=sug.filter(x=>x.from===myId);
+ $('sPay').hidden=true;$('sPick').hidden=false;
+ $('sList').innerHTML=mine.length?mine.map((x,k)=>`<div class="item"><span><b>${esc(nm(x.to))}</b></span><span><span class="bad">debés ${money(x.amount,x.currency)}</span> <button data-pay="${k}" style="width:auto;margin:0 0 0 8px;padding:6px 10px">Pagar</button></span></div>`).join(''):'<p class="muted">🎉 No tenés ningún saldo por liquidar en este grupo.</p>';
+ $('sList').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{
+  const x=mine[Number(b.dataset.pay)],p=payBy[x.to];
+  $('pTo').value=x.to;$('pAmt').value=(x.amount/100).toFixed(2).replace('.',',');
+  $('sTitle').textContent='Le pagaste a '+nm(x.to);
+  const dest=p&&(p.alias||p.cbu);
+  $('sInfo').innerHTML=dest?`Alias/CBU: <b>${esc(dest)}</b> <button class="sec" style="width:auto;margin:0;padding:2px 8px" data-copy="${esc(dest)}">Copiar</button>${p.holder_name?'<br>'+esc(p.holder_name)+(p.bank?' · '+esc(p.bank):''):''}`:'';
+  $('sInfo').querySelectorAll('[data-copy]').forEach(c=>c.onclick=copyBtn(c));
+  $('sPick').hidden=true;$('sPay').hidden=false;
+ });
+ show('vSettle');window.scrollTo(0,0);
+}
+$('btnSettle').onclick=openSettle;
+$('btnSettleBack').onclick=()=>{show('vGroup')};
+$('btnPayBack').onclick=openSettle;
 $('btnPay').onclick=busy($('btnPay'),async()=>{
  const amt=toMinor($('pAmt').value);if(!amt)throw Error('Importe inválido');
  if(!$('pTo').value)throw Error('No hay a quién pagarle');
  await rpc('cuentas_payment_add',{p_group:gid,p_currency:group.reference_currency,p_amount_minor:amt,p_to:$('pTo').value,p_description:null,p_occurred_on:today(),p_key:newKey()});
- $('pAmt').value='';await openGroup(gid);say('Pago registrado: queda pendiente hasta que lo confirme quien cobra.');
+ $('pAmt').value='';await openGroup(gid);setTab('gastos');say('Pago registrado: queda pendiente hasta que lo confirme quien cobra.');
 });
 
 async function start(){
