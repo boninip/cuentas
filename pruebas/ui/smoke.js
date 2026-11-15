@@ -5,7 +5,7 @@ const URL='file://'+path.resolve(__dirname,'../../index.html');
 const ME='11111111-1111-1111-1111-111111111111',BR='22222222-2222-2222-2222-222222222222',G='33333333-3333-3333-3333-333333333333',TOK='a'.repeat(64);
 let fails=0;const ok=(c,m)=>{if(!c){fails++;console.log('FALLA:',m)}else console.log('ok   ',m)};
 const LU='44444444-4444-4444-4444-444444444444';
-async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false}={}){
+async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false}={}){
  const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();
  const jwt='x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y';
  await page.addInitScript(([j])=>{localStorage.setItem('cuentas_auth_v1',JSON.stringify({access_token:j,refresh_token:'r',expires_at:Date.now()+3600000,email:'b@test.com'}))},[jwt]);
@@ -19,14 +19,16 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false}={}){
    case 'core_profile_set':prof={display_name:JSON.parse(body).p_name};return J(null);
    case 'cuentas_invite_accept':return J(G);
    case 'cuentas_my_groups_all':return J([{id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',member_status:'active'}]);
-   case 'cuentas_group_get':return J({id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',members:[{user_id:ME,role:'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno'}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])});
+   case 'cuentas_group_get':return J({id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',members:[{user_id:ME,role:'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])});
    case 'cuentas_guest_add':return J(LU);
    case 'cuentas_guest_invite_create':return J('c'.repeat(64));
    case 'cuentas_balances':return J(guest?[{user_id:ME,balance_minor:'-250000',currency:'ARS'},{user_id:BR,balance_minor:'100000',currency:'ARS'},{user_id:LU,balance_minor:'150000',currency:'ARS'}]:[{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
    case 'cuentas_group_payouts':return J([{user_id:BR,alias:'bruno.cuentas',cbu:null,holder_name:'Bruno',bank:'MP'}]);
    case 'cuentas_payment_add':debt=false;return J('p1');
-   case 'cuentas_expense_add':return J('e1');
-   case 'cuentas_movements_list':if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}]);
+   case 'cuentas_expense_add':if(offline)return r.abort('failed');return J('e1');
+   case 'cuentas_categories_list':return J(fam?[{key:'comida',name:'Comida y bebida',icon:'fork',color:0,archived:false},{key:'ocio',name:'Salidas y ocio',icon:'ticket',color:4,archived:false}]:[]);
+   case 'cuentas_member_set_weight':case 'cuentas_category_save':return J(null);
+   case 'cuentas_movements_list':if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].map(x=>fam?{...x,category:'comida'}:x));
    case 'cuentas_proposals_list':case 'cuentas_delegations_list':case 'core_links_list':case 'cuentas_pairs_list':case 'core_organizable_trips':return J([]);
    default:return J(null);}});
  const errs=[];page.on('pageerror',e=>errs.push(e.message));
@@ -173,4 +175,33 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.goto(URL);await t.page.waitForTimeout(800);
  ok((await views(t.page)).join()==='vLogin'&&/venci/i.test(await t.page.textContent('#msg')),'sesión vencida: vuelve al login con aviso');
 
+
+ // ===== categorías, familia, moneda, búsqueda, CSV, sin señal =====
+ t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ await t.page.click('#fab');
+ ok((await t.page.locator('#eCats .chip').count())===2,'categorías: chips en el formulario');
+ await t.page.click('#eCats [data-ck=comida]');ok((await t.page.getAttribute('#eCats [data-ck=comida]','aria-pressed'))==='true','categorías: se elige una');
+ await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','300');
+ await t.page.evaluate(()=>{document.getElementById('eAdv').open=true});await t.page.selectOption('#eCur','USD');ok(await t.page.isVisible('#eFx'),'moneda: otra moneda pide cotización');
+ await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
+ ok(/cotizaci/i.test(await t.page.textContent('#msg')),'moneda: no guarda sin cotización');
+ await t.page.fill('#eFx','1000');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
+ {const c=t.calls.find(c=>c.startsWith('cuentas_expense_add'));ok(c&&c.includes('"p_currency":"USD"')&&c.includes('"p_fx":1000')&&c.includes('"p_category":"comida"'),'gasto: envía moneda, cotización y categoría');
+  ok(c&&c.includes('"p_shares":{')&&c.includes('20000')&&c.includes('10000'),'familia: partes según peso (niño paga la mitad)');}
+ ok(/Comida y bebida/.test(await t.page.textContent('#moves')),'lista: muestra la categoría');
+ ok(await t.page.evaluate(()=>!!document.querySelector('#moves .cat-av svg')),'lista: ícono de categoría');
+ await t.page.click('#btnGear');ok((await t.page.locator('#catList .item').count())===2,'ajustes: lista de categorías');
+ ok(/cuenta ½/.test(await t.page.textContent('#mList')),'ajustes: etiqueta de peso en el miembro');
+ await t.page.click('[data-fam]');await t.page.click('#pick >> text=Niño/a');await t.page.waitForTimeout(250);
+ ok(t.calls.some(c=>c.startsWith('cuentas_member_set_weight')&&c.includes('0.5')),'familia: marca niño/a con peso 0,5');
+ await t.page.click('#btnCatAdd');await t.page.fill('#catName','Mascotas');await t.page.click('#catIcons [data-ci=paw]');await t.page.click('#btnCatSave');await t.page.waitForTimeout(250);
+ ok(t.calls.some(c=>c.startsWith('cuentas_category_save')&&c.includes('Mascotas')&&c.includes('paw')),'ajustes: crea categoría');
+ const dl=t.page.waitForEvent('download');await t.page.click('#btnCsv');const d=await dl;ok(/\.csv$/.test(d.suggestedFilename()),'exportar: baja un CSV');
+ // sin señal
+ t=await mk(b,{offline:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ await t.page.click('#fab');await t.page.fill('#eDesc','Peaje');await t.page.fill('#eAmt','50');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
+ ok(/Sin señal/i.test(await t.page.textContent('#msg')),'sin señal: avisa que quedó en espera');
+ ok(await t.page.evaluate(()=>JSON.parse(localStorage.getItem('cuentas_outbox_v1')||'[]').length===1),'sin señal: queda en la cola local');
+ ok(await t.page.isVisible('#obxNote'),'sin señal: aviso de gastos en espera');
+ ok((await t.errs).length===0,'nuevas funciones: sin errores de JS');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
