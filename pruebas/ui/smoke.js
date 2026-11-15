@@ -27,6 +27,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_payment_add':debt=false;return J('p1');
    case 'cuentas_expense_add':if(offline)return r.abort('failed');return J('e1');
    case 'cuentas_categories_list':return J(fam?[{key:'comida',name:'Comida y bebida',icon:'fork',color:0,archived:false},{key:'ocio',name:'Salidas y ocio',icon:'ticket',color:4,archived:false}]:[]);
+   case 'cuentas_activity_list':return J(fam?[{id:1,action:'expense_added',actor:ME,created_at:'2026-11-14T10:00:00Z',amount_minor:20000,currency:'ARS',description:'Asado'}]:[]);
    case 'cuentas_member_set_weight':case 'cuentas_category_save':return J(null);
    case 'cuentas_movements_list':if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
    case 'cuentas_proposals_list':case 'cuentas_delegations_list':case 'core_links_list':case 'cuentas_pairs_list':case 'core_organizable_trips':return J([]);
@@ -195,6 +196,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('[data-av=categorias]');await t.page.waitForTimeout(150);
  ok(/categoría elegida/.test(await t.page.textContent('#anBody')),'análisis: usa la categoría elegida');
  await t.page.click('#btnGear');ok((await t.page.locator('#catList .item').count())===2,'ajustes: lista de categorías');
+ ok(/Vos cargó un gasto/.test(await t.page.textContent('#actList')),'actividad: muestra qué pasó en el grupo');
  ok(/cuenta ½/.test(await t.page.textContent('#mList')),'ajustes: etiqueta de peso en el miembro');
  await t.page.click('[data-fam]');await t.page.click('#pick >> text=Niño/a');await t.page.waitForTimeout(250);
  ok(t.calls.some(c=>c.startsWith('cuentas_member_set_weight')&&c.includes('0.5')),'familia: marca niño/a con peso 0,5');

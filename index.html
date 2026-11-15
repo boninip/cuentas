@@ -312,6 +312,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  <div data-pane="mas" hidden>
   <button class="lnk" data-goto="gastos">‹ Volver a gastos</button>
   <h2 style="margin:6px 0">Ajustes del grupo</h2>
+  <div class="card" id="cAct"><h2>Actividad del grupo</h2><p class="muted" style="margin:0 0 8px">Lo último que pasó, para que no te enteres por otro lado.</p><div id="actList"></div></div>
   <div class="card" id="cCats"><h2>Categorías</h2><p class="muted" style="margin:0 0 8px">Para ordenar los gastos y ver en qué se va la plata.</p><div id="catList"></div>
    <div id="catForm" hidden><label for="catName">Nombre</label><input id="catName" maxlength="30" placeholder="Ej. Mascotas">
     <label id="catIcLbl">Ícono</label><div id="catIcons" class="icopick" role="group" aria-labelledby="catIcLbl"></div>
@@ -565,7 +566,7 @@ function fxNote(){
 async function openGroup(id){
  if(gid!==id)toTop();
  gid=id;
- const [g,bal,mv,pay,props,dels,links,pairs,cl]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id}),rpc('cuentas_categories_list',{p_group:id}).catch(()=>[])]);
+ const [g,bal,mv,pay,props,dels,links,pairs,cl,act]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id}),rpc('cuentas_categories_list',{p_group:id}).catch(()=>[]),rpc('cuentas_activity_list',{p_group:id,p_limit:30}).catch(()=>[])]);
  catsAll=Array.isArray(cl)?cl:[];cats=catsAll.filter(c=>!c.archived);
  group=g;show('vGroup');say('');setTab(tab);
  const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
@@ -653,7 +654,7 @@ async function openGroup(id){
  const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('ePayer').innerHTML=opts;$('ePayer').value=myId;
  $('eParts').innerHTML=active.map(m=>`<label class="chk"><span class="pa" aria-hidden="true">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><input type="checkbox" value="${m.user_id}" checked><span class="nm">${esc(name(m.user_id))}</span><input class="amt" inputmode="decimal" placeholder="0,00" data-u="${m.user_id}"></label>`).join('');
- $('eMode').value='eq';fillCur();$('eFx').value='';renderCats();syncFx();syncMode();resetEdit();renderCatsAdmin();obxNote();$('mvSearch').hidden=mv.length<5;$('mvSearch').querySelector('.si').innerHTML=ic('search',18);
+ $('eMode').value='eq';fillCur();$('eFx').value='';renderCats();syncFx();syncMode();resetEdit();renderCatsAdmin();renderActivity(act);obxNote();$('mvSearch').hidden=mv.length<5;$('mvSearch').querySelector('.si').innerHTML=ic('search',18);
  const allRows=mv.filter(m=>m.kind==='expense'||m.kind==='payment'||m.kind==='compensation').slice().reverse();
  const nVoid=allRows.filter(m=>m.voided).length;
  const rows=allRows.filter(m=>showVoided||!m.voided);
@@ -901,6 +902,16 @@ function famMenu(uid){
    if(!cand.length){say('No hay otra persona que pueda ser responsable.',true);return}
    pickGroup('¿Quién paga por '+who+'?',cand.map(x=>({name:nm(x.user_id)===who?nm(x.user_id):nm(x.user_id),sub:'Su saldo se suma al de '+nm(x.user_id),icon:'person',k:'c',id:x.user_id})),x=>famSet('cuentas_member_set_guardian',{p_group:gid,p_user:uid,p_guardian:x.id},nm(x.id)+' paga por '+who+'. Los saldos se muestran juntos.'))}
  });
+}
+/* ===== Actividad del grupo ===== */
+const ACT_TXT={expense_added:'cargó un gasto',expense_edited:'editó un gasto',expense_voided:'anuló un gasto',group_created:'creó el grupo',invite_created:'generó un link de invitación',guest_added:'sumó a alguien por nombre'};
+function renderActivity(a){
+ const L=Array.isArray(a)?a:[];
+ $('actList').innerHTML=L.length?'<div class="toplist">'+L.slice(0,30).map(x=>{
+  const d=x.created_at?new Date(x.created_at):null,dt=d?String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'';
+  const who=x.actor===myId?'Vos':nm(x.actor),t=ACT_TXT[x.action]||'hizo un cambio';
+  const extra=x.description?' · '+esc(x.description):x.name?' · '+esc(x.name):'';
+  return `<div class="trow"><span><b>${esc(who)} ${esc(t)}</b><small>${dt}${extra}</small></span>${x.amount_minor?`<b>${money(x.amount_minor,x.currency||group.reference_currency)}</b>`:''}</div>`}).join('')+'</div>':'<p class="muted">Todavía no hay actividad.</p>';
 }
 /* ===== Categorías (Ajustes) ===== */
 function renderCatsAdmin(){
