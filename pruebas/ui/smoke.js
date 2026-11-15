@@ -63,6 +63,16 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(t.calls.some(c=>c.startsWith('cuentas_payment_add')&&c.includes('250000')),'liquidar: registra pago por 250000');
  await t.page.click('#btnGAdd');await t.page.fill('#eDesc','Coca');await t.page.fill('#eAmt','200');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')),'gasto: se guarda desde el botón flotante');
+
+ // apariencia
+ t=await mk(b);await t.page.goto(URL);await t.page.waitForTimeout(500);
+ await t.page.evaluate(()=>document.querySelector('[data-d="cuenta"]').click?.());
+ await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="dark"]').click()});
+ ok(await t.page.evaluate(()=>document.documentElement.dataset.theme==='dark'&&localStorage.getItem('cuentas_theme')==='dark'),'apariencia: oscuro se aplica y se guarda');
+ await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="light"]').click()});
+ ok(await t.page.evaluate(()=>document.documentElement.dataset.theme==='light'),'apariencia: claro');
+ await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="auto"]').click()});
+ ok(await t.page.evaluate(()=>!document.documentElement.dataset.theme&&!localStorage.getItem('cuentas_theme')),'apariencia: automático sigue el sistema');
  ok(t.errs.length===0,'sin errores de JS');
  // robustez: sin conexión
  t=await mk(b);
