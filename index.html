@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#4F6B4F">
+<meta name="theme-color" content="#637B55">
 <title>Cuentas</title>
 <style>
-:root{--outer:#E7E2D3;--bg:#F4EFE3;--card:#FBF8F0;--field:#FFFFFF;--fg:#26331F;--muted:#5F6A52;--line:#DDE2C5;--accent:#4F6B4F;--accent-fg:#F4EFE3;--tile:#E6EAD2;--bad:#A55F26;--good:#4F6B4F;--warm:#D89A57;--warm-fg:#2B1B08;--shadow:0 3px 12px #26331F12;--h1:#2F4A2F;--h2:#4F6B4F;--h3:#587450}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--outer:#121A11;--bg:#1C251B;--card:#25311F;--field:#1C251B;--fg:#EDE8D8;--muted:#A9B49B;--line:#37442F;--accent:#8FA77A;--accent-fg:#1C251B;--tile:#293624;--bad:#E3AA70;--good:#A9C493;--warm:#D89A57;--shadow:0 3px 12px #0006;--h1:#2A3D27;--h2:#3F5A3F;--h3:#4B6842;color-scheme:dark}}
-:root[data-theme="dark"]{--outer:#121A11;--bg:#1C251B;--card:#25311F;--field:#1C251B;--fg:#EDE8D8;--muted:#A9B49B;--line:#37442F;--accent:#8FA77A;--accent-fg:#1C251B;--tile:#293624;--bad:#E3AA70;--good:#A9C493;--warm:#D89A57;--shadow:0 3px 12px #0006;--h1:#2A3D27;--h2:#3F5A3F;--h3:#4B6842;color-scheme:dark}
+:root{--outer:#EEEBE0;--bg:#FFFFFF;--card:#F8F6EF;--field:#FFFFFF;--fg:#344936;--muted:#5E6B58;--line:#E4E2D6;--accent:#637B55;--accent-fg:#FFFFFF;--tile:#E4ECD9;--bad:#A24D3A;--good:#3A6B2F;--warm:#A9553F;--warm-fg:#FFFFFF;--gold:#D7B96A;--logo:#3B5530;--pos-bg:#E4ECD9;--neg-bg:#F5E2D9;--shadow:0 3px 12px #34493612;--h1:#344936;--h2:#4F6A43;--h3:#5F7A52}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--outer:#0F150F;--bg:#1B241A;--card:#232F21;--field:#1B241A;--fg:#EEF0E6;--muted:#A9B5A0;--line:#364233;--accent:#9DB78B;--accent-fg:#16201A;--tile:#2E3D2B;--bad:#E39A86;--good:#A9D49A;--warm:#D9806A;--warm-fg:#1F0F0A;--gold:#D7B96A;--logo:#B7D3A3;--pos-bg:#2B3E27;--neg-bg:#4A2A22;--shadow:0 3px 12px #0006;--h1:#263A27;--h2:#3F5A3F;--h3:#4B6842;color-scheme:dark}}
+:root[data-theme="dark"]{--outer:#0F150F;--bg:#1B241A;--card:#232F21;--field:#1B241A;--fg:#EEF0E6;--muted:#A9B5A0;--line:#364233;--accent:#9DB78B;--accent-fg:#16201A;--tile:#2E3D2B;--bad:#E39A86;--good:#A9D49A;--warm:#D9806A;--warm-fg:#1F0F0A;--gold:#D7B96A;--logo:#B7D3A3;--pos-bg:#2B3E27;--neg-bg:#4A2A22;--shadow:0 3px 12px #0006;--h1:#263A27;--h2:#3F5A3F;--h3:#4B6842;color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--outer);color:var(--fg);font:16px/1.45 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;letter-spacing:-.1px}
 main{max-width:460px;margin:0 auto;padding:16px;background:var(--bg);min-height:100dvh}
 @media(min-width:600px){main{box-shadow:0 8px 30px #0002}}
-h1{font-size:1.9rem;margin:0;color:var(--accent);font-weight:850;letter-spacing:-1.5px}h1 span{color:var(--warm)}h2{font-size:1.15rem;margin:0 0 8px;font-weight:800;letter-spacing:-.3px}
-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:-16px -16px 0;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+h1{font-size:1.9rem;margin:0;color:var(--logo);font-weight:850;letter-spacing:-1.5px}h1 span{color:var(--gold)}h2{font-size:1.15rem;margin:0 0 8px;font-weight:800;letter-spacing:-.3px}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:-16px -16px 0;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0;box-shadow:var(--shadow)}
 input,select,button{font:inherit;width:100%;margin:4px 0 10px;padding:12px 13px;border-radius:12px;border:1px solid var(--line);background:var(--field);color:var(--fg)}
 button{background:var(--accent);color:var(--accent-fg);border:0;font-weight:750;cursor:pointer;min-height:48px;box-shadow:0 4px 12px #1c385014}
@@ -50,9 +50,19 @@ main{padding-bottom:96px}header{justify-content:flex-start}
 .adv{border:1px solid var(--line);border-radius:10px;padding:10px;margin:4px 0 12px}.adv>summary{color:var(--accent)}.adv[open]>summary{margin-bottom:8px}
 .avatar{margin-left:auto!important}.burger{width:44px;height:44px;margin:0;padding:0;min-height:0;background:transparent;color:var(--accent);box-shadow:none;position:relative;display:grid;place-items:center}.burger i{position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:50%;background:var(--warm)}#who{display:none}#cNew:not([open]){display:none}#cNew>summary{display:none}
 .avatar{width:42px;height:42px;border-radius:50%;margin:0;padding:0;min-height:0;background:var(--tile);color:var(--accent);font-weight:850;font-size:1.05rem;box-shadow:none}
-.hero-img{border-radius:0;margin:0 -16px 16px;padding:150px 20px 20px;color:#fff;background:linear-gradient(0deg,#16241Ad9 8%,#16241A00 70%),url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 800 480%22 preserveAspectRatio=%22xMidYMid slice%22%3E%3Cdefs%3E%3ClinearGradient id=%22sky%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23F7E3BE%22/%3E%3Cstop offset=%22.55%22 stop-color=%22%23F1C98E%22/%3E%3Cstop offset=%221%22 stop-color=%22%23C9D3A0%22/%3E%3C/linearGradient%3E%3ClinearGradient id=%22tbl%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%238A5A34%22/%3E%3Cstop offset=%221%22 stop-color=%22%236B4326%22/%3E%3C/linearGradient%3E%3CradialGradient id=%22glow%22%3E%3Cstop offset=%220%22 stop-color=%22%23FFF3CF%22 stop-opacity=%22.95%22/%3E%3Cstop offset=%221%22 stop-color=%22%23FFF3CF%22 stop-opacity=%220%22/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width=%22800%22 height=%22480%22 fill=%22url%28%23sky%29%22/%3E%3Ccircle cx=%22640%22 cy=%22120%22 r=%22150%22 fill=%22url%28%23glow%29%22/%3E%3Ccircle cx=%22640%22 cy=%22120%22 r=%2246%22 fill=%22%23F6B35E%22/%3E%3Cpath d=%22M0 300 Q120 230 260 285 T520 270 T800 285 V480 H0Z%22 fill=%22%238FA877%22/%3E%3Cpath d=%22M0 340 Q160 290 330 335 T620 325 T800 340 V480 H0Z%22 fill=%22%236E8C5E%22/%3E%3C%21-- guirnalda --%3E%3Cpath d=%22M0 40 Q200 110 400 50 T800 60%22 fill=%22none%22 stroke=%22%235A3B26%22 stroke-width=%222.5%22/%3E%3Cg fill=%22%23FFD27A%22%3E%3Ccircle cx=%2260%22 cy=%2268%22 r=%227%22/%3E%3Ccircle cx=%22150%22 cy=%2286%22 r=%227%22/%3E%3Ccircle cx=%22250%22 cy=%2290%22 r=%227%22/%3E%3Ccircle cx=%22350%22 cy=%2272%22 r=%227%22/%3E%3Ccircle cx=%22450%22 cy=%2258%22 r=%227%22/%3E%3Ccircle cx=%22550%22 cy=%2258%22 r=%227%22/%3E%3Ccircle cx=%22650%22 cy=%2262%22 r=%227%22/%3E%3Ccircle cx=%22745%22 cy=%2262%22 r=%227%22/%3E%3C/g%3E%3Cg fill=%22%23FFE9B0%22 opacity=%22.5%22%3E%3Ccircle cx=%2260%22 cy=%2268%22 r=%2216%22/%3E%3Ccircle cx=%22250%22 cy=%2290%22 r=%2216%22/%3E%3Ccircle cx=%22450%22 cy=%2258%22 r=%2216%22/%3E%3Ccircle cx=%22650%22 cy=%2262%22 r=%2216%22/%3E%3C/g%3E%3C%21-- hojas --%3E%3Cg fill=%22%234F6B4F%22%3E%3Cpath d=%22M0 330 q40 -90 90 -120 q-10 70 -30 120z%22/%3E%3Cpath d=%22M20 330 q10 -70 60 -100 q10 50 -10 100z%22 fill=%22%235F7F55%22/%3E%3Cpath d=%22M800 330 q-40 -90 -90 -120 q10 70 30 120z%22/%3E%3Cpath d=%22M780 330 q-10 -70 -60 -100 q-10 50 10 100z%22 fill=%22%235F7F55%22/%3E%3C/g%3E%3C%21-- personas %28detr%C3%A1s de la mesa%29 --%3E%3Cg%3E%3C%21-- 1 --%3E%3Ccircle cx=%22170%22 cy=%22250%22 r=%2230%22 fill=%22%23E7B58E%22/%3E%3Cpath d=%22M142 244 Q150 214 172 218 Q196 216 200 246 Q184 230 142 244Z%22 fill=%22%234A2F1E%22/%3E%3Cpath d=%22M118 400 Q118 296 170 296 Q222 296 222 400Z%22 fill=%22%23D8924F%22/%3E%3Ccircle cx=%22160%22 cy=%22252%22 r=%222.6%22 fill=%22%233a2a20%22/%3E%3Ccircle cx=%22182%22 cy=%22252%22 r=%222.6%22 fill=%22%233a2a20%22/%3E%3Cpath d=%22M160 266 Q171 276 183 266%22 stroke=%22%237a3b2a%22 stroke-width=%223%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3C%21-- 2 %28brazo en alto con ticket%29 --%3E%3Ccircle cx=%22320%22 cy=%22232%22 r=%2231%22 fill=%22%23C98F68%22/%3E%3Cpath d=%22M290 228 Q296 196 322 198 Q348 196 352 230 Q334 214 290 228Z%22 fill=%22%232B1D14%22/%3E%3Cpath d=%22M266 400 Q266 280 320 280 Q374 280 374 400Z%22 fill=%22%23F4EFE3%22/%3E%3Ccircle cx=%22310%22 cy=%22236%22 r=%222.6%22 fill=%22%233a2a20%22/%3E%3Ccircle cx=%22332%22 cy=%22236%22 r=%222.6%22 fill=%22%233a2a20%22/%3E%3Cpath d=%22M309 250 Q321 262 334 250%22 stroke=%22%237a3b2a%22 stroke-width=%223%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M372 320 Q410 280 420 214%22 stroke=%22%23C98F68%22 stroke-width=%2216%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3Cg transform=%22rotate%28-8 430 180%29%22%3E%3Crect x=%22396%22 y=%22130%22 width=%2276%22 height=%2298%22 rx=%228%22 fill=%22%23FFFDF6%22 stroke=%22%23E2D6BC%22 stroke-width=%222%22/%3E%3Cg stroke=%22%234F6B4F%22 stroke-width=%224%22 stroke-linecap=%22round%22%3E%3Cpath d=%22M410 152h48M410 168h48M410 184h32%22/%3E%3C/g%3E%3Cpath d=%22M410 204h48%22 stroke=%22%23D89A57%22 stroke-width=%225%22 stroke-linecap=%22round%22/%3E%3C/g%3E%3C%21-- 3 --%3E%3Ccircle cx=%22500%22 cy=%22248%22 r=%2230%22 fill=%22%23F2C9A5%22/%3E%3Cpath d=%22M470 244 Q474 210 502 214 Q530 212 532 244 Q516 226 470 244Z%22 fill=%22%238A5A2B%22/%3E%3Cpath d=%22M448 400 Q448 296 500 296 Q552 296 552 400Z%22 fill=%22%232F4A2F%22/%3E%3Ccircle cx=%22490%22 cy=%22250%22 r=%222.6%22 fill=%22%233a2a20%22/%3E%3Ccircle cx=%22512%22 cy=%22250%22 r=%222.6%22 fill=%22%233a2a20%22/%3E%3Cpath d=%22M489 264 Q501 275 514 264%22 stroke=%22%237a3b2a%22 stroke-width=%223%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3C%21-- 4 --%3E%3Ccircle cx=%22650%22 cy=%22256%22 r=%2230%22 fill=%22%23A8744F%22/%3E%3Cpath d=%22M620 254 Q622 220 652 222 Q680 222 682 254 Q666 238 620 254Z%22 fill=%22%231F1A16%22/%3E%3Cpath d=%22M598 400 Q598 304 650 304 Q702 304 702 400Z%22 fill=%22%23E8B6A0%22/%3E%3Ccircle cx=%22640%22 cy=%22258%22 r=%222.6%22 fill=%22%233a2a20%22/%3E%3Ccircle cx=%22662%22 cy=%22258%22 r=%222.6%22 fill=%22%233a2a20%22/%3E%3Cpath d=%22M639 272 Q651 283 664 272%22 stroke=%22%237a3b2a%22 stroke-width=%223%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M600 340 Q570 320 560 296%22 stroke=%22%23A8744F%22 stroke-width=%2215%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3C/g%3E%3C%21-- mesa --%3E%3Cpath d=%22M0 392 H800 V480 H0Z%22 fill=%22url%28%23tbl%29%22/%3E%3Crect y=%22388%22 width=%22800%22 height=%2212%22 fill=%22%23A06A3C%22/%3E%3C%21-- platos y monedas --%3E%3Cg%3E%3Cellipse cx=%22170%22 cy=%22418%22 rx=%2252%22 ry=%2212%22 fill=%22%23F4EFE3%22/%3E%3Cellipse cx=%22170%22 cy=%22416%22 rx=%2230%22 ry=%226%22 fill=%22%23E3DAC2%22/%3E%3Cellipse cx=%22400%22 cy=%22424%22 rx=%2262%22 ry=%2214%22 fill=%22%23F4EFE3%22/%3E%3Cellipse cx=%22400%22 cy=%22421%22 rx=%2238%22 ry=%227%22 fill=%22%23E3DAC2%22/%3E%3Cellipse cx=%22640%22 cy=%22418%22 rx=%2252%22 ry=%2212%22 fill=%22%23F4EFE3%22/%3E%3Cellipse cx=%22640%22 cy=%22416%22 rx=%2230%22 ry=%226%22 fill=%22%23E3DAC2%22/%3E%3C/g%3E%3Cg%3E%3Ccircle cx=%22270%22 cy=%22436%22 r=%2214%22 fill=%22%23F2B866%22 stroke=%22%23C98B3A%22 stroke-width=%223%22/%3E%3Ctext x=%22270%22 y=%22441%22 font-size=%2215%22 font-weight=%22800%22 text-anchor=%22middle%22 fill=%22%237A4B14%22 font-family=%22system-ui%2Csans-serif%22%3E%24%3C/text%3E%3Ccircle cx=%22522%22 cy=%22440%22 r=%2214%22 fill=%22%23F2B866%22 stroke=%22%23C98B3A%22 stroke-width=%223%22/%3E%3Ctext x=%22522%22 y=%22445%22 font-size=%2215%22 font-weight=%22800%22 text-anchor=%22middle%22 fill=%22%237A4B14%22 font-family=%22system-ui%2Csans-serif%22%3E%24%3C/text%3E%3C/g%3E%3C%21-- jarra --%3E%3Cpath d=%22M720 392 q-8 40 4 62 h34 q12 -22 4 -62z%22 fill=%22%239CC4A8%22 opacity=%22.85%22/%3E%3Cpath d=%22M724 410 h38%22 stroke=%22%23fff%22 stroke-width=%223%22 opacity=%22.7%22/%3E%3C/svg%3E") center/cover,var(--h2);}
-.hero-img .kicker{font-size:.65rem;font-weight:850;letter-spacing:.2em;color:#F6DDB4}.hero-img .ht{font-size:1.55rem;font-weight:800;letter-spacing:-.7px;line-height:1.15;margin-top:6px}
+.hero-img{border-radius:0;margin:0 -16px 16px;padding:170px 20px 20px;color:#fff;background:linear-gradient(0deg,#16241Ad0 0%,#16241A00 62%),url(assets/hero.jpg) center/cover,var(--h2)}
+.hero-img .kicker{font-size:.7rem;font-weight:850;letter-spacing:.2em;color:#fff}.hero-img .kicker::first-letter{color:var(--gold)}.hero-img .ht{font-size:1.55rem;font-weight:800;letter-spacing:-.7px;line-height:1.15;margin-top:6px}
 .opts{display:flex;flex-direction:column}
+.stats{display:grid;grid-template-columns:1fr 1fr 1.1fr;width:100%;padding:0;border-radius:18px;overflow:hidden;margin:6px 0 14px;background:var(--card);border:1px solid var(--line);box-shadow:none;min-height:0;font-weight:400;color:var(--fg)}
+.st{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px;font-size:.85rem;font-weight:600}.st b{font-size:1.25rem;font-weight:800;letter-spacing:-.4px}
+.st.pos{background:var(--pos-bg);color:var(--good)}.st.neg{background:var(--neg-bg);color:var(--bad)}.st.net{background:var(--pos-bg);color:var(--good)}.st.net.minus{background:var(--neg-bg);color:var(--bad)}
+.cta{display:grid;grid-template-columns:1.1fr 1fr;gap:10px;margin:0 0 6px}.cta button{margin:0;min-height:54px;border-radius:16px;font-size:1.02rem;display:flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--accent)}.cta button.sec{color:var(--accent);background:var(--bg)}
+.sech{display:flex;justify-content:space-between;align-items:baseline;margin-top:16px}.sech h2{margin:0}.lnk{width:auto;margin:0;padding:4px 0;min-height:0;background:transparent;color:var(--accent);box-shadow:none;font-weight:700}
+.lnk2{background:transparent;color:var(--accent);box-shadow:none;border:0;font-weight:700;min-height:0;margin:8px 0 0}
+.pill{border-radius:99px;padding:6px 12px;font-weight:800;font-size:.95rem;white-space:nowrap}.pill.pos{background:var(--pos-bg);color:var(--good)}.pill.neg{background:var(--neg-bg);color:var(--bad)}.pill.zero{background:var(--card);color:var(--muted);border:1px solid var(--line);font-weight:600}
+.banner{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--neg-bg);color:var(--fg);border:0;border-radius:16px;margin:0 0 10px;padding:10px 12px;box-shadow:none;min-height:0;font-weight:400}.banner .tile{background:var(--bg);color:var(--bad)}.banner .ot b{color:var(--bad)}
+#pick{position:fixed;inset:0;z-index:25;display:flex;align-items:flex-end;justify-content:center}#pick[hidden]{display:none}
+#pick .scrim{position:absolute;inset:0;background:#0007}#pick .sheet{position:relative;width:100%;max-width:460px;background:var(--bg);border-radius:20px 20px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow:auto}
 .feat{display:flex;align-items:center;gap:16px;width:100%;text-align:left;background:var(--card);color:var(--fg);border:1.5px solid var(--line);border-radius:20px;margin:0 0 12px;padding:16px;min-height:0;box-shadow:var(--shadow);font-weight:400}
 .tile.big{width:56px;height:56px;min-width:56px;border-radius:15px}.feat .ot b{font-size:1.15rem}
 .opt.plain{border-top:1px solid var(--line)}.opt .ic{color:var(--accent);width:34px;display:grid;place-items:center}
@@ -99,15 +109,15 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 
 <section id="vHome" hidden>
 <div data-hp="grupos">
- <div class="hero-img"><div class="kicker">● CUENTAS CLARAS</div><div class="ht">Dividí gastos con tu gente, sin vueltas.</div></div>
- <button class="feat" id="optNew"><span class="tile big"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M12 13v5M9.5 15.5h5"/></svg></span><span class="ot"><b>Nuevo grupo</b><small>Un viaje, una juntada, el depto…</small></span><span class="chev">›</span></button>
- <button class="feat" id="optAct"><span class="tile big"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg></span><span class="ot"><b>Actividad</b><small id="optActSub">Pagos y decisiones que te esperan</small></span><span class="chev">›</span></button>
- <div class="opts rows" style="margin-top:14px">
-  <button class="opt plain" id="optBal"><span class="ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16M4 16h16"/><circle cx="9" cy="8" r="2.2" fill="currentColor"/><circle cx="15" cy="16" r="2.2" fill="currentColor"/></svg></span><span class="ot"><b>Mi balance general</b><small>Cuánto debés y cuánto te deben</small></span><span class="chev">›</span></button>
- </div>
- <h2 class="sec-h">Mis grupos</h2>
+ <div class="hero-img"><div class="kicker">● CUENTAS CLARAS.</div><div class="ht">Hagamos<br>las cuentas.</div></div>
+ <button class="banner" id="optAct" hidden><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg></span><span class="ot"><b>Tenés cosas pendientes</b><small id="optActSub"></small></span><span class="chev">›</span></button>
+ <h2 class="sec-h" style="margin-top:6px">Mi balance general</h2>
+ <button class="stats" id="optBal" aria-label="Ver mi balance general"><span class="st pos"><span>A favor</span><b id="stPos">–</b></span><span class="st neg"><span>Debés</span><b id="stNeg">–</b></span><span class="st net"><span>Balance neto</span><b id="stNet">–</b></span></button>
+ <div class="cta"><button id="btnHomeAdd">＋ Agregar gasto</button><button class="sec" id="btnHomeSettle"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l5-5 4 3 4-3 5 5-6 6-3-2-3 2z"/></svg> Saldar deuda</button></div>
+ <div class="sech"><h2>Mis grupos</h2><button class="lnk" id="btnAllG" hidden>Ver todos ›</button></div>
  <div class="opts" id="groups"></div>
  <p id="noGroups" class="muted" hidden>Todavía no tenés grupos. Creá el primero con “Nuevo grupo”.</p>
+ <button class="lnk2" id="optNew">＋ Nuevo grupo</button>
  <details class="card" id="cNew">
   <summary>Nuevo grupo</summary><h2>Nuevo grupo</h2>
   <label for="gName">Nombre</label><input id="gName" maxlength="120" placeholder="Ej. Viaje a Mendoza">
@@ -140,6 +150,7 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 </div>
 </section>
 
+<div id="pick" hidden><div class="scrim" id="pkScrim"></div><div class="sheet"><h2 id="pkT"></h2><div id="pkL" class="opts"></div><button class="sec" id="pkX">Cancelar</button></div></div>
 <div id="drawer" hidden><div class="scrim" id="dScrim"></div><nav aria-label="Menú">
  <div class="dh"><span>cuentas</span><button id="dClose" aria-label="Cerrar">✕</button></div>
  <button class="di" data-d="grupos"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9H4z"/></svg>Inicio</button>
@@ -304,16 +315,53 @@ function setHp(t){hp=t;document.querySelectorAll('[data-hp]').forEach(p=>p.hidde
 function show(v){if(v==='vHome')setHp(hp);$('burger').hidden=v==='vLogin'||(v==='vInvite'&&!session);['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v)}
 function busy(btn,fn){return async()=>{btn.disabled=true;say('Guardando…');try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
 
+let gsAll=[],rowsBal=null,showAll=false;
+const moneyS=(m,c)=>{m=Number(m);try{return new Intl.NumberFormat('es-AR',{style:'currency',currency:c,minimumFractionDigits:m%100===0?0:2,maximumFractionDigits:2}).format(m/100)}catch(_){return money(m,c)}};
+async function fetchBalances(gs){
+ return Promise.all(gs.filter(g=>g.member_status!=='former').map(async g=>{const bal=await rpc('cuentas_balances',{p_group:g.id});return {g,mine:(bal||[]).filter(b=>b.user_id===myId&&Number(b.balance_minor)!==0)}}));
+}
+function renderStats(rows){
+ const tot={};rows.forEach(r=>r.mine.forEach(b=>{const t=tot[b.currency]=tot[b.currency]||{pos:0,neg:0};const v=Number(b.balance_minor);if(v>0)t.pos+=v;else t.neg+=-v}));
+ const cur=tot.ARS?'ARS':Object.keys(tot)[0]||'ARS';const t=tot[cur]||{pos:0,neg:0};const net=t.pos-t.neg;
+ $('stPos').textContent=moneyS(t.pos,cur);$('stNeg').textContent=moneyS(t.neg,cur);
+ $('stNet').textContent=(net>0?'+ ':net<0?'− ':'')+moneyS(Math.abs(net),cur);$('stNet').parentElement.classList.toggle('minus',net<0);
+}
+function renderGroups(){
+ const lim=showAll?99:4;const list=gsAll.slice(0,lim);
+ $('btnAllG').hidden=gsAll.length<=4;$('btnAllG').textContent=showAll?'Ver menos ›':'Ver todos ›';
+ $('groups').innerHTML=list.map(g=>{
+  let pill='';
+  if(g.member_status==='former')pill='<span class="pill zero">ex miembro</span>';
+  else if(rowsBal){const r=rowsBal.find(x=>x.g.id===g.id);const b=r&&r.mine[0];
+   pill=!b?'<span class="pill zero">Al día</span>':(Number(b.balance_minor)>0?`<span class="pill pos">+ ${esc(moneyS(b.balance_minor,b.currency))}</span>`:`<span class="pill neg">− ${esc(moneyS(-Number(b.balance_minor),b.currency))}</span>`)}
+  return `<button class="opt" data-g="${g.id}"><span class="tile">${esc((g.name||'?').trim().charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(g.name)}</b></span>${pill}<span class="chev">›</span></button>`}).join('');
+ $('groups').querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const g=gsAll.find(x=>x.id===b.dataset.g);(g.member_status==='former'?openFormer(g):openGroup(g.id)).catch(e=>say(e.message,true))});
+}
 async function home(){
  gid=null;tab='gastos';show('vHome');
  loadPayout().catch(()=>{});
  loadPending().catch(()=>{});
  loadProfile().catch(()=>{});
- const gs=(await rpc('cuentas_my_groups_all')).filter(g=>g.status!=='archived');
- $('noGroups').hidden=gs.length>0;
- $('groups').innerHTML=gs.map(g=>`<button class="opt" data-g="${g.id}"><span class="tile">${esc((g.name||'?').trim().charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(g.name)}</b><small>${esc(g.reference_currency)} · ${g.member_status==='former'?'ex miembro: ver mi saldo':(g.status==='open'?'abierto':'cerrado')}</small></span><span class="chev">›</span></button>`).join('');
- $('groups').querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const g=gs.find(x=>x.id===b.dataset.g);(g.member_status==='former'?openFormer(g):openGroup(g.id)).catch(e=>say(e.message,true))});
+ gsAll=(await rpc('cuentas_my_groups_all')).filter(g=>g.status!=='archived');rowsBal=null;
+ $('noGroups').hidden=gsAll.length>0;renderGroups();
+ fetchBalances(gsAll).then(r=>{rowsBal=r;renderStats(r);renderGroups()}).catch(()=>{});
 }
+function pickGroup(title,list,cb){
+ if(!list.length)return false;
+ if(list.length===1){cb(list[0]);return true}
+ $('pkT').textContent=title;
+ $('pkL').innerHTML=list.map((g,k)=>`<button class="opt" data-k="${k}"><span class="tile">${esc((g.name||'?').charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(g.name)}</b></span><span class="chev">›</span></button>`).join('');
+ $('pkL').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{$('pick').hidden=true;cb(list[Number(b.dataset.k)])});
+ $('pick').hidden=false;return true;
+}
+$('pkScrim').onclick=$('pkX').onclick=()=>{$('pick').hidden=true};
+$('btnHomeAdd').onclick=()=>{const l=gsAll.filter(g=>g.status==='open'&&g.member_status!=='former');
+ if(!pickGroup('¿En qué grupo?',l,g=>openGroup(g.id).then(()=>$('fab').click()).catch(e=>say(e.message,true))))say('Primero creá un grupo.',true)};
+$('btnHomeSettle').onclick=async()=>{
+ if(!rowsBal)try{rowsBal=await fetchBalances(gsAll)}catch(e){say(e.message,true);return}
+ const l=rowsBal.filter(r=>r.mine.some(b=>Number(b.balance_minor)<0)).map(r=>r.g);
+ if(!pickGroup('¿Dónde querés saldar?',l,g=>openGroup(g.id).then(()=>$('btnSettle').click()).catch(e=>say(e.message,true))))say('No tenés deudas para saldar. 🎉')};
+$('btnAllG').onclick=()=>{showAll=!showAll;renderGroups()};
 async function loadProfile(){
  const p=await rpc('core_profile_get');const n=(p&&p.display_name)||'';
  $('pName').value=n;if(n){$('avatar').dataset.n='1';$('avatar').textContent=n.charAt(0).toUpperCase()}$('profSum').textContent=n?'Mi nombre: '+n:'Poné tu nombre (así te ven en los grupos)';$('cProfile').open=!n;
@@ -321,7 +369,7 @@ async function loadProfile(){
 $('btnProfile').onclick=busy($('btnProfile'),async()=>{const n=$('pName').value.trim();if(!n)throw Error('Escribí tu nombre');await rpc('core_profile_set',{p_name:n});await loadProfile();say('Nombre guardado.')});
 async function loadPending(){
  const p=await rpc('cuentas_my_pending');
- $('noPending').hidden=p.length>0;$('optActSub').textContent=p.length?p.length+(p.length===1?' grupo te espera':' grupos te esperan'):'Nada pendiente';$('actDot').hidden=!p.length;
+ $('noPending').hidden=p.length>0;$('optAct').hidden=!p.length;$('optActSub').textContent=p.length+(p.length===1?' grupo te espera':' grupos te esperan');$('actDot').hidden=!p.length;
  $('pending').innerHTML=p.map(x=>{const t=[];const n=(c,s,pl)=>{if(Number(c))t.push(c+' '+(Number(c)===1?s:pl))};n(x.payments,'pago por confirmar','pagos por confirmar');n(x.proposals,'propuesta por decidir','propuestas por decidir');n(x.pairs,'solicitud de cuenta compartida','solicitudes de cuenta compartida');
   return `<div class="item"><div><b>${esc(x.name)}</b><div class="muted">${t.join(' · ')}</div></div><button style="width:auto;margin:0" data-pg="${x.group_id}">Ver</button></div>`}).join('');
  $('pending').querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>openGroup(b.dataset.pg).catch(e=>say(e.message,true)));
