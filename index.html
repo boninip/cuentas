@@ -95,6 +95,32 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 .mv .mvbody{padding:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mv .mvbody>*{margin:0}
 .mv .mvbody button{width:auto;padding:8px 14px}
 .mon{font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 0 2px;font-weight:600}
+/* Formulario de gasto: plano, importe protagonista */
+#cExpense{background:transparent;border:0;box-shadow:none;padding:0;margin:6px 0 18px}
+#cExpense>h2{font-size:1.5rem;margin:6px 0 2px;letter-spacing:-.4px}
+#cExpense label{display:block;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 6px}
+#cExpense #eAmt{display:block;width:100%;text-align:center;font-size:2.7rem!important;font-weight:800!important;letter-spacing:-1px;border:0;border-bottom:2px solid var(--line);border-radius:0;background:transparent;color:var(--fg);padding:8px 0;margin:4px 0 6px;box-shadow:none}
+#cExpense #eAmt:focus{outline:0;border-bottom-color:var(--accent)}
+#cExpense #eDesc{background:var(--field);border:1px solid var(--line);border-radius:14px;padding:14px;font-size:1.05rem}
+#cExpense .adv{border:0;border-bottom:1px solid var(--line);border-radius:0;padding:0;margin:6px 0 14px}
+#cExpense .adv>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;list-style:none;padding:14px 0;color:var(--fg);font-weight:600;font-size:.98rem}
+#cExpense .adv>summary::-webkit-details-marker{display:none}
+#cExpense .adv>summary .go{flex:none;color:var(--muted);transition:transform .15s}
+#cExpense .adv[open]>summary .go{transform:rotate(90deg)}
+#cExpense .adv>summary .st{min-width:0}
+#cExpense .adv[open]>summary{margin-bottom:0}
+#cExpense .adv select{background:var(--field);border:1px solid var(--line);border-radius:14px;padding:13px 12px}
+#eParts{display:flex;flex-direction:column;margin:0 0 10px}
+#eParts .chk{display:flex;align-items:center;gap:12px;margin:0;padding:10px 0;border-bottom:1px solid var(--line);text-transform:none;letter-spacing:0;font-size:1rem;font-weight:500;color:var(--fg);cursor:pointer}
+#eParts .chk:last-child{border-bottom:0}
+#eParts .chk .pa{flex:none;width:36px;height:36px;border-radius:50%;background:var(--tile);color:var(--logo);display:grid;place-items:center;font-weight:700;font-size:.95rem}
+#eParts .chk .nm{flex:1;min-width:0}
+#eParts .chk input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:none;order:3;width:26px;height:26px;min-width:26px;padding:0;margin:0;border-radius:50%;border:2px solid var(--line);background:transparent;display:grid;place-items:center;cursor:pointer}
+#eParts .chk input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+#eParts .chk input[type=checkbox]:checked{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;background-size:16px}
+#eParts .chk input[type=checkbox]:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+#eParts .chk .amt{order:2;flex:0 0 6.5em;margin:0}
+#btnExpClose,#btnEditCancel{background:transparent;border:0;box-shadow:none;color:var(--muted);font-weight:600}
 </style>
 </head>
 <body>
@@ -272,6 +298,7 @@ const ICONS={
  plus:'<path d="M12 5v14M5 12h14"/>',
  close:'<path d="M6 6l12 12M18 6L6 18"/>',
  back:'<path d="M15 5l-7 7 7 7"/>',
+ right:'<path d="M9 5l7 7-7 7"/>',
  left:'<path d="M19 12H5M11 6l-6 6 6 6"/>',
  chart:'<path d="M5 20V11M12 20V4M19 20v-6"/>',
  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/>',
@@ -526,7 +553,7 @@ async function openGroup(id){
 
  const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('ePayer').innerHTML=opts;$('ePayer').value=myId;
- $('eParts').innerHTML=active.map(m=>`<label class="chk"><input type="checkbox" value="${m.user_id}" checked><span class="nm">${esc(name(m.user_id))}</span><input class="amt" inputmode="decimal" placeholder="0,00" data-u="${m.user_id}"></label>`).join('');
+ $('eParts').innerHTML=active.map(m=>`<label class="chk"><span class="pa" aria-hidden="true">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><input type="checkbox" value="${m.user_id}" checked><span class="nm">${esc(name(m.user_id))}</span><input class="amt" inputmode="decimal" placeholder="0,00" data-u="${m.user_id}"></label>`).join('');
  $('eMode').value='eq';syncMode();resetEdit();
  const allRows=mv.filter(m=>m.kind==='expense'||m.kind==='payment'||m.kind==='compensation').slice().reverse();
  const nVoid=allRows.filter(m=>m.voided).length;
@@ -581,7 +608,7 @@ function updAdv(){
  const p=$('ePayer');const pn=p.selectedOptions[0]?p.selectedOptions[0].textContent:'';
  const m={eq:'En partes iguales',ex:'Importes exactos',pc:'Porcentajes'}[$('eMode').value];
  const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')];const n=cs.filter(c=>c.checked).length;
- $('eAdvSum').textContent='Pagó '+pn+' · '+m+(cs.length&&n<cs.length?' · entre '+n+' de '+cs.length:' · entre todos')+' ▾';
+ $('eAdvSum').innerHTML='<span class="st">Pagó '+esc(pn)+' · '+m+(cs.length&&n<cs.length?' · entre '+n+' de '+cs.length:' · entre todos')+'</span><span class="go">'+ic('right',20)+'</span>';
 }
 function syncMode(){
  const ex=$('eMode').value!=='eq';
