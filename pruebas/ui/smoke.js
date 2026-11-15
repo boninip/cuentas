@@ -11,6 +11,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
  await page.addInitScript(([j])=>{localStorage.setItem('cuentas_auth_v1',JSON.stringify({access_token:j,refresh_token:'r',expires_at:Date.now()+3600000,email:'b@test.com'}))},[jwt]);
  const calls=[];let prof=profile?{display_name:'Pau'}:null,debt=owe;
  await page.route('**/*',async r=>{const u=r.request().url();if(!u.includes('supabase.co'))return r.continue();
+  if(u.includes('/storage/v1/object/')){calls.push('STORAGE '+r.request().method()+' '+u);if(r.request().method()==='POST')return r.fulfill({status:200,contentType:'application/json',body:'{"Key":"x"}'});return r.fulfill({status:200,contentType:'image/jpeg',body:Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=','base64')})}
   const fn=u.split('/rpc/')[1],body=r.request().postData();calls.push(fn+' '+body);const J=v=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(v)});
   switch(fn){
    case 'cuentas_my_pending':return J([{group_id:G,name:'Viaje 1',payments:1,proposals:0,pairs:0}]);
@@ -28,6 +29,8 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_expense_add':if(offline)return r.abort('failed');return J('e1');
    case 'cuentas_categories_list':return J(fam?[{key:'comida',name:'Comida y bebida',icon:'fork',color:0,archived:false},{key:'ocio',name:'Salidas y ocio',icon:'ticket',color:4,archived:false}]:[]);
    case 'cuentas_recurring_list':return J(fam?[{id:'r1',description:'Alquiler',amount_minor:5000000,currency:'ARS',frequency:'monthly',status:'active',next_on:'2026-12-01',created_by:ME}]:[]);
+   case 'cuentas_receipts_list':return J(fam?[{movement:'e1',path:G+'/e1.jpg'}]:[]);
+   case 'cuentas_receipt_register':case 'cuentas_receipt_copy':return J(null);
    case 'cuentas_recurring_run':return J(0);
    case 'cuentas_recurring_save':case 'cuentas_recurring_set_status':return J(null);
    case 'cuentas_activity_list':return J(fam?[{id:1,action:'expense_added',actor:ME,created_at:'2026-11-14T10:00:00Z',amount_minor:20000,currency:'ARS',description:'Asado'},{id:2,action:'member_weight_set',actor:ME,target:BR,weight:0.5,created_at:'2026-11-14T09:00:00Z'}]:[]);
@@ -212,6 +215,21 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('#btnCatAdd');await t.page.fill('#catName','Mascotas');await t.page.click('#catIcons [data-ci=paw]');await t.page.click('#btnCatSave');await t.page.waitForTimeout(250);
  ok(t.calls.some(c=>c.startsWith('cuentas_category_save')&&c.includes('Mascotas')&&c.includes('paw')),'ajustes: crea categoría');
  const dl=t.page.waitForEvent('download');await t.page.click('#btnCsv');const d=await dl;ok(/\.csv$/.test(d.suggestedFilename()),'exportar: baja un CSV');
+ // comprobante
+ t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ await t.page.click('#fab');await t.page.fill('#eDesc','Peaje');await t.page.fill('#eAmt','50');
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEUlEQVR4nGM44eCAFTEMLQkALKhSAY1dq8cAAAAASUVORK5CYII=','base64');
+ await t.page.setInputFiles('#eRcptIn',{name:'ticket.png',mimeType:'image/png',buffer:png});await t.page.waitForTimeout(500);
+ ok(/Lista/.test(await t.page.textContent('#eRcptName')),'comprobante: la foto se achica y queda lista');
+ await t.page.click('#btnExpense');await t.page.waitForTimeout(500);
+ ok(t.calls.some(c=>c.startsWith('STORAGE POST')&&c.includes('/cuentas-receipts/'+G+'/e1.jpg')),'comprobante: sube la foto a la ruta grupo/gasto');
+ ok(t.calls.some(c=>c.startsWith('cuentas_receipt_register')&&c.includes('"p_movement":"e1"')),'comprobante: registra la foto en el gasto');
+ await t.page.evaluate(()=>{document.querySelectorAll('#moves details.mv').forEach(d=>d.open=true)});
+ ok(await t.page.isVisible('[data-rv]'),'comprobante: el gasto con foto ofrece verla');
+ await t.page.click('[data-rv]');await t.page.waitForTimeout(400);
+ ok(await t.page.isVisible('#rcptView')&&t.calls.some(c=>c.startsWith('STORAGE GET')),'comprobante: se abre la foto');
+ await t.page.keyboard.press('Escape');ok(!(await t.page.isVisible('#rcptView')),'comprobante: Escape la cierra');
+ ok(t.errs.length===0,'comprobante: sin errores de JS');
  // gastos repetidos
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eAdv').open=true});

@@ -142,6 +142,9 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 .dtrack .df{position:absolute;top:0;bottom:0}.dtrack .df.p{background:var(--good);border-radius:0 99px 99px 0}.dtrack .df.n{background:var(--bad);border-radius:99px 0 0 99px}
 .an-det{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:var(--card)}.an-det .dh{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:4px}.an-det .dh span{color:var(--muted);font-size:.86rem}
 /* categorías, familia, búsqueda, pendientes */
+.rcpt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.rcpt .sec{width:auto;margin:0;display:inline-flex;align-items:center;gap:8px}
+#rcptView{position:fixed;inset:0;z-index:30;background:#000d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}#rcptView[hidden]{display:none}
+#rcptView img{max-width:100%;max-height:78vh;border-radius:12px;background:#fff}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
 .chip{display:inline-flex;align-items:center;gap:6px;width:auto;margin:0;min-height:0;padding:8px 12px 8px 8px;border-radius:99px;border:1.5px solid var(--line);background:transparent;color:var(--fg);font-size:.9rem;font-weight:600;box-shadow:none}
 .chip .ci{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--ck,var(--accent)) 20%,transparent);color:var(--ck,var(--accent))}
@@ -217,6 +220,8 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 </section>
 
 <button class="fab" id="fab" hidden aria-label="Agregar gasto"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Agregar gasto</button>
+<input type="file" id="rcptAddIn" accept="image/*" hidden>
+<div id="rcptView" hidden role="dialog" aria-modal="true" aria-label="Comprobante"><img id="rcptImg" alt="Foto del comprobante"><button class="sec" id="rcptClose" style="width:auto">Cerrar</button></div>
 <div id="pick" hidden role="dialog" aria-modal="true" aria-labelledby="pkT"><div class="scrim" id="pkScrim"></div><div class="sheet"><h2 id="pkT"></h2><div id="pkL" class="opts"></div><button class="sec" id="pkX">Cancelar</button></div></div>
 <div id="drawer" hidden role="dialog" aria-modal="true" aria-label="Menú principal"><div class="scrim" id="dScrim"></div><nav aria-label="Menú">
  <div class="dh"><span>cuentas</span><button id="dClose" aria-label="Cerrar"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
@@ -280,6 +285,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
    <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300" placeholder="Ej. Asado, Nafta, Vinos">
    <label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00" style="font-size:1.6rem;font-weight:700">
    <label id="eCatsLbl">Categoría</label><div id="eCats" class="chips" role="group" aria-labelledby="eCatsLbl"></div>
+   <div class="rcpt" id="eRcptBox"><input type="file" id="eRcptIn" accept="image/*" hidden><button type="button" class="sec" id="btnRcpt"></button><span class="muted" id="eRcptName"></span><button type="button" class="lnk" id="btnRcptX" hidden>Quitar</button></div>
    <details id="eAdv" class="adv"><summary id="eAdvSum">Pagó Vos · En partes iguales</summary>
     <label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select>
     <label for="eCur">Moneda</label><select id="eCur"></select>
@@ -576,13 +582,51 @@ function fxNote(){
  const f=Number(String($('eFx').value).replace(/\./g,'').replace(',','.')),a=toMinor($('eAmt').value);
  $('eFxNote').textContent=f>0&&a?`Equivale a ${money(Math.round(a*f),ref)}. Los saldos quedan en ${c}; la cotización se usa solo para totales y gráficos.`:`Cuántos ${ref} vale 1 ${c} el día del gasto. Los saldos quedan en ${c}.`;
 }
-let recs=[];
+let recs=[],rcpts={},rcptBlob=null;
+/* ===== Comprobante (foto del ticket) ===== */
+async function compressImg(file){
+ const bmp=await (window.createImageBitmap?createImageBitmap(file):new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(file)}));
+ let w=bmp.width,h=bmp.height;const k=Math.min(1,1600/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
+ for(let scale=1;scale>0.4;scale-=0.15){
+  const c=document.createElement('canvas');c.width=Math.round(w*scale);c.height=Math.round(h*scale);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+  for(const q of [0.8,0.65,0.5]){const b=await new Promise(r=>c.toBlob(r,'image/jpeg',q));if(b&&b.size<=1000000)return b}
+ }
+ throw Error('No pude achicar la foto. Probá con otra.');
+}
+function rcptUi(){
+ $('btnRcpt').innerHTML=ic('receipt',18)+(rcptBlob?' Cambiar foto':' Foto del ticket');
+ $('eRcptName').textContent=rcptBlob?'Lista ('+Math.round(rcptBlob.size/1000)+' KB)':'';$('btnRcptX').hidden=!rcptBlob;
+}
+$('btnRcpt').onclick=()=>$('eRcptIn').click();
+$('btnRcptX').onclick=()=>{rcptBlob=null;$('eRcptIn').value='';rcptUi()};
+$('eRcptIn').onchange=async()=>{const f=$('eRcptIn').files[0];if(!f)return;try{rcptBlob=await compressImg(f)}catch(e){rcptBlob=null;say(e.message,true)}rcptUi()};
+async function uploadReceipt(mid,blob){
+ if(!(await fresh()))throw Error('Tu sesión venció.');
+ let r;try{r=await fetch(BASE+'/storage/v1/object/cuentas-receipts/'+gid+'/'+mid+'.jpg',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'image/jpeg','x-upsert':'false'},body:blob})}catch(_){const e=Error(NETERR);e.net=true;throw e}
+ if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.message||'No se pudo subir la foto ('+r.status+')')}
+ await rpc('cuentas_receipt_register',{p_movement:mid,p_size:blob.size});
+}
+async function showReceipt(mid){
+ const path=rcpts[mid];if(!path)return;
+ try{if(!(await fresh()))throw Error('Tu sesión venció.');
+  const r=await fetch(BASE+'/storage/v1/object/authenticated/cuentas-receipts/'+path,{headers:{apikey:KEY,Authorization:'Bearer '+session.access_token}});
+  if(!r.ok)throw Error('No se pudo abrir la foto ('+r.status+')');
+  const b=await r.blob(),u=URL.createObjectURL(b);$('rcptImg').src=u;$('rcptView').hidden=false;$('rcptClose').focus();
+ }catch(e){say(e.name==='TypeError'?NETERR:e.message,true)}
+}
+function closeReceipt(){const u=$('rcptImg').src;$('rcptView').hidden=true;$('rcptImg').removeAttribute('src');try{if(u.startsWith('blob:'))URL.revokeObjectURL(u)}catch(_){}}
+$('rcptClose').onclick=closeReceipt;$('rcptView').addEventListener('click',e=>{if(e.target===$('rcptView'))closeReceipt()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('rcptView').hidden)closeReceipt()});
+let rcptFor=null;
+$('rcptAddIn').onchange=async()=>{const f=$('rcptAddIn').files[0],mid=rcptFor;$('rcptAddIn').value='';if(!f||!mid)return;
+ try{say('Subiendo la foto…');const b=await compressImg(f);await uploadReceipt(mid,b);await openGroup(gid);say('Foto agregada al gasto.')}catch(e){say(e.message,true)}};
+
 async function openGroup(id){
  if(gid!==id)toTop();
  gid=id;
  let ran=0;try{ran=Number(await rpc('cuentas_recurring_run',{p_group:id}))||0}catch(_){}
- const [g,bal,mv,pay,props,dels,links,pairs,cl,act,rl]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id}),rpc('cuentas_categories_list',{p_group:id}).catch(()=>[]),rpc('cuentas_activity_list',{p_group:id,p_limit:30}).catch(()=>[]),rpc('cuentas_recurring_list',{p_group:id}).catch(()=>[])]);
- recs=Array.isArray(rl)?rl:[];
+ const [g,bal,mv,pay,props,dels,links,pairs,cl,act,rl,rcl]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id}),rpc('cuentas_categories_list',{p_group:id}).catch(()=>[]),rpc('cuentas_activity_list',{p_group:id,p_limit:30}).catch(()=>[]),rpc('cuentas_recurring_list',{p_group:id}).catch(()=>[]),rpc('cuentas_receipts_list',{p_group:id}).catch(()=>[])]);
+ recs=Array.isArray(rl)?rl:[];rcpts={};(Array.isArray(rcl)?rcl:[]).forEach(x=>{rcpts[x.movement]=x.path});
  catsAll=Array.isArray(cl)?cl:[];cats=catsAll.filter(c=>!c.archived);
  group=g;show('vGroup');say(ran>0?'Se cargaron '+ran+(ran===1?' gasto repetido que vencía.':' gastos repetidos que vencían.'):'');setTab(tab);
  const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
@@ -701,8 +745,11 @@ async function openGroup(id){
    if(m.from_user===myId){const d=Number(m.amount_minor)-sh;if(d>0)mineTxt=`<b class="good">${money(d,m.currency)}</b><small>te deben</small>`}
    else if(sh>0)mineTxt=`<b class="bad">${money(sh,m.currency)}</b><small>debés</small>`}
   const rep=isE&&m.shares&&Object.keys(m.shares).length?`<div class="muted" style="flex-basis:100%">Reparto: ${Object.entries(m.shares).map(([u,v])=>esc(name(u))+' '+money(v,m.currency)).join(', ')}</div>`:'';
+  const rcBtn=isE?(rcpts[m.id]?`<div style="flex-basis:100%"><button class="sec" style="width:auto;margin:0" data-rv="${m.id}">${ic('receipt',18)} Ver comprobante</button></div>`:(!m.voided?`<div style="flex-basis:100%"><button class="sec" style="width:auto;margin:0" data-ra="${m.id}">${ic('receipt',18)} Agregar foto del ticket</button></div>`:'')):'';
   const cg=isE&&m.category?catBy(m.category):null;const fxT=isE&&m.fx_rate?`<div class="muted" style="flex-basis:100%">Cotización: 1 ${esc(m.currency)} = ${money(Math.round(Number(m.fx_rate)*100),cur)} (≈ ${money(Math.round(Number(m.amount_minor)*Number(m.fx_rate)),cur)})</div>`:'';
-  return hd+`<details class="mv"><summary><span class="av ${cg?'cat-av':isE?hue(m.from_user):''}" ${cg?`style="--ck:${KCOL(cg.color)}"`:''} aria-hidden="true">${cg?ic(cg.icon,20):isE?esc(name(m.from_user).charAt(0).toUpperCase()):ic('swap',20)}</span><span class="mb"><b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b><small>${who}${isE?' '+money(m.amount_minor,m.currency):''} · ${dt}${cg?' · '+esc(cg.name):''}${st?' · ':''}${st}</small></span><span class="mr">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}</span></summary><div class="mvbody">${rep}${fxT}${act}</div></details>`}).join(''):'<div style="text-align:center;padding:18px 0"><div class="tile" style="margin:0 auto 10px;width:56px;height:56px">'+ic('receipt',28)+'</div><b>Todavía no hay gastos</b><p class="muted" style="margin:4px 0 0">Tocá «Agregar gasto» para cargar el primero.</p></div>';
+  return hd+`<details class="mv"><summary><span class="av ${cg?'cat-av':isE?hue(m.from_user):''}" ${cg?`style="--ck:${KCOL(cg.color)}"`:''} aria-hidden="true">${cg?ic(cg.icon,20):isE?esc(name(m.from_user).charAt(0).toUpperCase()):ic('swap',20)}</span><span class="mb"><b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b><small>${who}${isE?' '+money(m.amount_minor,m.currency):''} · ${dt}${cg?' · '+esc(cg.name):''}${st?' · ':''}${st}</small></span><span class="mr">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}</span></summary><div class="mvbody">${rep}${fxT}${rcBtn}${act}</div></details>`}).join(''):'<div style="text-align:center;padding:18px 0"><div class="tile" style="margin:0 auto 10px;width:56px;height:56px">'+ic('receipt',28)+'</div><b>Todavía no hay gastos</b><p class="muted" style="margin:4px 0 0">Tocá «Agregar gasto» para cargar el primero.</p></div>';
+ $('moves').querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>showReceipt(b.dataset.rv));
+ $('moves').querySelectorAll('[data-ra]').forEach(b=>b.onclick=()=>{rcptFor=b.dataset.ra;$('rcptAddIn').click()});
  $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{try{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}catch(e){if(!/propuesta/i.test(e.message))throw e;await rpc('cuentas_proposal_create',{p_kind:'void_expense',p_target:b.dataset.void,p_reason:null});await openGroup(gid);say('Este gasto ya tiene pagos confirmados, así que no se puede anular directo: creé una propuesta de anulación. Aparece en “Propuestas pendientes” y se aplica cuando los afectados la aprueben.')}}));
  $('moves').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
   const m=mv.find(x=>x.id===b.dataset.edit);if(!m)return;
@@ -722,7 +769,7 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
 function repVis(){const on=!editId;$('eRep').hidden=$('eRepLbl').hidden=!on;if(!on)$('eRep').value=''}
-function resetEdit(){editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true}
+function resetEdit(){rcptBlob=null;try{$('eRcptIn').value='';rcptUi()}catch(_){}editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true}
 function updAdv(){
  const p=$('ePayer');const pn=p.selectedOptions[0]?p.selectedOptions[0].textContent:'';
  const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')];const n=cs.filter(c=>c.checked).length;
@@ -1215,11 +1262,15 @@ $('btnExpense').onclick=busy($('btnExpense'),async()=>{
  if(rep){
   if(!$('eDesc').value.trim())throw Error('Poné una descripción para el gasto que se repite');
   await rpc('cuentas_recurring_save',{p_group:gid,p_description:$('eDesc').value.trim(),p_amount_minor:amt,p_currency:curX,p_payer:$('ePayer').value,p_participants:shares?null:parts,p_shares:shares,p_category:catSel||null,p_fx:fx,p_frequency:rep,p_start:today(),p_ends:null});
-  $('eDesc').value='';$('eAmt').value='';$('eRep').value='';await openGroup(gid);say('Gasto repetido guardado: se carga solo '+(rep==='weekly'?'cada semana':'cada mes')+'. Lo ves en Ajustes.');return;
+  $('eDesc').value='';$('eAmt').value='';$('eRep').value='';rcptBlob=null;rcptUi();await openGroup(gid);say('Gasto repetido guardado: se carga solo '+(rep==='weekly'?'cada semana':'cada mes')+'. Lo ves en Ajustes.');return;
  }
  const args={p_currency:curX,p_category:catSel||null,p_fx:fx,p_amount_minor:amt,p_payer:$('ePayer').value,p_participants:shares?null:parts,p_shares:shares,p_description:$('eDesc').value.trim()||null,p_occurred_on:wasEdit&&editDate?editDate:today(),p_key:newKey()};
- if(wasEdit){try{await rpc('cuentas_expense_edit',{p_expense:editId,...args})}catch(e){if(/confirmad|propuesta|anul/i.test(e.message))throw Error('Este gasto ya tiene pagos confirmados y no se puede editar directo. Anulalo con una propuesta (aprobada por los afectados) y cargá el corregido.');throw e}}else{try{await rpc('cuentas_expense_add',{p_group:gid,...args})}catch(e){if(!e.net)throw e;obxPush({gid,args:{p_group:gid,...args},desc:$('eDesc').value.trim(),amt:amt,cur:curX,ts:Date.now()});$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;$('fab').hidden=false;resetEdit();say('Sin señal: guardé el gasto en este celular y lo envío solo cuando vuelva la conexión.');return}}
- $('eDesc').value='';$('eAmt').value='';await openGroup(gid);say(wasEdit?'Gasto editado: el anterior quedó anulado.':'Gasto guardado.');
+ let newId=null;
+ if(wasEdit){try{newId=await rpc('cuentas_expense_edit',{p_expense:editId,...args})}catch(e){if(/confirmad|propuesta|anul/i.test(e.message))throw Error('Este gasto ya tiene pagos confirmados y no se puede editar directo. Anulalo con una propuesta (aprobada por los afectados) y cargá el corregido.');throw e}}else{try{newId=await rpc('cuentas_expense_add',{p_group:gid,...args})}catch(e){if(!e.net)throw e;obxPush({gid,args:{p_group:gid,...args},desc:$('eDesc').value.trim(),amt:amt,cur:curX,ts:Date.now()});$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;$('fab').hidden=false;resetEdit();say('Sin señal: guardé el gasto en este celular y lo envío solo cuando vuelva la conexión.'+(rcptBlob?' La foto no se guarda sin conexión: agregala después desde el gasto.':''));rcptBlob=null;rcptUi();return}}
+ let rcptMsg='';
+ if(newId){const old=editId;if(rcptBlob){try{await uploadReceipt(newId,rcptBlob)}catch(e){rcptMsg=' No se pudo subir la foto ('+e.message+'): agregala desde el gasto.'}}else if(wasEdit&&rcpts[old]){try{await rpc('cuentas_receipt_copy',{p_from:old,p_to:newId})}catch(_){}}}
+ rcptBlob=null;rcptUi();
+ $('eDesc').value='';$('eAmt').value='';await openGroup(gid);say((wasEdit?'Gasto editado: el anterior quedó anulado.':'Gasto guardado.')+rcptMsg,!!rcptMsg);
 });
 let sug=[],payBy={},guestIds=new Set(),mvAll=[],showVoided=false;
 const nm=u=>{const m=group.members.find(x=>x.user_id===u);return (m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
