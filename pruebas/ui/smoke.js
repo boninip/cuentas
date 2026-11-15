@@ -64,7 +64,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('#btnSettle');await t.page.click('[data-pay]');ok((await t.page.inputValue('#pAmt'))==='2500,00','liquidar: monto prellenado');
  await t.page.click('#btnPay');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_payment_add')&&c.includes('250000')),'liquidar: registra pago por 250000');
- await t.page.click('#btnGAdd');await t.page.fill('#eDesc','Coca');await t.page.fill('#eAmt','200');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
+ await t.page.click('#fab');await t.page.fill('#eDesc','Coca');await t.page.fill('#eAmt','200');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')),'gasto: se guarda desde el botón flotante');
 
 
@@ -109,6 +109,17 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.evaluate(()=>{window.scrollTo(0,800)});
  await t.page.evaluate(()=>document.getElementById('btnBack').click());await t.page.waitForTimeout(400);
  ok(await t.page.evaluate(()=>window.scrollY)===0,'scroll: al cambiar de pantalla arranca arriba');
+
+ // botón flotante
+ t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ ok(await t.page.isVisible('#fab'),'flotante: visible en el inicio');
+ await t.page.click('#burger');await t.page.waitForTimeout(100);
+ ok(!(await t.page.isVisible('#fab')),'flotante: se oculta con el menú abierto');
+ await t.page.keyboard.press('Escape');await t.page.waitForTimeout(100);
+ await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);
+ ok(await t.page.isVisible('#fab'),'flotante: visible en el grupo');
+ await t.page.click('#btnGear');await t.page.waitForTimeout(200);
+ ok(!(await t.page.isVisible('#fab')),'flotante: oculto en Ajustes');
  // apariencia
  t=await mk(b);await t.page.goto(URL);await t.page.waitForTimeout(500);
  await t.page.evaluate(()=>document.querySelector('[data-d="cuenta"]').click?.());
