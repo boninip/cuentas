@@ -314,7 +314,9 @@ async function rpc(fn,args,retried){
   if(e.status===401){sessionLost()}
   throw e}
 }
-function setTab(t){tab=t;const f=$('fab');if(f)f.hidden=!(t==='gastos'&&group&&group.status==='open'&&!$('vGroup').hidden);document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);if($('gTop'))$('gTop').hidden=t!=='gastos';document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'))}
+const toTop=()=>{try{window.scrollTo(0,0)}catch(_){}};
+let curView=null;
+function setTab(t){if(t!==tab)toTop();tab=t;const f=$('fab');if(f)f.hidden=!(t==='gastos'&&group&&group.status==='open'&&!$('vGroup').hidden);document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);if($('gTop'))$('gTop').hidden=t!=='gastos';document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'))}
 document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{setTab(b.dataset.goto);window.scrollTo(0,0)});
 $('btnGAdd').onclick=()=>$('fab').click();
 $('btnSaldos').onclick=()=>{setTab('saldos');window.scrollTo(0,0)};$('btnGear').onclick=()=>{setTab('mas');window.scrollTo(0,0)};
@@ -346,8 +348,8 @@ async function loadBalance(){
 }
 $('optBal').onclick=()=>{setHp('balance');window.scrollTo(0,0);loadBalance().catch(e=>say(e.message,true))};
 let hp='grupos';
-function setHp(t){hp=t;document.querySelectorAll('[data-hp]').forEach(p=>p.hidden=p.dataset.hp!==t)}
-function show(v){if(v==='vHome')setHp(hp);$('burger').hidden=v==='vLogin'||(v==='vInvite'&&!session);['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v)}
+function setHp(t){if(t!==hp)toTop();hp=t;document.querySelectorAll('[data-hp]').forEach(p=>p.hidden=p.dataset.hp!==t)}
+function show(v){if(v!==curView){curView=v;toTop()}if(v==='vHome')setHp(hp);$('burger').hidden=v==='vLogin'||(v==='vInvite'&&!session);['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v)}
 function busy(btn,fn){return async()=>{btn.disabled=true;say('Guardando…');try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
 
 let gsAll=[],rowsBal=null,showAll=false;
@@ -415,6 +417,7 @@ async function loadPending(){
  $('pending').querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>openGroup(b.dataset.pg).catch(e=>say(e.message,true)));
 }
 async function openGroup(id){
+ if(gid!==id)toTop();
  gid=id;
  const [g,bal,mv,pay,props,dels,links,pairs]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id})]);
  group=g;show('vGroup');say('');setTab(tab);

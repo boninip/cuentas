@@ -99,6 +99,16 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(/Total gastado/.test(await t.page.textContent('#anBody'))&&await t.page.isVisible('#anBody .bars'),'análisis: muestra totales y barras por persona');
  await t.page.goBack();await t.page.waitForTimeout(300);
  ok(await t.page.isVisible('#gTop'),'análisis: atrás vuelve a gastos');
+
+ // siempre arranca arriba
+ t=await mk(b,{eqExp:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);
+ await t.page.evaluate(()=>{document.body.style.minHeight='3000px';window.scrollTo(0,800)});
+ await t.page.evaluate(()=>document.getElementById('btnSaldos').click());await t.page.waitForTimeout(200);
+ ok(await t.page.evaluate(()=>window.scrollY)===0,'scroll: al cambiar de sección arranca arriba');
+ await t.page.evaluate(()=>{window.scrollTo(0,800)});
+ await t.page.evaluate(()=>document.getElementById('btnBack').click());await t.page.waitForTimeout(400);
+ ok(await t.page.evaluate(()=>window.scrollY)===0,'scroll: al cambiar de pantalla arranca arriba');
  // apariencia
  t=await mk(b);await t.page.goto(URL);await t.page.waitForTimeout(500);
  await t.page.evaluate(()=>document.querySelector('[data-d="cuenta"]').click?.());
