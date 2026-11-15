@@ -48,6 +48,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('#burger',{state:'visible'});
  ok(await t.page.isVisible('#actDot'),'inicio: punto de actividad en el menú');
  await t.page.click('#burger');await t.page.click('[data-d=actividad]');await t.page.waitForTimeout(300);ok(await t.page.isVisible('#pending'),'menú: Actividad');
+ await t.page.click('#burger');await t.page.click('[data-d=balance]');await t.page.waitForTimeout(300);ok(/Debés/.test(await t.page.textContent('#balTot')),'balance general: total que debés');ok(/Viaje 1/.test(await t.page.textContent('#balGrp')),'balance general: por grupo');
  await t.page.click('#burger');await t.page.click('[data-d=grupos]');await t.page.waitForTimeout(300);ok(!(await t.page.isVisible('#bnav').catch(()=>false)),'sin barra inferior');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  await t.page.click('#btnSaldos');ok(await t.page.isVisible('#balances'),'grupo: saldos');await t.page.click('[data-pane=saldos] [data-goto]');
  await t.page.click('#btnGear');ok(await t.page.isVisible('#mList'),'grupo: ajustes');await t.page.click('[data-pane=mas] [data-goto]');
