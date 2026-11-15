@@ -291,7 +291,7 @@ async function openGroup(id){
  $('cEmpty').hidden=!(active.length<2&&g.status==='open');$('btnInvite').hidden=!$('cEmpty').hidden;
  $('cExpense').hidden=g.status!=='open';$('cExpense').open=false;
  const mine=bal.filter(b=>b.user_id===myId);
- $('gSum').innerHTML=mine.length&&mine.some(b=>Number(b.balance_minor)!==0)?mine.filter(b=>Number(b.balance_minor)!==0).map(b=>Number(b.balance_minor)>0?`<span class="good">Te deben ${money(b.balance_minor,b.currency)}</span>`:`<span class="bad">Debés ${money(-Number(b.balance_minor),b.currency)}</span>`).join(' · '):'<span class="muted">Estás al día</span>';
+ $('gSum').innerHTML=mine.length&&mine.some(b=>Number(b.balance_minor)!==0)?mine.filter(b=>Number(b.balance_minor)!==0).map(b=>Number(b.balance_minor)>0?`<span class="good">Te deben ${money(b.balance_minor,b.currency)}</span>`:`<span class="bad">Debés ${money(-Number(b.balance_minor),b.currency)}</span>`).join(' · '):'<span class="good">🎉 Todo saldado en este grupo.</span>';
  $('inviteLink').hidden=true;
  $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item"><span>${esc(name(b.user_id))}</span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(b.balance_minor,b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
  sug=settleSuggestions(bal);
@@ -315,7 +315,16 @@ async function openGroup(id){
    if(!isE&&!isC&&m.confirmed&&!m.reversed&&(m.from_user===myId||m.to_user===myId))act=`<button class="sec" style="width:auto;margin:0" data-prev="${m.id}">Proponer anular</button>`;
    if(!isE&&!isC&&!m.confirmed&&m.to_user===myId)act=`<button style="width:auto;margin:0" data-conf="${m.id}">Confirmar</button>`;
   }
-  return `<div class="item"><div><b>${esc(m.description||(isE?'Gasto':'Pago'))}</b> ${st}<div class="muted">${who} · ${esc(m.occurred_on||'')}</div>${isE&&m.shares&&Object.keys(m.shares).length?`<div class="muted">Reparto: ${Object.entries(m.shares).map(([u,v])=>esc(name(u))+' '+money(v,m.currency)).join(', ')}</div>`:''}</div><div style="text-align:right"><b>${money(m.amount_minor,m.currency)}</b><div>${act}</div></div></div>`}).join(''):'<p class="muted">Sin movimientos.</p>';
+  const dt=m.occurred_on?esc(String(m.occurred_on).slice(5).split('-').reverse().join('/')):'';
+  if(!isE&&!isC){
+   const who2=`${esc(name(m.from_user))} pagó a ${esc(name(m.to_user))}`;
+   return `<div class="item mv-pay"><div><span class="muted">${dt}</span> 💵 ${who2} <b>${money(m.amount_minor,m.currency)}</b> ${st}</div><div>${act}</div></div>`;
+  }
+  let mineTxt='';
+  if(isE&&!m.voided&&m.shares){const sh=Number(m.shares[myId]||0);
+   if(m.from_user===myId){const d=Number(m.amount_minor)-sh;if(d>0)mineTxt=`<div class="good">pediste ${money(d,m.currency)}</div>`}
+   else if(sh>0)mineTxt=`<div class="bad">debés ${money(sh,m.currency)}</div>`}
+  return `<div class="item"><div><b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b> ${st}<div class="muted">${dt} · ${who}${isE?' '+money(m.amount_minor,m.currency):''}</div>${isE&&m.shares&&Object.keys(m.shares).length?`<details class="muted"><summary>Ver reparto</summary>${Object.entries(m.shares).map(([u,v])=>esc(name(u))+' '+money(v,m.currency)).join(', ')}</details>`:''}</div><div style="text-align:right">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}<div>${act}</div></div></div>`}).join(''):'<p class="muted">Sin movimientos.</p>';
  $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{try{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}catch(e){if(!/propuesta/i.test(e.message))throw e;await rpc('cuentas_proposal_create',{p_kind:'void_expense',p_target:b.dataset.void,p_reason:null});await openGroup(gid);say('Este gasto ya tiene pagos confirmados: creé una propuesta de anulación que necesita la aprobación de los afectados.')}}));
  $('moves').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
   const m=mv.find(x=>x.id===b.dataset.edit);if(!m)return;
