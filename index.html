@@ -329,6 +329,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
     <button id="btnCatSave">Guardar categoría</button><div class="row"><button class="sec" id="btnCatHide" hidden></button><button class="sec" id="btnCatCancel">Cancelar</button></div></div>
    <button class="sec" id="btnCatAdd" hidden>Agregar categoría</button></details>
   <details class="card" id="cRec"><summary class="srow"><span class="tile" data-ic="swap"></span><span class="ot"><b>Gastos repetidos</b><small>Alquiler, expensas, suscripciones</small></span><span class="chev">›</span></summary><div id="recList"></div><p class="muted" style="margin:8px 0 0">Para sumar uno nuevo, cargá un gasto y elegí «Repetir» en los detalles.</p></details>
+  <details class="card" id="cImp" hidden><summary class="srow"><span class="tile" data-ic="download"></span><span class="ot"><b>Importar de Splitwise</b><small>Traé tu historial desde un archivo CSV</small></span><span class="chev">›</span></summary><p class="muted" style="margin:0 0 8px">En Splitwise: grupo, Exportar como CSV. Los gastos se cargan con el reparto original; los pagos («Payment») no se importan, así que los saldos reflejan solo los gastos.</p><input type="file" id="impIn" accept=".csv,text/csv,text/plain"><div id="impBody"></div></details>
   <details class="card" id="cAct"><summary class="srow"><span class="tile" data-ic="receipt"></span><span class="ot"><b>Actividad del grupo</b><small>Lo último que pasó</small></span><span class="chev">›</span></summary><div id="actList"></div></details>
   <details class="card"><summary class="srow"><span class="tile" data-ic="download"></span><span class="ot"><b>Exportar</b><small>Todos los movimientos en un archivo</small></span><span class="chev">›</span></summary><p class="muted" style="margin:0 0 8px">Para abrir en Excel o Google Sheets.</p><button class="sec" id="btnCsv"></button></details>
   <details class="card" id="cDeleg" hidden><summary class="srow"><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M17 11l2 2 3-3"/></svg></span><span class="ot"><b>Coadministración</b><small>Delegar tareas con permiso revocable</small></span><span class="chev">›</span></summary><p class="muted">Delegación expresa, revocable y auditada. Reabrir y archivar quedan solo para quien administra.</p><div id="dList"></div>
@@ -968,9 +969,93 @@ function famMenu(uid){
  });
 }
 document.querySelectorAll('[data-ic]').forEach(e=>{e.innerHTML=ic(e.dataset.ic,22)});
+/* ===== Importar de Splitwise (CSV) ===== */
+function csvParse(t){
+ t=String(t).replace(/^﻿/,'');const first=t.split(/\r?\n/)[0]||'';const d=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?';':',';
+ const rows=[];let row=[],f='',q=false;
+ for(let i=0;i<t.length;i++){const c=t[i];
+  if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+  else if(c==='"')q=true;else if(c===d){row.push(f);f=''}
+  else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);f='';if(row.some(x=>x!==''))rows.push(row);row=[]}
+  else f+=c}
+ row.push(f);if(row.some(x=>x!==''))rows.push(row);return rows;
+}
+const impNum=v=>{let x=String(v||'').trim().replace(/\s/g,'');if(!x)return 0;if(x.includes(',')&&x.includes('.'))x=x.lastIndexOf(',')>x.lastIndexOf('.')?x.replace(/\./g,'').replace(',','.'):x.replace(/,/g,'');else if(x.includes(','))x=x.replace(',','.');const n=Number(x);return isFinite(n)?n:NaN};
+const SPLIT_CATS=[[/dining|restaurant|groceries|liquor|food|bar|coffee/,'Comida y bebida'],[/transport|taxi|gas\/fuel|fuel|parking|plane|bus|train|car|bicycle/,'Transporte'],[/hotel|lodging|accommodation/,'Alojamiento'],[/movie|entertainment|music|game|sport|tour|event|party/,'Salidas y ocio'],[/rent|utilit|electric|heat|water|internet|phone|tv|cleaning|household|furniture|medical|mortgage|maintenance|insurance/,'Hogar y servicios'],[/cloth|gift|shopping|electronics|books/,'Compras y regalos']];
+function impCat(sc,desc){
+ const x=anNorm(sc);for(const [re,name] of SPLIT_CATS){if(re.test(x)){const c=cats.find(c=>anNorm(c.name)===anNorm(name));if(c)return c.key}}
+ return suggestCat(desc);
+}
+function parseSplitwise(text){
+ const R=csvParse(text);if(R.length<2)throw Error('El archivo está vacío.');
+ const H=R[0].map(h=>String(h).trim()),iD=H.findIndex(h=>/^date$/i.test(h)),iDe=H.findIndex(h=>/^description$/i.test(h)),iCa=H.findIndex(h=>/^category$/i.test(h)),iCo=H.findIndex(h=>/^cost$/i.test(h)),iCu=H.findIndex(h=>/^currency$/i.test(h));
+ if([iD,iDe,iCo,iCu].some(i=>i<0)||iCu+1>=H.length)throw Error('No parece un CSV de Splitwise: faltan las columnas Date, Description, Cost, Currency y una por persona.');
+ const people=H.slice(iCu+1).map(h=>h.trim()).filter(Boolean),np=people.length;
+ const out={people,rows:[],skip:{pagos:0,total:0,sinPagador:0,variosPagadores:0,invalidas:0}};
+ for(let r=1;r<R.length;r++){
+  const c=R[r],desc=String(c[iDe]||'').trim(),cat=iCa>=0?String(c[iCa]||'').trim():'';
+  if(/^total balance$/i.test(desc)||/^total$/i.test(desc)){out.skip.total++;continue}
+  if(/^payment$/i.test(cat)||/^payment$/i.test(desc)){out.skip.pagos++;continue}
+  const date=String(c[iD]||'').trim(),cost=Math.round(impNum(c[iCo])*100),cur=String(c[iCu]||'').trim().toUpperCase();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!(cost>0)||!/^[A-Z]{3}$/.test(cur)){out.skip.invalidas++;continue}
+  const net=people.map((_,k)=>Math.round(impNum(c[iCu+1+k])*100));
+  if(net.some(isNaN)){out.skip.invalidas++;continue}
+  const pos=net.map((v,k)=>[v,k]).filter(x=>x[0]>0);
+  if(pos.length===0){out.skip.sinPagador++;continue}
+  if(pos.length>1){out.skip.variosPagadores++;continue}
+  const payer=pos[0][1],owed=net.map((v,k)=>k===payer?cost-v:-v);
+  if(owed.some(v=>v<0)||owed.reduce((a,b)=>a+b,0)!==cost){out.skip.invalidas++;continue}
+  out.rows.push({date,desc,cat,cost,cur,payer,owed,line:r});
+ }
+ return out;
+}
+const fnv=t=>{let h=2166136261;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)};
+let imp=null;
+function renderImp(){
+ const ref=group.reference_currency,B=$('impBody');if(!imp){B.innerHTML='';return}
+ const act=group.members.filter(m=>m.status==='active');
+ const opt=(sel)=>act.map(m=>`<option value="${m.user_id}"${sel===m.user_id?' selected':''}>${esc(nm(m.user_id))}</option>`).join('');
+ const auto=n=>{const k=anNorm(n).trim();const m=act.find(m=>anNorm(nm(m.user_id)).trim()===k||(m.user_id===myId&&/^(vos|yo|me)$/.test(k)));return m?m.user_id:''};
+ const used=new Set(imp.parsed.rows.flatMap(r=>[r.payer,...r.owed.map((v,k)=>v>0?k:-1).filter(k=>k>=0)]));
+ const curs=[...new Set(imp.parsed.rows.map(r=>r.cur).filter(c=>c!==ref))];
+ const sk=imp.parsed.skip,skT=[sk.pagos&&sk.pagos+' pago(s) («Payment»)',sk.variosPagadores&&sk.variosPagadores+' con varios pagadores',sk.sinPagador&&sk.sinPagador+' sin pagador',sk.invalidas&&sk.invalidas+' con datos inválidos'].filter(Boolean);
+ B.innerHTML=`<p><b>${imp.parsed.rows.length}</b> gastos para importar${imp.parsed.rows.length?' ('+imp.parsed.rows[0].date.split('-').reverse().join('/')+' al '+imp.parsed.rows[imp.parsed.rows.length-1].date.split('-').reverse().join('/')+')':''}.${skT.length?' No se importan: '+skT.join(', ')+'.':''}</p>
+ <h3 style="margin:10px 0 4px">¿Quién es quién?</h3>${imp.parsed.people.map((n,k)=>{if(!used.has(k))return '';const a=imp.map[k]!=null?imp.map[k]:auto(n);return `<label for="impP${k}">${esc(n)} en Splitwise</label><select id="impP${k}" data-ip="${k}"><option value="">Sumar como invitado «${esc(n)}»</option>${opt(a)}</select>`}).join('')}
+ ${curs.length?`<h3 style="margin:10px 0 4px">Otras monedas</h3><p class="muted">Poné cuántos ${esc(ref)} vale 1 de cada moneda. Si lo dejás vacío, esos gastos no se importan.</p>${curs.map(c=>`<label for="impF${c}">1 ${esc(c)} = ? ${esc(ref)}</label><input id="impF${c}" data-if="${c}" inputmode="decimal" value="${esc(imp.fx[c]||'')}">`).join('')}`:''}
+ <button id="btnImpGo"${imp.parsed.rows.length?'':' disabled'} style="margin-top:12px">Importar</button><p class="muted" id="impProg"></p>`;
+ B.querySelectorAll('[data-ip]').forEach(e=>e.onchange=()=>{imp.map[Number(e.dataset.ip)]=e.value});
+ B.querySelectorAll('[data-ip]').forEach(e=>{if(imp.map[Number(e.dataset.ip)]==null)imp.map[Number(e.dataset.ip)]=e.value});
+ B.querySelectorAll('[data-if]').forEach(e=>e.oninput=()=>{imp.fx[e.dataset.if]=e.value});
+ $('btnImpGo').onclick=runImport;
+}
+async function runImport(){
+ const b=$('btnImpGo');b.disabled=true;const P=$('impProg'),ref=group.reference_currency;
+ let ok=0,bad=[],skipFx=0;
+ try{
+  const ids={};
+  for(const [k,v] of Object.entries(imp.map)){ids[k]=v||null}
+  for(const k of Object.keys(ids)){if(ids[k]===null){const n=imp.parsed.people[Number(k)];P.textContent='Sumando a '+n+'…';ids[k]=await rpc('cuentas_guest_add',{p_group:gid,p_name:n})}}
+  const seed=fnv(imp.text);let i=0;
+  for(const r of imp.parsed.rows){
+   i++;P.textContent='Importando '+i+' de '+imp.parsed.rows.length+'…';
+   let fx=null;if(r.cur!==ref){fx=impNum(imp.fx[r.cur]);if(!(fx>0)){skipFx++;continue}}
+   const shares={};r.owed.forEach((v,k)=>{if(v>0)shares[ids[k]]=(shares[ids[k]]||0)+v});
+   try{await rpc('cuentas_expense_add',{p_group:gid,p_currency:r.cur,p_amount_minor:r.cost,p_payer:ids[r.payer],p_participants:null,p_shares:shares,p_description:r.desc||null,p_occurred_on:r.date,p_key:'imp-'+seed+'-'+r.line,p_category:impCat(r.cat,r.desc),p_fx:fx});ok++}
+   catch(e){if(e.net)throw e;bad.push('línea '+(r.line+1)+': '+e.message)}
+  }
+ }catch(e){P.textContent='';say((ok?ok+' importados. ':'')+'Se cortó: '+e.message+' Podés volver a elegir el mismo archivo: lo ya importado no se duplica.',true);b.disabled=false;if(ok)await openGroup(gid);return}
+ imp=null;$('impIn').value='';$('impBody').innerHTML='';await openGroup(gid);
+ say(ok+' gastos importados.'+(skipFx?' '+skipFx+' sin cotización no se importaron.':'')+(bad.length?' '+bad.length+' fallaron ('+bad.slice(0,2).join(' · ')+').':''),!!bad.length);
+}
+$('impIn').onchange=async()=>{
+ const f=$('impIn').files[0];if(!f)return;
+ try{const text=await f.text();const parsed=parseSplitwise(text);if(parsed.rows.length>500)throw Error('El archivo tiene más de 500 gastos: dividilo en partes.');imp={text,parsed,map:{},fx:{}};renderImp()}
+ catch(e){imp=null;$('impBody').innerHTML='';say(e.message,true)}
+};
 /* ===== Gastos repetidos ===== */
 function renderRecs(){
  const me=group.members.find(m=>m.user_id===myId),adm=!!(me&&(me.role==='admin'||me.role==='coadmin'));
+ $('cImp').hidden=!(adm&&group.status==='open');
  const fq={weekly:'cada semana',monthly:'cada mes'};
  $('recList').innerHTML=recs.length?recs.map(r=>{
   const mine=r.created_by===myId||adm,paused=r.status==='paused';

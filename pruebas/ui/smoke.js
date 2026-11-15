@@ -242,6 +242,23 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('[data-rs$="|paused"]');await t.page.waitForTimeout(250);
  ok(t.calls.some(c=>c.startsWith('cuentas_recurring_set_status')&&c.includes('paused')),'repetidos: se puede pausar');
  ok(t.errs.length===0,'repetidos: sin errores de JS');
+ // importar de Splitwise
+ t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ await t.page.click('#btnGear');await t.page.evaluate(()=>{document.getElementById('cImp').open=true});
+ ok(await t.page.isVisible('#cImp'),'importar: la tarjeta aparece para admin');
+ const csv='﻿Date,Description,Category,Cost,Currency,Pau,Bruno,Ana\n2026-11-01,"Cena, con vino",Dining out,3000.00,ARS,2000.00,-1000.00,-1000.00\n2026-11-02,Hotel,Hotel,100.00,USD,-50.00,100.00,-50.00\n2026-11-03,Payment,Payment,500.00,ARS,500.00,-500.00,0.00\n2026-11-04,Dos pagan,General,100.00,ARS,50.00,50.00,-100.00\n\n2026-11-05,Total balance, ,0.00,ARS,0.00,0.00,0.00\n';
+ await t.page.setInputFiles('#impIn',{name:'sw.csv',mimeType:'text/csv',buffer:Buffer.from(csv,'utf8')});await t.page.waitForTimeout(300);
+ const it=await t.page.textContent('#impBody');
+ ok(/2<\/b> gastos|2 gastos/.test(it)||/2\s*gastos/.test(it),'importar: cuenta 2 gastos importables');
+ ok(/1 pago/.test(it)&&/varios pagadores/.test(it),'importar: informa lo que no se importa');
+ ok(await t.page.inputValue('#impP0')===ME&&await t.page.inputValue('#impP1')===BR,'importar: empareja por nombre');
+ ok(await t.page.inputValue('#impP2')==='','importar: el desconocido queda como invitado');
+ await t.page.click('#btnImpGo');await t.page.waitForTimeout(500);
+ let adds=t.calls.filter(c=>c.startsWith('cuentas_expense_add'));
+ ok(adds.length===1&&adds[0].includes('Cena, con vino')&&adds[0].includes('"p_amount_minor":300000'),'importar: sin cotización solo importa el gasto en ARS');
+ ok(t.calls.some(c=>c.startsWith('cuentas_guest_add')&&c.includes('Ana')),'importar: suma a Ana como invitada');
+ ok(adds[0].includes('"p_category":"comida"')&&/"p_key":"imp-/.test(adds[0]),'importar: categoría mapeada y clave idempotente');
+ ok(t.errs.length===0,'importar: sin errores de JS');
  // sin señal
  t=await mk(b,{offline:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  await t.page.click('#fab');await t.page.fill('#eDesc','Peaje');await t.page.fill('#eAmt','50');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
