@@ -91,6 +91,14 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(/Sí, automático/.test(await t.page.textContent('#pkL')),'incluir: ofrece automático para gastos a partes iguales');
  await t.page.click('#pkL [data-k="0"]');await t.page.waitForTimeout(500);
  ok(t.calls.some(c=>c.startsWith('cuentas_expense_edit')&&c.includes(LU)&&c.includes('"p_shares":null')),'incluir: edita el gasto sumando al nuevo, a partes iguales');
+
+ // análisis
+ t=await mk(b,{eqExp:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);
+ await t.page.click('#btnAna');await t.page.waitForTimeout(200);
+ ok(/Total gastado/.test(await t.page.textContent('#anBody'))&&await t.page.isVisible('#anBody .bars'),'análisis: muestra totales y barras por persona');
+ await t.page.goBack();await t.page.waitForTimeout(300);
+ ok(await t.page.isVisible('#gTop'),'análisis: atrás vuelve a gastos');
  // apariencia
  t=await mk(b);await t.page.goto(URL);await t.page.waitForTimeout(500);
  await t.page.evaluate(()=>document.querySelector('[data-d="cuenta"]').click?.());
