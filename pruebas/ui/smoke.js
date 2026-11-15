@@ -9,10 +9,10 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
  const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();
  const jwt='x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y';
  await page.addInitScript(([j])=>{localStorage.setItem('cuentas_auth_v1',JSON.stringify({access_token:j,refresh_token:'r',expires_at:Date.now()+3600000,email:'b@test.com'}))},[jwt]);
- const calls=[];let prof=profile?{display_name:'Pau'}:null,debt=owe;
+ const state={down:false};const calls=[];let prof=profile?{display_name:'Pau'}:null,debt=owe;
  await page.route('**/*',async r=>{const u=r.request().url();if(!u.includes('supabase.co'))return r.continue();
   if(u.includes('/storage/v1/object/')){calls.push('STORAGE '+r.request().method()+' '+u);if(r.request().method()==='POST')return r.fulfill({status:200,contentType:'application/json',body:'{"Key":"x"}'});return r.fulfill({status:200,contentType:'image/jpeg',body:Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=','base64')})}
-  const fn=u.split('/rpc/')[1],body=r.request().postData();calls.push(fn+' '+body);const J=v=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(v)});
+  if(state.down)return r.abort('failed');const fn=u.split('/rpc/')[1],body=r.request().postData();calls.push(fn+' '+body);const J=v=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(v)});
   switch(fn){
    case 'cuentas_my_pending':return J([{group_id:G,name:'Viaje 1',payments:1,proposals:0,pairs:0}]);
    case 'cuentas_invite_preview':return J(preview);
@@ -39,7 +39,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_proposals_list':case 'cuentas_delegations_list':case 'core_links_list':case 'cuentas_pairs_list':case 'core_organizable_trips':return J([]);
    default:return J(null);}});
  const errs=[];page.on('pageerror',e=>errs.push(e.message));
- return {page,calls,errs};
+ return {page,calls,errs,state};
 }
 const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s=>!s.hidden).map(s=>s.id));
 (async()=>{const b=await chromium.launch();
@@ -242,6 +242,19 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('[data-rs$="|paused"]');await t.page.waitForTimeout(250);
  ok(t.calls.some(c=>c.startsWith('cuentas_recurring_set_status')&&c.includes('paused')),'repetidos: se puede pausar');
  ok(t.errs.length===0,'repetidos: sin errores de JS');
+ // grupo sin conexión
+ t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ ok(!(await t.page.isVisible('#offNote')),'sin conexión: con señal no muestra el aviso');
+ t.state.down=true;await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:8000});
+ ok(/Sin conexión/.test(await t.page.textContent('#msg')),'sin conexión: el inicio avisa que muestra lo guardado');
+ await t.page.click('[data-g]');await t.page.waitForSelector('#gTitle',{state:'visible'});await t.page.waitForTimeout(400);
+ ok((await t.page.textContent('#gTitle'))==='Viaje 1','sin conexión: se abre el grupo con la última vista guardada');
+ ok(await t.page.isVisible('#offNote'),'sin conexión: aviso en el grupo');
+ ok(/Vinos/.test(await t.page.textContent('#moves')),'sin conexión: se ven los movimientos guardados');
+ await t.page.click('#fab');await t.page.fill('#eDesc','Peaje');await t.page.fill('#eAmt','50');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
+ ok(await t.page.evaluate(()=>JSON.parse(localStorage.getItem('cuentas_outbox_v1')||'[]').length===1),'sin conexión: cargar un gasto lo deja en cola');
+ t.state.down=false;await t.page.click('#btnLogout').catch(()=>{});
+ ok(t.errs.length===0,'sin conexión: sin errores de JS');
  // pagos: anulación por la administración
  t=await mk(b,{pay:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  await t.page.evaluate(()=>{document.querySelectorAll('#moves details.mv').forEach(d=>d.open=true)});

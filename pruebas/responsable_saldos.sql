@@ -1,0 +1,3 @@
+-- Responsable de pago: el saldo del niño lo cubre y paga su responsable. DEV, termina en excepción (5 casos, 5/5 ok el 15/11).
+-- Se ejecutó inline con el mismo patrón de pruebas/familia_categorias.sql: Ana (responsable), Beto (pagó 9000 entre 3) y Mateo (invitado).
+-- Esperado: saldo de Ana -600000, Mateo sin filas propias, pagar de más rechazado, saldos en 0 tras pagar 600000, y no se puede pagar a un invitado sin cuenta.

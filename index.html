@@ -153,6 +153,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 .icopick{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:0 0 10px}.icopick button{margin:0;min-height:0;aspect-ratio:1;padding:0;border-radius:14px;border:1.5px solid var(--line);background:transparent;color:var(--muted);display:grid;place-items:center;box-shadow:none;width:auto}.icopick button.on{border-color:var(--accent);background:var(--tile);color:var(--logo)}
 .copick{display:flex;gap:12px;margin:0 0 14px}.copick button{margin:0;min-height:0;width:36px;height:36px;padding:0;border-radius:50%;border:3px solid transparent;box-shadow:none}.copick button.on{border-color:var(--fg)}
 .search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--field);border-radius:14px;padding:0 12px;margin:6px 0 8px}.search .si{display:grid;place-items:center;color:var(--muted)}.search input{border:0;background:transparent;box-shadow:none;margin:0;padding:12px 0;flex:1;min-width:0;font-size:1rem}.search input:focus{outline:0}
+.obx.off{background:var(--card2,var(--neg-bg));color:var(--fg,inherit)}
 .obx{margin:6px 0 0;padding:8px 12px;border-radius:12px;background:var(--neg-bg);color:var(--bad);font-size:.88rem;font-weight:600;display:flex;gap:8px;align-items:center}
 .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}.tags .tag{white-space:nowrap}.tag.fam{background:var(--tile);color:var(--logo)}
 </style>
@@ -268,7 +269,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 </section>
 <section id="vGroup" hidden>
  <div class="row topbar"><button class="lnk" id="btnBack"><svg class="icn" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Grupos</button><button class="lnk" id="btnAna"><svg class="icn" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20v-6"/></svg>Análisis</button><button class="lnk" id="btnGear" aria-label="Ajustes del grupo"><svg class="icn" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg>Ajustes</button></div>
- <div class="ghead"><h2 id="gTitle"></h2><div id="gMeta" class="muted"></div><p id="obxNote" class="obx" hidden></p></div>
+ <div class="ghead"><h2 id="gTitle"></h2><div id="gMeta" class="muted"></div><p id="offNote" class="obx off" hidden></p><p id="obxNote" class="obx" hidden></p></div>
  <div id="gSum" hidden></div><div id="gMembers" hidden></div>
  <div id="gTop">
  <div class="ghero" id="gStats"><small id="gLbl"></small><b id="gBig">–</b><span id="gSub"></span></div>
@@ -427,6 +428,14 @@ async function fresh(){
  catch(e){if(e.net)throw e;if(e.status>=500)throw e;save(null);return false}
 }
 function sessionLost(){save(null);try{show('vLogin')}catch(_){}say('Tu sesión venció. Ingresá de nuevo para continuar.',true);$('avatar').hidden=true;$('burger').hidden=true}
+let offAt=0;
+const cKey=(fn,a)=>'cuentas_cache_v1_'+(myId||'')+'_'+fn+'_'+((a&&(a.p_group||''))||'');
+async function rpcC(fn,args){
+ try{const v=await rpc(fn,args);try{localStorage.setItem(cKey(fn,args),JSON.stringify({t:Date.now(),d:v}))}catch(_){}return v}
+ catch(e){if(!e.net)throw e;let c=null;try{c=JSON.parse(localStorage.getItem(cKey(fn,args))||'null')}catch(_){}if(!c)throw e;offAt=offAt?Math.min(offAt,c.t):c.t;return c.d}
+}
+function offClear(){try{Object.keys(localStorage).filter(k=>k.startsWith('cuentas_cache_v1_')).forEach(k=>localStorage.removeItem(k))}catch(_){}}
+const agoTxt=t=>{const m=Math.max(1,Math.round((Date.now()-t)/60000));return m<60?m+' min':m<1440?Math.round(m/60)+' h':Math.round(m/1440)+' d'};
 async function rpc(fn,args,retried){
  if(!(await fresh())){sessionLost();throw Error('Tu sesión venció. Ingresá de nuevo para continuar.')}
  try{return await req('/rest/v1/rpc/'+fn,args||{},session.access_token)}
@@ -452,13 +461,13 @@ document.addEventListener('keydown',e=>{
 });
 $('burger').onclick=openDrawer;$('avatar').onclick=()=>{say('');home().then(()=>{setHp('cuenta');window.scrollTo(0,0)}).catch(e=>say(e.message,true))};$('dClose').onclick=closeDrawer;$('dScrim').onclick=closeDrawer;
 document.querySelectorAll('#drawer [data-d]').forEach(b=>b.onclick=()=>{closeDrawer();const d=b.dataset.d;say('');
- if(d==='salir'){save(null);start();return}
+ if(d==='salir'){offClear();save(null);start();return}
  home().then(()=>{if(d==='nuevo'){setHp('grupos');$('cNew').open=true;$('cNew').scrollIntoView({behavior:'smooth'})}else{setHp(d);if(d==='balance')loadBalance().catch(e=>say(e.message,true))}}).catch(e=>say(e.message,true))});
 $('optNew').onclick=()=>{$('cNew').open=true;$('cNew').scrollIntoView({behavior:'smooth'});$('gName').focus()};
 $('optAct').onclick=()=>{setHp('actividad');window.scrollTo(0,0)};
 
 async function loadBalance(){
- const gs=(await rpc('cuentas_my_groups_all')).filter(g=>g.status!=='archived'&&g.member_status!=='former');
+ const gs=(await rpcC('cuentas_my_groups_all')).filter(g=>g.status!=='archived'&&g.member_status!=='former');
  const rows=await Promise.all(gs.map(async g=>{const bal=await rpc('cuentas_balances',{p_group:g.id});return {g,mine:(bal||[]).filter(b=>b.user_id===myId&&Number(b.balance_minor)!==0)}}));
  const tot={};rows.forEach(r=>r.mine.forEach(b=>{tot[b.currency]=(tot[b.currency]||0)+Number(b.balance_minor)}));
  const cur=Object.keys(tot);
@@ -478,7 +487,7 @@ function busy(btn,fn){return async()=>{btn.disabled=true;say('Guardando…');try
 let gsAll=[],rowsBal=null,showAll=false;
 const moneyS=(m,c)=>{m=Number(m);try{return new Intl.NumberFormat('es-AR',{style:'currency',currency:c,minimumFractionDigits:m%100===0?0:2,maximumFractionDigits:2}).format(m/100)}catch(_){return money(m,c)}};
 async function fetchBalances(gs){
- return Promise.all(gs.filter(g=>g.member_status!=='former').map(async g=>{const bal=await rpc('cuentas_balances',{p_group:g.id});return {g,mine:(bal||[]).filter(b=>b.user_id===myId&&Number(b.balance_minor)!==0)}}));
+ return Promise.all(gs.filter(g=>g.member_status!=='former').map(async g=>{const bal=await rpcC('cuentas_balances',{p_group:g.id});return {g,mine:(bal||[]).filter(b=>b.user_id===myId&&Number(b.balance_minor)!==0)}}));
 }
 function renderStats(rows){
  const tot={};rows.forEach(r=>r.mine.forEach(b=>{const t=tot[b.currency]=tot[b.currency]||{pos:0,neg:0};const v=Number(b.balance_minor);if(v>0)t.pos+=v;else t.neg+=-v}));
@@ -507,7 +516,7 @@ async function home(){
  loadPayout().catch(()=>{});
  loadPending().catch(()=>{});
  loadProfile().catch(()=>{});
- gsAll=(await rpc('cuentas_my_groups_all')).filter(g=>g.status!=='archived');rowsBal=null;
+ offAt=0;gsAll=(await rpcC('cuentas_my_groups_all')).filter(g=>g.status!=='archived');rowsBal=null;if(offAt)say('Sin conexión: mostrando lo último guardado (hace '+agoTxt(offAt)+').');
  $('noGroups').hidden=gsAll.length>0;renderGroups();
  fetchBalances(gsAll).then(r=>{rowsBal=r;renderStats(r);renderGroups()}).catch(()=>{});
 }
@@ -626,12 +635,12 @@ $('rcptAddIn').onchange=async()=>{const f=$('rcptAddIn').files[0],mid=rcptFor;$(
 
 async function openGroup(id){
  if(gid!==id)toTop();
- gid=id;
+ gid=id;offAt=0;
  let ran=0;try{ran=Number(await rpc('cuentas_recurring_run',{p_group:id}))||0}catch(_){}
- const [g,bal,mv,pay,props,dels,links,pairs,cl,act,rl,rcl]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id}),rpc('cuentas_categories_list',{p_group:id}).catch(()=>[]),rpc('cuentas_activity_list',{p_group:id,p_limit:30}).catch(()=>[]),rpc('cuentas_recurring_list',{p_group:id}).catch(()=>[]),rpc('cuentas_receipts_list',{p_group:id}).catch(()=>[])]);
+ const [g,bal,mv,pay,props,dels,links,pairs,cl,act,rl,rcl]=await Promise.all([rpcC('cuentas_group_get',{p_group:id}),rpcC('cuentas_balances',{p_group:id}),rpcC('cuentas_movements_list',{p_group:id}),rpcC('cuentas_group_payouts',{p_group:id}),rpcC('cuentas_proposals_list',{p_group:id}),rpcC('cuentas_delegations_list',{p_group:id}),rpcC('core_links_list',{p_group:id}),rpcC('cuentas_pairs_list',{p_group:id}),rpcC('cuentas_categories_list',{p_group:id}).catch(()=>[]),rpcC('cuentas_activity_list',{p_group:id,p_limit:30}).catch(()=>[]),rpcC('cuentas_recurring_list',{p_group:id}).catch(()=>[]),rpcC('cuentas_receipts_list',{p_group:id}).catch(()=>[])]);
  recs=Array.isArray(rl)?rl:[];rcpts={};(Array.isArray(rcl)?rcl:[]).forEach(x=>{rcpts[x.movement]=x.path});
  catsAll=Array.isArray(cl)?cl:[];cats=catsAll.filter(c=>!c.archived);
- group=g;show('vGroup');say(ran>0?'Se cargaron '+ran+(ran===1?' gasto repetido que vencía.':' gastos repetidos que vencían.'):'');setTab(tab);
+ group=g;show('vGroup');offNote();say(ran>0?'Se cargaron '+ran+(ran===1?' gasto repetido que vencía.':' gastos repetidos que vencían.'):'');setTab(tab);
  const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
  mvAll=mv;
  const active=g.members.filter(m=>m.status==='active');guestIds=new Set(g.members.filter(m=>m.guest&&m.status==='active').map(m=>m.user_id));
@@ -911,7 +920,7 @@ $('btnLogin').onclick=busy($('btnLogin'),async()=>{
  await req('/auth/v1/otp?redirect_to='+encodeURIComponent(redirect.toString()),{email,create_user:true});
  say('Revisá tu correo y abrí el enlace. Si no llega, mirá spam.');
 });
-$('btnLogout').onclick=()=>{save(null);start()};
+$('btnLogout').onclick=()=>{offClear();save(null);start()};
 $('btnBack').onclick=()=>home().catch(e=>say(e.message,true));
 $('btnNewCancel').onclick=()=>{$('cNew').open=false};
 $('btnCreate').onclick=busy($('btnCreate'),async()=>{
@@ -1117,6 +1126,7 @@ const OBX='cuentas_outbox_v1';
 const obxGet=()=>{try{return JSON.parse(localStorage.getItem(OBX)||'[]')}catch(_){return[]}};
 const obxSet=a=>{try{localStorage.setItem(OBX,JSON.stringify(a))}catch(_){}};
 function obxPush(it){const a=obxGet();a.push(it);obxSet(a);obxNote()}
+function offNote(){const el=$('offNote');if(!el)return;el.hidden=!offAt;if(offAt)el.innerHTML=ic('cloud',18)+'<span>Sin conexión · mostrando lo último guardado (hace '+agoTxt(offAt)+'). Podés cargar gastos: se envían solos al volver la señal.</span>'}
 function obxNote(){
  const el=$('obxNote');if(!el)return;const a=obxGet().filter(x=>x.gid===gid);
  el.hidden=!a.length;if(a.length)el.innerHTML=ic('cloud',18)+'<span>'+a.length+(a.length===1?' gasto esperando señal':' gastos esperando señal')+' · se envían solos</span>';
@@ -1415,7 +1425,8 @@ async function start(){
   }catch(e){say(e.message,true)}
   history.replaceState(null,'',location.pathname+location.search);
  }
- if(!(await fresh())){show('vLogin');if(token)say('Ingresá para aceptar la invitación.');$('who').textContent='';$('avatar').hidden=true;return}
+ let okS;try{okS=await fresh()}catch(e){if(!e.net)throw e;okS=!!session}
+ if(!okS){show('vLogin');if(token)say('Ingresá para aceptar la invitación.');$('who').textContent='';$('avatar').hidden=true;return}
  myId=decodeSub(session.access_token);
  $('who').textContent='';$('who2').textContent=session.email||'';$('avatar').hidden=false;if(!$('avatar').dataset.n)$('avatar').textContent=(session.email||'P').charAt(0).toUpperCase();
  if(token){

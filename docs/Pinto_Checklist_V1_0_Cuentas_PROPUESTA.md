@@ -17,8 +17,8 @@ Orden general acordado: cada app (Cuentas, Juntada, Escapada) llega a 1.0 con su
 ## B. Trabajo de Claude
 | # | Tarea | Estado |
 | --- | --- | --- |
-| B1 | Saldar deudas de un miembro con responsable (diseño y prueba) | Pendiente |
-| B8 | Grupo sin conexión (lectura y carga): guardar la última vista del grupo en el aparato, marcar «sin conexión» y sincronizar al volver | Pendiente (alcance nuevo, aprobado el 15/11) |
+| B1 | Saldar deudas de un miembro con responsable (diseño y prueba) | Verificado en DEV (5/5 casos, `pruebas/responsable_saldos.sql`): el responsable ve y paga el saldo conjunto, no puede pagar de más y no se paga a un invitado sin cuenta. Sin prueba en celulares |
+| B8 | Grupo sin conexión (lectura y carga): guardar la última vista del grupo en el aparato, marcar «sin conexión» y sincronizar al volver | Construido (propuesto): última vista guardada por persona y grupo, aviso con la antigüedad, gastos en cola; se borra al cerrar sesión. Probado con servidor simulado; falta probar en celular |
 | B9 | Aviso esencial de consentimiento (A5) con envío por correo/SMTP | Pendiente |
 | B2 | Vínculos con Juntada y Escapada de punta a punta | Pendiente |
 | B3 | Contratos ADR-010: errores, versiones, reconciliación | Pendiente |
