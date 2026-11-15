@@ -26,10 +26,6 @@ button:disabled{opacity:.5}
 .item{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
 .item:first-child{border-top:0}
 .tag{font-size:.75rem;border:1px solid var(--line);border-radius:99px;padding:1px 8px;color:var(--muted)}
-#bnav{position:fixed;left:50%;transform:translateX(-50%);max-width:460px;width:100%;bottom:0;display:flex;background:var(--bg);border-top:1px solid var(--line);padding:6px max(8px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px));z-index:9}
-#bnav button{flex:1;margin:0;background:transparent;color:var(--muted);border:0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:1.2rem;padding:4px;position:relative;line-height:1.2;box-shadow:none;min-height:0}
-#bnav button span{font-size:.72rem}#bnav button[aria-selected=true]{color:var(--accent);font-weight:800}
-#bnav i{position:absolute;top:2px;right:30%;width:9px;height:9px;border-radius:50%;background:var(--warm)}
 #msg{min-height:1.4em;overflow-wrap:anywhere;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;margin:0}#msg.bad{font-weight:600}
 [hidden]{display:none!important}
 label{font-size:.9rem;color:var(--muted)}
@@ -48,12 +44,12 @@ details.card[open]>summary{margin-bottom:10px}
 .hero button.sec{background:#ffffff22;color:#fff;border:1px solid #ffffff44}.hero button.warm{background:var(--warm);color:var(--warm-fg)}
 .actions{gap:8px}.topbar{flex-wrap:nowrap;gap:8px}.topbar>*{margin:0 0 4px;min-width:0}.actions>*{min-width:0;margin:6px 0 0}
 .fab{position:fixed;right:max(16px,calc(50% - 230px + 16px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:auto;margin:0;padding:14px 20px;border-radius:99px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:8;font-size:1.05rem}
-main{padding-bottom:96px}
+main{padding-bottom:96px}header{justify-content:flex-start}
 #cExpense:not([open]){display:none}#cExpense>summary{display:none}
 .adv{border:1px solid var(--line);border-radius:10px;padding:10px;margin:4px 0 12px}.adv>summary{color:var(--accent)}.adv[open]>summary{margin-bottom:8px}
-.avatar{margin-left:auto!important}#who{display:none}#cNew:not([open]){display:none}#cNew>summary{display:none}
+.avatar{margin-left:auto!important}.burger{width:44px;height:44px;margin:0;padding:0;min-height:0;background:transparent;color:var(--accent);box-shadow:none;position:relative;display:grid;place-items:center}.burger i{position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:50%;background:var(--warm)}#who{display:none}#cNew:not([open]){display:none}#cNew>summary{display:none}
 .avatar{width:42px;height:42px;border-radius:50%;margin:0;padding:0;min-height:0;background:var(--tile);color:var(--accent);font-weight:850;font-size:1.05rem;box-shadow:none}
-.hero-img{border-radius:18px;margin:4px 0 14px;padding:84px 18px 18px;color:#fff;background:linear-gradient(0deg,#1a2a1acc,#1a2a1a22),linear-gradient(135deg,var(--h1),var(--h3));box-shadow:var(--shadow)}
+.hero-img{border-radius:18px;margin:4px 0 14px;padding:110px 18px 18px;color:#fff;background:linear-gradient(0deg,#16241Ad9 8%,#16241A00 70%),url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 240%22 preserveAspectRatio=%22xMidYMid slice%22%3E%3Cdefs%3E%3ClinearGradient id=%22s%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23F6E7C8%22/%3E%3Cstop offset=%221%22 stop-color=%22%23BFD1A4%22/%3E%3C/linearGradient%3E%3C/defs%3E%0A%3Crect width=%22400%22 height=%22240%22 fill=%22url%28%23s%29%22/%3E%3Ccircle cx=%22318%22 cy=%2262%22 r=%2234%22 fill=%22%23F2B866%22 opacity=%22.9%22/%3E%0A%3Cpath d=%22M0 170 Q90 120 200 160 T400 140 V240 H0Z%22 fill=%22%237E9A6A%22/%3E%3Cpath d=%22M0 200 Q120 160 240 195 T400 180 V240 H0Z%22 fill=%22%234F6B4F%22/%3E%0A%3Cg%3E%3Ccircle cx=%2278%22 cy=%22118%22 r=%2216%22 fill=%22%23E8B48C%22/%3E%3Cpath d=%22M52 190 Q52 140 78 140 Q104 140 104 190Z%22 fill=%22%23D89A57%22/%3E%3Cpath d=%22M62 112 Q78 96 94 112%22 fill=%22%235A3B26%22/%3E%0A%3Ccircle cx=%22150%22 cy=%22106%22 r=%2217%22 fill=%22%23C98F6B%22/%3E%3Cpath d=%22M122 190 Q122 128 150 128 Q178 128 178 190Z%22 fill=%22%23F4EFE3%22/%3E%3Cpath d=%22M133 100 Q150 82 167 100Z%22 fill=%22%232E2218%22/%3E%3Cpath d=%22M178 140 L196 108%22 stroke=%22%23C98F6B%22 stroke-width=%229%22 stroke-linecap=%22round%22/%3E%0A%3Ccircle cx=%22232%22 cy=%22110%22 r=%2216%22 fill=%22%23F0C7A2%22/%3E%3Cpath d=%22M204 190 Q204 132 232 132 Q260 132 260 190Z%22 fill=%22%232F4A2F%22/%3E%3Cpath d=%22M216 104 Q232 86 248 104Z%22 fill=%22%238A5A2B%22/%3E%0A%3Ccircle cx=%22312%22 cy=%22120%22 r=%2216%22 fill=%22%23A8744F%22/%3E%3Cpath d=%22M286 190 Q286 142 312 142 Q338 142 338 190Z%22 fill=%22%23E7B8A0%22/%3E%3Cpath d=%22M296 114 Q312 98 328 114Z%22 fill=%22%231F1A16%22/%3E%3Cpath d=%22M286 152 L268 124%22 stroke=%22%23A8744F%22 stroke-width=%229%22 stroke-linecap=%22round%22/%3E%3C/g%3E%0A%3Cg fill=%22%23F4EFE3%22%3E%3Crect x=%22188%22 y=%2262%22 width=%2234%22 height=%2244%22 rx=%224%22 transform=%22rotate%28-8 205 84%29%22/%3E%3C/g%3E%3Cg stroke=%22%234F6B4F%22 stroke-width=%222.2%22 stroke-linecap=%22round%22%3E%3Cpath d=%22M194 72h20M194 80h20M194 88h14%22 transform=%22rotate%28-8 205 84%29%22/%3E%3C/g%3E%3Ccircle cx=%22222%22 cy=%2260%22 r=%229%22 fill=%22%23F2B866%22/%3E%3Ctext x=%22222%22 y=%2264%22 font-size=%2211%22 font-weight=%22800%22 text-anchor=%22middle%22 fill=%22%235A3B1A%22 font-family=%22system-ui%22%3E%24%3C/text%3E%3C/svg%3E") center/cover,var(--h2);box-shadow:var(--shadow)}
 .hero-img .kicker{font-size:.65rem;font-weight:850;letter-spacing:.2em;color:#F6DDB4}.hero-img .ht{font-size:1.55rem;font-weight:800;letter-spacing:-.7px;line-height:1.15;margin-top:6px}
 .opts{display:flex;flex-direction:column}
 .opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:transparent;color:var(--fg);box-shadow:none;border:0;border-bottom:1px solid var(--line);border-radius:0;margin:0;padding:14px 4px;min-height:0;font-weight:400}
@@ -82,7 +78,7 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 </head>
 <body>
 <main>
-<header><h1>Cuentas<span>.</span></h1><button id="avatar" class="avatar" aria-label="Menú" hidden>P</button><div id="who" class="muted"></div></header>
+<header><button id="burger" class="burger" aria-label="Abrir menú" hidden><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><i id="actDot" hidden></i></button><h1>Cuentas<span>.</span></h1><button id="avatar" class="avatar" aria-label="Mi cuenta" hidden>P</button><div id="who" class="muted"></div></header>
 <p id="msg" class="muted" role="status" aria-live="polite"></p>
 
 <section id="vLogin" hidden>
@@ -145,7 +141,7 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
  <hr>
  <button class="di" data-d="salir"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5V3h4M16 17l5-5-5-5M21 12H9"/></svg>Cerrar sesión</button>
 </nav></div>
-<nav id="bnav" hidden><button data-hp-btn="grupos" aria-selected="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.2c2.6 0 4.5 2 4.5 4.8"/></svg><span>Grupos</span></button><button data-hp-btn="actividad"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg><span>Actividad</span><i id="actDot" hidden></i></button><button data-hp-btn="cuenta"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span>Cuenta</span></button></nav>
+
 
 <section id="vInvite" hidden>
  <div class="hero-img"><div class="kicker">● INVITACIÓN</div><div class="ht" id="invGroup"></div><div id="invBy" style="margin-top:6px;color:#F1F5E8"></div></div>
@@ -275,16 +271,15 @@ document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{setTab(b.data
 $('btnSaldos').onclick=()=>{setTab('saldos');window.scrollTo(0,0)};$('btnGear').onclick=()=>{setTab('mas');window.scrollTo(0,0)};
 
 function openDrawer(){$('drawer').hidden=false}function closeDrawer(){$('drawer').hidden=true}
-$('avatar').onclick=openDrawer;$('dClose').onclick=closeDrawer;$('dScrim').onclick=closeDrawer;
+$('burger').onclick=openDrawer;$('avatar').onclick=()=>{say('');home().then(()=>{setHp('cuenta');window.scrollTo(0,0)}).catch(e=>say(e.message,true))};$('dClose').onclick=closeDrawer;$('dScrim').onclick=closeDrawer;
 document.querySelectorAll('#drawer [data-d]').forEach(b=>b.onclick=()=>{closeDrawer();const d=b.dataset.d;say('');
  if(d==='salir'){save(null);start();return}
  home().then(()=>{if(d==='nuevo'){setHp('grupos');$('cNew').open=true;$('cNew').scrollIntoView({behavior:'smooth'})}else setHp(d)}).catch(e=>say(e.message,true))});
 $('optNew').onclick=()=>{$('cNew').open=true;$('cNew').scrollIntoView({behavior:'smooth'});$('gName').focus()};
 $('optAct').onclick=()=>{setHp('actividad');window.scrollTo(0,0)};
 let hp='grupos';
-function setHp(t){hp=t;document.querySelectorAll('[data-hp]').forEach(p=>p.hidden=p.dataset.hp!==t);document.querySelectorAll('#bnav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.hpBtn===t?'true':'false'))}
-document.querySelectorAll('#bnav button').forEach(b=>b.onclick=()=>{say('');setHp(b.dataset.hpBtn);window.scrollTo(0,0)});
-function show(v){$('bnav').hidden=v!=='vHome';if(v==='vHome')setHp(hp);['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v)}
+function setHp(t){hp=t;document.querySelectorAll('[data-hp]').forEach(p=>p.hidden=p.dataset.hp!==t)}
+function show(v){if(v==='vHome')setHp(hp);$('burger').hidden=v==='vLogin'||(v==='vInvite'&&!session);['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v)}
 function busy(btn,fn){return async()=>{btn.disabled=true;say('Guardando…');try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
 
 async function home(){

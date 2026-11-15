@@ -45,9 +45,10 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  t=await mk(b,{preview:{valid:false}});await t.page.goto(URL+'?invite='+TOK);await t.page.waitForTimeout(500);
  ok((await views(t.page)).join()==='vHome'&&/venci/i.test(await t.page.textContent('#msg')),'invitación: vencida va al inicio con aviso');
  // navegación + liquidar + gasto
- t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('#bnav',{state:'visible'});
- await t.page.click('[data-hp-btn=actividad]');ok(await t.page.isVisible('#actDot'),'inicio: punto de actividad');
- await t.page.click('[data-hp-btn=grupos]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('#burger',{state:'visible'});
+ ok(await t.page.isVisible('#actDot'),'inicio: punto de actividad en el menú');
+ await t.page.click('#burger');await t.page.click('[data-d=actividad]');await t.page.waitForTimeout(300);ok(await t.page.isVisible('#pending'),'menú: Actividad');
+ await t.page.click('#burger');await t.page.click('[data-d=grupos]');await t.page.waitForTimeout(300);ok(!(await t.page.isVisible('#bnav').catch(()=>false)),'sin barra inferior');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  await t.page.click('#btnSaldos');ok(await t.page.isVisible('#balances'),'grupo: saldos');await t.page.click('[data-pane=saldos] [data-goto]');
  await t.page.click('#btnGear');ok(await t.page.isVisible('#mList'),'grupo: ajustes');await t.page.click('[data-pane=mas] [data-goto]');
  await t.page.click('#btnSettle');await t.page.click('[data-pay]');ok((await t.page.inputValue('#pAmt'))==='2500,00','liquidar: monto prellenado');
