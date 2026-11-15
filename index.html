@@ -70,6 +70,9 @@ main{padding-bottom:96px}
 #drawer .di{display:flex;gap:14px;align-items:center;width:calc(100% - 20px);margin:2px 10px;padding:12px 12px;border-radius:12px;background:transparent;color:var(--fg);box-shadow:none;text-align:left;font-weight:700;min-height:0}
 #drawer .di[aria-current=true]{background:var(--tile);color:var(--accent)}#drawer .di svg{color:var(--accent);flex:none}
 #drawer hr{border:0;border-top:1px solid var(--line);margin:8px 16px}
+.srow{display:flex!important;align-items:center;gap:14px;font-weight:400}.srow .ot b{color:var(--accent)}
+details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotate(90deg)}
+.who{display:flex;align-items:center;gap:12px}.who .tile{width:38px;height:38px;min-width:38px;border-radius:50%;font-size:1rem}
 .mv{border-top:1px solid var(--line)}.mv:first-child{border-top:0}
 .mv>summary{display:flex;justify-content:space-between;gap:8px;padding:10px 0;font-weight:400}
 .mv .mvbody{padding:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mv .mvbody>*{margin:0}
@@ -201,7 +204,7 @@ main{padding-bottom:96px}
 
  <div data-pane="saldos" hidden>
   <button class="sec" data-goto="gastos">← Volver a gastos</button>
-  <div class="card"><h2>Saldos</h2><p class="muted">Positivo: te deben. Negativo: debés.</p><div id="balances"></div>
+  <div class="card"><h2>Saldos</h2><div id="balances"></div>
   </div>
    <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
  </div>
@@ -211,18 +214,18 @@ main{padding-bottom:96px}
   <div class="card"><h2>Miembros</h2><div id="mList"></div>
    <button class="sec" id="btnStatus"></button>
    <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div></div>
-  <details class="card" id="cDeleg" hidden><summary>Coadministración</summary><p class="muted">Delegación expresa, revocable y auditada. Reabrir y archivar quedan solo para quien administra.</p><div id="dList"></div>
+  <details class="card" id="cDeleg" hidden><summary class="srow"><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M17 11l2 2 3-3"/></svg></span><span class="ot"><b>Coadministración</b><small>Delegar tareas con permiso revocable</small></span><span class="chev">›</span></summary><p class="muted">Delegación expresa, revocable y auditada. Reabrir y archivar quedan solo para quien administra.</p><div id="dList"></div>
    <label for="dUser">Delegar en</label><select id="dUser"></select>
    <div id="dScopes"><label class="chk"><input type="checkbox" value="invite"><span>Invitar</span></label><label class="chk"><input type="checkbox" value="close"><span>Cerrar grupo</span></label><label class="chk"><input type="checkbox" value="void"><span>Anular gastos ajenos</span></label><label class="chk"><input type="checkbox" value="link"><span>Vincular eventos</span></label></div>
    <button id="btnGrant">Delegar</button></details>
-  <details class="card"><summary>Viajes y eventos vinculados</summary><p class="muted">Eliminar un viaje o evento nunca borra deudas, pagos ni historial.</p><div id="lList"></div>
+  <details class="card"><summary class="srow"><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg></span><span class="ot"><b>Viajes y eventos</b><small>Vinculá el grupo a Escapada o Juntada</small></span><span class="chev">›</span></summary><p class="muted">Eliminar un viaje o evento nunca borra deudas, pagos ni historial.</p><div id="lList"></div>
    <div id="lForm"><label for="lType">Tipo</label><select id="lType"><option value="escapada_trip">Viaje (Escapada)</option><option value="juntada">Evento (Juntada)</option></select>
    <div id="lRefW"><label for="lTrip">Tus viajes</label><select id="lTrip"></select></div>
    <div id="lEvW" hidden><label for="lEv">Tus eventos</label><select id="lEv"></select>
     <details><summary class="muted">¿No aparece tu evento? Reclamalo</summary><p class="muted">Pegá el ID y el código de organizador de Juntada una sola vez: el evento queda a tu nombre y después lo elegís de la lista.</p>
     <input id="lClaimId" placeholder="ID del evento (uuid)" autocapitalize="none"><input id="lClaimOrg" placeholder="Código de organizador (uuid)" autocapitalize="none"><button class="sec" id="btnClaim">Reclamar evento</button></details></div>
    <button class="sec" id="btnLink">Vincular</button><p class="muted">Elegí de tu lista. Los viajes que organizás aparecen solos; los eventos hay que reclamarlos una vez.</p></div></details>
-  <details class="card"><summary>Cuenta compartida (pareja / familia)</summary><p class="muted">Dos personas que comparten gastos. Agrupa saldos, no reemplaza las deudas de cada una. Una compensación solo se aplica si las dos la aprueban. Provisorio: aún no aprobado para producción.</p><div id="pairs"></div><div id="pairNew" hidden><label for="pairWith">Pedirle una cuenta compartida a</label><select id="pairWith"></select><button class="sec" id="btnPairReq">Enviar solicitud</button></div></details>
+  <details class="card"><summary class="srow"><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></span><span class="ot"><b>Cuenta compartida</b><small>Pareja o familia que comparten gastos</small></span><span class="chev">›</span></summary><p class="muted">Dos personas que comparten gastos. Agrupa saldos, no reemplaza las deudas de cada una. Una compensación solo se aplica si las dos la aprueban. Provisorio: aún no aprobado para producción.</p><div id="pairs"></div><div id="pairNew" hidden><label for="pairWith">Pedirle una cuenta compartida a</label><select id="pairWith"></select><button class="sec" id="btnPairReq">Enviar solicitud</button></div></details>
  </div>
 </section>
 </main>
@@ -316,7 +319,7 @@ async function openGroup(id){
  $('gMembers').textContent='Miembros: '+active.map(m=>name(m.user_id)+(m.role!=='member'?' ('+roleEs[m.role]+')':'')).join(', ');
  $('btnStatus').hidden=!(me&&me.role==='admin');
  const isAdmin=!!(me&&me.role==='admin');
- $('mList').innerHTML=active.map(m=>`<div class="item"><span>${esc(name(m.user_id))} <span class="tag">${roleEs[m.role]}</span></span>${isAdmin&&m.user_id!==myId?`<button class="sec" style="width:auto;margin:0" data-rm="${m.user_id}">Quitar</button>`:''}</div>`).join('');
+ $('mList').innerHTML=active.map(m=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><span>${esc(name(m.user_id))} <span class="tag">${roleEs[m.role]}</span></span></span>${isAdmin&&m.user_id!==myId?`<button class="sec" style="width:auto;margin:0" data-rm="${m.user_id}">Quitar</button>`:''}</div>`).join('');
  $('mList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: quitar';say('Quitar a alguien no borra sus deudas ni el historial. Tocá de nuevo para confirmar.');return}await rpc('cuentas_member_remove',{p_group:gid,p_user:b.dataset.rm});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')}));
  $('btnArchive').hidden=!(isAdmin&&g.status==='closed');
  const dBy={};(dels||[]).forEach(d=>dBy[d.delegate_id]=d);
@@ -375,7 +378,7 @@ async function openGroup(id){
  const mine=bal.filter(b=>b.user_id===myId);
  $('gSum').innerHTML=mine.length&&mine.some(b=>Number(b.balance_minor)!==0)?mine.filter(b=>Number(b.balance_minor)!==0).map(b=>Number(b.balance_minor)>0?`<span class="good">Te deben ${money(b.balance_minor,b.currency)}</span>`:`<span class="bad">Debés ${money(-Number(b.balance_minor),b.currency)}</span>`).join(' · '):'<span class="good">🎉 Todo saldado en este grupo.</span>';
  $('inviteLink').hidden=true;
- $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item"><span>${esc(name(b.user_id))}</span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(b.balance_minor,b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
+ $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(b.user_id).charAt(0).toUpperCase())}</span><span><b>${esc(name(b.user_id))}</b><div class="muted">${Number(b.balance_minor)===0?'al día':(Number(b.balance_minor)>0?'le deben':'debe')}</div></span></span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(Math.abs(Number(b.balance_minor)),b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
  sug=settleSuggestions(bal);
  $('btnSettle').hidden=g.status!=='open'||active.length<2;
  $('btnSettle').className=sug.some(x=>x.from===myId)?'warm':'sec';
