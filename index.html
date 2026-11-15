@@ -281,6 +281,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
    <label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00" style="font-size:1.6rem;font-weight:700">
    <label id="eCatsLbl">Categoría</label><div id="eCats" class="chips" role="group" aria-labelledby="eCatsLbl"></div>
    <details id="eAdv" class="adv"><summary id="eAdvSum">Pagó Vos · En partes iguales</summary>
+    <label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select>
     <label for="eCur">Moneda</label><select id="eCur"></select>
     <div id="eFxBox" hidden><label for="eFx" id="eFxLbl">Cotización</label><input id="eFx" inputmode="decimal" placeholder="0,00"><p id="eFxNote" class="muted" style="margin:6px 0 0"></p></div>
     <label for="ePayer">Pagó</label><select id="ePayer"></select>
@@ -321,6 +322,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
     <label id="catCoLbl">Color</label><div id="catColors" class="copick" role="group" aria-labelledby="catCoLbl"></div>
     <button id="btnCatSave">Guardar categoría</button><div class="row"><button class="sec" id="btnCatHide" hidden></button><button class="sec" id="btnCatCancel">Cancelar</button></div></div>
    <button class="sec" id="btnCatAdd" hidden>Agregar categoría</button></details>
+  <details class="card" id="cRec"><summary class="srow"><span class="tile" data-ic="swap"></span><span class="ot"><b>Gastos repetidos</b><small>Alquiler, expensas, suscripciones</small></span><span class="chev">›</span></summary><div id="recList"></div><p class="muted" style="margin:8px 0 0">Para sumar uno nuevo, cargá un gasto y elegí «Repetir» en los detalles.</p></details>
   <details class="card" id="cAct"><summary class="srow"><span class="tile" data-ic="receipt"></span><span class="ot"><b>Actividad del grupo</b><small>Lo último que pasó</small></span><span class="chev">›</span></summary><div id="actList"></div></details>
   <details class="card"><summary class="srow"><span class="tile" data-ic="download"></span><span class="ot"><b>Exportar</b><small>Todos los movimientos en un archivo</small></span><span class="chev">›</span></summary><p class="muted" style="margin:0 0 8px">Para abrir en Excel o Google Sheets.</p><button class="sec" id="btnCsv"></button></details>
   <details class="card" id="cDeleg" hidden><summary class="srow"><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M17 11l2 2 3-3"/></svg></span><span class="ot"><b>Coadministración</b><small>Delegar tareas con permiso revocable</small></span><span class="chev">›</span></summary><p class="muted">Delegación expresa, revocable y auditada. Reabrir y archivar quedan solo para quien administra.</p><div id="dList"></div>
@@ -574,12 +576,15 @@ function fxNote(){
  const f=Number(String($('eFx').value).replace(/\./g,'').replace(',','.')),a=toMinor($('eAmt').value);
  $('eFxNote').textContent=f>0&&a?`Equivale a ${money(Math.round(a*f),ref)}. Los saldos quedan en ${c}; la cotización se usa solo para totales y gráficos.`:`Cuántos ${ref} vale 1 ${c} el día del gasto. Los saldos quedan en ${c}.`;
 }
+let recs=[];
 async function openGroup(id){
  if(gid!==id)toTop();
  gid=id;
- const [g,bal,mv,pay,props,dels,links,pairs,cl,act]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id}),rpc('cuentas_categories_list',{p_group:id}).catch(()=>[]),rpc('cuentas_activity_list',{p_group:id,p_limit:30}).catch(()=>[])]);
+ let ran=0;try{ran=Number(await rpc('cuentas_recurring_run',{p_group:id}))||0}catch(_){}
+ const [g,bal,mv,pay,props,dels,links,pairs,cl,act,rl]=await Promise.all([rpc('cuentas_group_get',{p_group:id}),rpc('cuentas_balances',{p_group:id}),rpc('cuentas_movements_list',{p_group:id}),rpc('cuentas_group_payouts',{p_group:id}),rpc('cuentas_proposals_list',{p_group:id}),rpc('cuentas_delegations_list',{p_group:id}),rpc('core_links_list',{p_group:id}),rpc('cuentas_pairs_list',{p_group:id}),rpc('cuentas_categories_list',{p_group:id}).catch(()=>[]),rpc('cuentas_activity_list',{p_group:id,p_limit:30}).catch(()=>[]),rpc('cuentas_recurring_list',{p_group:id}).catch(()=>[])]);
+ recs=Array.isArray(rl)?rl:[];
  catsAll=Array.isArray(cl)?cl:[];cats=catsAll.filter(c=>!c.archived);
- group=g;show('vGroup');say('');setTab(tab);
+ group=g;show('vGroup');say(ran>0?'Se cargaron '+ran+(ran===1?' gasto repetido que vencía.':' gastos repetidos que vencían.'):'');setTab(tab);
  const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
  mvAll=mv;
  const active=g.members.filter(m=>m.status==='active');guestIds=new Set(g.members.filter(m=>m.guest&&m.status==='active').map(m=>m.user_id));
@@ -665,7 +670,7 @@ async function openGroup(id){
  const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('ePayer').innerHTML=opts;$('ePayer').value=myId;
  $('eParts').innerHTML=active.map(m=>`<label class="chk"><span class="pa" aria-hidden="true">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><input type="checkbox" value="${m.user_id}" checked><span class="nm">${esc(name(m.user_id))}</span><input class="amt" inputmode="decimal" placeholder="0,00" data-u="${m.user_id}"></label>`).join('');
- $('eMode').value='eq';fillCur();$('eFx').value='';renderCats();syncFx();syncMode();resetEdit();renderCatsAdmin();renderActivity(act);obxNote();$('mvSearch').hidden=mv.length<5;$('mvSearch').querySelector('.si').innerHTML=ic('search',18);
+ $('eMode').value='eq';fillCur();$('eFx').value='';renderCats();syncFx();syncMode();resetEdit();renderCatsAdmin();renderActivity(act);renderRecs();obxNote();$('mvSearch').hidden=mv.length<5;$('mvSearch').querySelector('.si').innerHTML=ic('search',18);
  const allRows=mv.filter(m=>m.kind==='expense'||m.kind==='payment'||m.kind==='compensation').slice().reverse();
  const nVoid=allRows.filter(m=>m.voided).length;
  const rows=allRows.filter(m=>showVoided||!m.voided);
@@ -701,7 +706,7 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{try{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}catch(e){if(!/propuesta/i.test(e.message))throw e;await rpc('cuentas_proposal_create',{p_kind:'void_expense',p_target:b.dataset.void,p_reason:null});await openGroup(gid);say('Este gasto ya tiene pagos confirmados, así que no se puede anular directo: creé una propuesta de anulación. Aparece en “Propuestas pendientes” y se aplica cuando los afectados la aprueben.')}}));
  $('moves').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
   const m=mv.find(x=>x.id===b.dataset.edit);if(!m)return;
-  editId=m.id;editDate=m.occurred_on||null;
+  editId=m.id;editDate=m.occurred_on||null;repVis();
   $('cExpense').open=true;$('fab').hidden=true;$('eAdv').open=true;$('eDesc').value=m.description||'';$('eAmt').value=(Number(m.amount_minor)/100).toFixed(2).replace('.',',');$('ePayer').value=m.from_user;fillCur(m.currency);$('eFx').value=m.fx_rate?String(Number(m.fx_rate)).replace('.',','):'';catSel=m.category&&cats.some(c=>c.key===m.category)?m.category:null;catAuto=false;renderCats();syncFx();
   const sh=m.shares||{};const ids=Object.keys(sh);const vals=ids.map(k=>Number(sh[k]));
   const wsh=weightsDiffer(ids)?weightedShares(Number(m.amount_minor),ids):null;
@@ -716,7 +721,8 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-prev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_create',{p_kind:'reverse_payment',p_target:b.dataset.prev,p_reason:null});await openGroup(gid);say('Propuesta creada: necesita la aprobación de todos los afectados.')}));
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
-function resetEdit(){editId=null;editDate=null;catSel=null;catAuto=true;try{renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true}
+function repVis(){const on=!editId;$('eRep').hidden=$('eRepLbl').hidden=!on;if(!on)$('eRep').value=''}
+function resetEdit(){editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true}
 function updAdv(){
  const p=$('ePayer');const pn=p.selectedOptions[0]?p.selectedOptions[0].textContent:'';
  const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')];const n=cs.filter(c=>c.checked).length;
@@ -915,8 +921,21 @@ function famMenu(uid){
  });
 }
 document.querySelectorAll('[data-ic]').forEach(e=>{e.innerHTML=ic(e.dataset.ic,22)});
+/* ===== Gastos repetidos ===== */
+function renderRecs(){
+ const me=group.members.find(m=>m.user_id===myId),adm=!!(me&&(me.role==='admin'||me.role==='coadmin'));
+ const fq={weekly:'cada semana',monthly:'cada mes'};
+ $('recList').innerHTML=recs.length?recs.map(r=>{
+  const mine=r.created_by===myId||adm,paused=r.status==='paused';
+  return `<div class="item" style="align-items:center;flex-wrap:wrap"><span class="who"><span class="tile">${ic('swap',20)}</span><span style="min-width:0"><b>${esc(r.description)}</b><div class="muted">${money(r.amount_minor,r.currency)} · ${fq[r.frequency]}${paused?' · en pausa':r.next_on?' · próximo '+fmtD(r.next_on):''}</div>${r.blocked_reason?`<div class="tags"><span class="tag" style="color:var(--bad,#b3402a)">Frenado: ${esc(r.blocked_reason)}</span></div>`:''}</span></span>${mine?`<span style="display:flex;gap:6px"><button class="sec" style="width:auto;margin:0" data-rs="${r.id}|${paused?'active':'paused'}">${paused?'Reanudar':'Pausar'}</button><button class="sec" style="width:auto;margin:0" data-rs="${r.id}|ended">Terminar</button></span>`:''}</div>`}).join(''):'<p class="muted">No hay gastos repetidos.</p>';
+ $('recList').querySelectorAll('[data-rs]').forEach(b=>b.onclick=async()=>{
+  const [id,st]=b.dataset.rs.split('|');
+  if(st==='ended'&&b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='¿Seguro? Tocá de nuevo';return}
+  try{await rpc('cuentas_recurring_set_status',{p_rule:id,p_status:st});await openGroup(gid);say(st==='ended'?'Terminado. Los gastos ya cargados quedan.':st==='paused'?'En pausa: no se carga nada hasta que lo reanudes.':'Reanudado.')}catch(e){say(e.message,true)}
+ });
+}
 /* ===== Actividad del grupo ===== */
-const ACT_TXT={expense_added:'cargó un gasto',expense_edited:'editó un gasto',expense_voided:'anuló un gasto',group_created:'creó el grupo',group_archived:'archivó el grupo',invite_created:'generó un link de invitación',guest_added:'sumó a alguien por nombre',guest_claimed:'se unió con su cuenta',guest_invite_created:'generó un link para un invitado',guest_removed:'sacó a un invitado',member_joined:'se unió al grupo',member_left:'salió del grupo',member_removed:'quitó a un miembro',member_weight_set:'cambió cuánto cuenta',member_guardian_set:'cambió quién paga por',category_saved:'guardó una categoría',category_archived:'ocultó o mostró una categoría',payment_added:'registró un pago',payment_confirmed:'confirmó un pago',payment_cancelled:'canceló un pago',delegation_granted:'delegó permisos',delegation_revoked:'revocó una delegación',link_created:'vinculó un viaje o evento',link_removed:'desvinculó un viaje o evento',pair_requested:'pidió una cuenta compartida',pair_activated:'activó una cuenta compartida',pair_rejected:'rechazó una cuenta compartida',proposal_created:'creó una propuesta',proposal_applied:'una propuesta se aplicó',proposal_cancelled:'canceló una propuesta',proposal_stale:'una propuesta quedó desactualizada'};
+const ACT_TXT={expense_added:'cargó un gasto',expense_edited:'editó un gasto',recurring_created:'creó un gasto repetido',recurring_paused:'pausó un gasto repetido',recurring_active:'reanudó un gasto repetido',recurring_ended:'terminó un gasto repetido',expense_voided:'anuló un gasto',group_created:'creó el grupo',group_archived:'archivó el grupo',invite_created:'generó un link de invitación',guest_added:'sumó a alguien por nombre',guest_claimed:'se unió con su cuenta',guest_invite_created:'generó un link para un invitado',guest_removed:'sacó a un invitado',member_joined:'se unió al grupo',member_left:'salió del grupo',member_removed:'quitó a un miembro',member_weight_set:'cambió cuánto cuenta',member_guardian_set:'cambió quién paga por',category_saved:'guardó una categoría',category_archived:'ocultó o mostró una categoría',payment_added:'registró un pago',payment_confirmed:'confirmó un pago',payment_cancelled:'canceló un pago',delegation_granted:'delegó permisos',delegation_revoked:'revocó una delegación',link_created:'vinculó un viaje o evento',link_removed:'desvinculó un viaje o evento',pair_requested:'pidió una cuenta compartida',pair_activated:'activó una cuenta compartida',pair_rejected:'rechazó una cuenta compartida',proposal_created:'creó una propuesta',proposal_applied:'una propuesta se aplicó',proposal_cancelled:'canceló una propuesta',proposal_stale:'una propuesta quedó desactualizada'};
 function renderActivity(a){
  const L=Array.isArray(a)?a:[];
  $('actList').innerHTML=L.length?'<div class="toplist">'+L.slice(0,30).map(x=>{
@@ -1192,6 +1211,12 @@ $('btnExpense').onclick=busy($('btnExpense'),async()=>{
  const curX=$('eCur').value,refC=group.reference_currency;let fx=null;
  if(curX!==refC){fx=Number(String($('eFx').value).replace(/\./g,'').replace(',','.'));if(!(fx>0))throw Error('Poné la cotización: cuántos '+refC+' vale 1 '+curX);try{localStorage.setItem(fxKey(curX),String($('eFx').value))}catch(_){}}
  const wasEdit=!!editId;
+ const rep=!wasEdit?$('eRep').value:'';
+ if(rep){
+  if(!$('eDesc').value.trim())throw Error('Poné una descripción para el gasto que se repite');
+  await rpc('cuentas_recurring_save',{p_group:gid,p_description:$('eDesc').value.trim(),p_amount_minor:amt,p_currency:curX,p_payer:$('ePayer').value,p_participants:shares?null:parts,p_shares:shares,p_category:catSel||null,p_fx:fx,p_frequency:rep,p_start:today(),p_ends:null});
+  $('eDesc').value='';$('eAmt').value='';$('eRep').value='';await openGroup(gid);say('Gasto repetido guardado: se carga solo '+(rep==='weekly'?'cada semana':'cada mes')+'. Lo ves en Ajustes.');return;
+ }
  const args={p_currency:curX,p_category:catSel||null,p_fx:fx,p_amount_minor:amt,p_payer:$('ePayer').value,p_participants:shares?null:parts,p_shares:shares,p_description:$('eDesc').value.trim()||null,p_occurred_on:wasEdit&&editDate?editDate:today(),p_key:newKey()};
  if(wasEdit){try{await rpc('cuentas_expense_edit',{p_expense:editId,...args})}catch(e){if(/confirmad|propuesta|anul/i.test(e.message))throw Error('Este gasto ya tiene pagos confirmados y no se puede editar directo. Anulalo con una propuesta (aprobada por los afectados) y cargá el corregido.');throw e}}else{try{await rpc('cuentas_expense_add',{p_group:gid,...args})}catch(e){if(!e.net)throw e;obxPush({gid,args:{p_group:gid,...args},desc:$('eDesc').value.trim(),amt:amt,cur:curX,ts:Date.now()});$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;$('fab').hidden=false;resetEdit();say('Sin señal: guardé el gasto en este celular y lo envío solo cuando vuelva la conexión.');return}}
  $('eDesc').value='';$('eAmt').value='';await openGroup(gid);say(wasEdit?'Gasto editado: el anterior quedó anulado.':'Gasto guardado.');

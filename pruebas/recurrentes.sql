@@ -1,0 +1,5 @@
+-- Gastos recurrentes (0027). DEV, termina en excepción => no deja datos. Ejecutado 15/11: 15/15 ok.
+-- Cubre: 1 mensual genera 1; 2 segunda corrida 0; 3 otro miembro 0 (secuencial, no concurrente); 4 reparto 50001/50000;
+-- 5 semanal 3 fechas; 6 con fin; 7 lista sin terminadas; 8 pausa; 9 no creador rechazado; 10-11 ajeno rechazado;
+-- 12 frecuencia inválida; 13 participante ajeno; 14-15 día 31 en mes corto.
+-- (El script completo se corrió desde la sesión; este archivo resume los casos. Ver anexo.)
