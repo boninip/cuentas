@@ -1046,9 +1046,12 @@ function anItems(exp,cur){
   return {kind:'line',items:ks.map(k=>{const t=sum(g[k]);acc+=t;return {label:fmtD(k),v:acc,day:t,ids:g[k],ci:0}}),note:'Cuánto se fue gastando en total, día a día.'};
  }
  if(v==='categorias'){
-  const g={};ids.forEach(i=>{const c=catOf(exp[i].description);(g[c]=g[c]||[]).push(i)});
-  const it=Object.keys(g).map(c=>{c=Number(c);const nameC=c<0?CAT_OTROS[0]:CATS[c][0],ci=c<0?CAT_OTROS[1]:CATS[c][1];return {label:nameC,v:sum(g[c]),ids:g[c],ci,otros:c<0}}).sort((a,b)=>(a.otros-b.otros)||(b.v-a.v));
-  return {kind:s==='dona'?'donut':'hbars',items:it,note:'Estimado a partir de la descripción de cada gasto (todavía no hay categoría elegida a mano).'};
+  const g={};let est=0;
+  ids.forEach(i=>{const m=exp[i],rc=m.category?catBy(m.category):null;let nameC,ci,otros=false;
+   if(rc){nameC=rc.name;ci=rc.color}else{est++;const c=catOf(m.description);if(c<0){nameC=CAT_OTROS[0];ci=CAT_OTROS[1];otros=true}else{nameC=CATS[c][0];ci=CATS[c][1]}}
+   const o=g[nameC]||(g[nameC]={label:nameC,ids:[],ci,otros});o.ids.push(i)});
+  const it=Object.values(g).map(o=>({...o,v:sum(o.ids)})).sort((a,b)=>(a.otros-b.otros)||(b.v-a.v));
+  return {kind:s==='dona'?'donut':'hbars',items:it,note:est===0?'Según la categoría elegida en cada gasto.':est===ids.length?'Estimado a partir de la descripción de cada gasto (todavía no hay categoría elegida).':`${ids.length-est} con categoría elegida y ${est} estimados por la descripción.`};
  }
  const users=[...new Set(exp.flatMap(m=>[m.from_user,...Object.keys(m.shares||{})]))];
  const it=users.map(u=>{const p=exp.reduce((t,m)=>t+(m.from_user===u?Number(m.amount_minor):0),0),o=exp.reduce((t,m)=>t+Number((m.shares||{})[u]||0),0);return {label:nm(u),v:p-o,ids:ids.filter(i=>exp[i].from_user===u||Number((exp[i].shares||{})[u]||0)>0),ci:0}}).sort((a,b)=>b.v-a.v);
@@ -1090,15 +1093,18 @@ function anChart(d,cur,total){
 }
 function renderAnalysis(){
  const cur=group.reference_currency;
- const exp=mvAll.filter(m=>m.kind==='expense'&&!m.voided&&m.currency===cur);
- const other=mvAll.filter(m=>m.kind==='expense'&&!m.voided&&m.currency!==cur).length;
+ const conv=m=>{if(m.currency===cur)return m;const f=Number(m.fx_rate);if(!(f>0))return null;const amt=Math.round(Number(m.amount_minor)*f),ids=Object.keys(m.shares||{}),tot=Number(m.amount_minor);
+  const b=ids.map(u=>{const e=Number(m.shares[u])*f,fl=Math.floor(e);return {u,fl,r:e-fl}});let left=amt-b.reduce((a,x)=>a+x.fl,0);b.slice().sort((x,y)=>y.r-x.r).forEach(x=>{if(left>0){x.fl++;left--}});
+  const sh={};b.forEach(x=>{sh[x.u]=x.fl});return {...m,amount_minor:amt,shares:sh,currency:cur,conv:true}};
+ const all=mvAll.filter(m=>m.kind==='expense'&&!m.voided),exp=all.map(conv).filter(Boolean);
+ const other=all.length-exp.length,nconv=exp.filter(m=>m.conv).length;
  $('anSub').textContent='Gastos vigentes del grupo, en '+cur+'. Los anulados no cuentan.';
  const box=$('anBody');
  if(!exp.length){box.innerHTML='<div style="text-align:center;padding:24px 0"><div class="tile" style="margin:0 auto 10px;width:56px;height:56px">'+ic('chart',28)+'</div><b>Todavía no hay datos</b><p class="muted" style="margin:4px 0 0">Cuando cargues gastos, acá vas a ver los gráficos.</p></div>';anCtx=null;return}
- anCtx={exp,cur,other};anSel=null;anDraw(true);
+ anCtx={exp,cur,other,nconv};anSel=null;anDraw(true);
 }
 function anDraw(full){
- const {exp,cur,other}=anCtx;
+ const {exp,cur,other,nconv}=anCtx;
  const total=exp.reduce((a,m)=>a+Number(m.amount_minor),0),n=exp.length;
  const myShare=exp.reduce((a,m)=>a+Number((m.shares||{})[myId]||0),0);
  const d=anItems(exp,cur);
@@ -1110,7 +1116,7 @@ function anDraw(full){
  <div class="seg" role="tablist" aria-label="Vista del análisis">${seg(AN_VIEWS,anView,'data-av')}</div>
  ${subs.length?`<div class="seg sm" role="tablist" aria-label="Tipo de gráfico">${seg(subs,anSub[anView],'data-as')}</div>`:''}
  <div class="an-sec" id="anChart"><p class="muted an-note">${esc(d.note||'')}</p>${anChart(d,cur,total)}${anDetail(anSel!=null?d.items[anSel]:null,exp,cur)}</div>
- <div class="an-sec"><h3>Los gastos más grandes</h3><div class="toplist">${top}</div></div>${other?`<p class="muted">Hay ${other} gasto(s) en otra moneda que no se incluyen acá.</p>`:''}`;
+ <div class="an-sec"><h3>Los gastos más grandes</h3><div class="toplist">${top}</div></div>${nconv?`<p class="muted">Incluye ${nconv} gasto(s) en otra moneda, convertidos con la cotización que cargaste.</p>`:''}${other?`<p class="muted">${other} gasto(s) en otra moneda no se incluyen porque no tienen cotización.</p>`:''}`;
 }
 $('anBody').addEventListener('click',e=>{
  if(!anCtx)return;
