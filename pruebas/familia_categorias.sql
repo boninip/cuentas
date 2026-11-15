@@ -17,13 +17,12 @@ begin
  begin perform public.cuentas_category_save(g,null,'x','nopermitido',0); r:=r||'4 ícono inválido ACEPTADO (mal); '; exception when others then r:=r||'4 ícono inválido rechazado ok; '; end;
  -- gasto con categoría
  e:=public.cuentas_expense_add(g,'ARS',9000,a,array[a,kid],null,'Asado',current_date,gen_random_uuid()::text,'comida',null);
- mv:=public.cuentas_movements_list(g); r:=r||'5 categoría en lista='||(mv->0->>'category')||'; ';
+ mv:=public.cuentas_movements_list(g); r:=r||'5 categoría en lista='||coalesce((select x->>'category' from jsonb_array_elements(mv) x where x->>'description'='Asado'),'null')||'; ';
  begin perform public.cuentas_expense_add(g,'ARS',100,a,array[a],null,'x',current_date,gen_random_uuid()::text,'no-existe',null); r:=r||'6 categoría inexistente ACEPTADA (mal); '; exception when others then r:=r||'6 categoría inexistente rechazada ok; '; end;
  -- cotización
  e:=public.cuentas_expense_add(g,'USD',1000,a,array[a],null,'Hotel',current_date,gen_random_uuid()::text,'alojamiento',1250.5);
- mv:=public.cuentas_movements_list(g); r:=r||'7 fx guardado='||(mv->1->>'fx_rate')||'; ';
- e:=public.cuentas_expense_add(g,'ARS',500,a,array[a],null,'Sin fx',current_date,gen_random_uuid()::text,null,99);
- mv:=public.cuentas_movements_list(g); r:=r||'8 fx en moneda del grupo ignorado='||coalesce(mv->2->>'fx_rate','null')||'; ';
+ mv:=public.cuentas_movements_list(g); r:=r||'7 fx guardado='||coalesce((select x->>'fx_rate' from jsonb_array_elements(mv) x where x->>'description'='Hotel'),'null')||'; ';
+ begin perform public.cuentas_expense_add(g,'ARS',500,a,array[a],null,'Sin fx',current_date,gen_random_uuid()::text,null,99); r:=r||'8 fx en moneda del grupo ACEPTADO (mal); '; exception when others then r:=r||'8 fx en moneda del grupo rechazado ok; '; end;
  begin perform public.cuentas_expense_add(g,'USD',100,a,array[a],null,'x',current_date,gen_random_uuid()::text,null,0); r:=r||'9 fx 0 ACEPTADO (mal); '; exception when others then r:=r||'9 fx 0 rechazado ok; '; end;
  -- pesos
  perform public.cuentas_member_set_weight(g,kid,0.5);
@@ -34,7 +33,7 @@ begin
  select balance_minor into bal from public.cuentas_balances(g) where user_id=kid and currency='ARS'; r:=r||'13 saldo Mateo antes='||coalesce(bal,0)||'; ';
  perform public.cuentas_member_set_guardian(g,kid,a);
  select count(*) into n from public.cuentas_balances(g) where user_id=kid; r:=r||'14 filas de Mateo tras responsable='||n||' (esperado 0); ';
- select balance_minor into bal from public.cuentas_balances(g) where user_id=a and currency='ARS'; r:=r||'15 saldo de Ana='||coalesce(bal,0)||' (esperado 9000-4500-500=4000? Ana puso 9500, le tocó 4500+500+Mateo 4500=9500 => 0); ';
+ select balance_minor into bal from public.cuentas_balances(g) where user_id=a and currency='ARS'; r:=r||'15 saldo de Ana='||coalesce(bal,0)||' (esperado: puso 9000+1000USD aparte; en ARS 9000 menos su parte y la de Mateo = 0); ';
  j:=public.cuentas_movements_list(g); r:=r||'16 shares de la lista siguen con Mateo='||((j->0->'shares') ? kid::text)||'; ';
  begin perform public.cuentas_member_set_guardian(g,a,kid); r:=r||'17 ciclo ACEPTADO (mal); '; exception when others then r:=r||'17 ciclo rechazado ok; '; end;
  -- permiso: un miembro común no puede
