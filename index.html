@@ -98,6 +98,9 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 #cExpense{background:transparent;border:0;box-shadow:none;padding:0;margin:6px 0 18px}
 #cExpense>h2{font-size:1.5rem;margin:6px 0 2px;letter-spacing:-.4px}
 #cExpense label{display:block;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 6px}
+#vGroup.ex-open>*:not([data-pane="gastos"]){display:none!important}#vGroup.ex-open [data-pane="gastos"]>*:not(#cExpense){display:none!important}
+#vGroup{padding-bottom:96px}
+#btnExpBack{display:inline-flex;align-items:center;gap:4px;margin:2px 0 6px}.pm{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pm>div{min-width:0}.pm select{margin-bottom:4px}
 #cExpense #eAmt{display:block;width:100%;text-align:center;font-size:2.7rem!important;font-weight:800!important;letter-spacing:-1px;border:0;border-bottom:2px solid var(--line);border-radius:0;background:transparent;color:var(--fg);padding:8px 0;margin:4px 0 6px;box-shadow:none}
 #cExpense #eAmt:focus{outline:0;border-bottom-color:var(--accent)}
 #cExpense #eDesc{background:var(--field);border:1px solid var(--line);border-radius:14px;padding:14px;font-size:1.05rem}
@@ -274,7 +277,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  <div id="gTop">
  <div class="ghero" id="gStats"><small id="gLbl"></small><b id="gBig">–</b><span id="gSub"></span></div>
  <div class="cta"><button class="sec" id="btnSettle" hidden><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h15M15 4l4 4-4 4M20 16H5M9 12l-4 4 4 4"/></svg> Saldar deuda</button></div>
- <div class="cta2"><button id="btnSaldos" class="act"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>¿Quién debe a quién?</button><button id="btnInvite" class="act"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7M19 8v6M16 11h6"/></svg>Personas</button></div>
+ <div class="cta2"><button id="btnSaldos" class="act"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Saldos</button><button id="btnInvite" class="act"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7M19 8v6M16 11h6"/></svg>Personas</button></div>
  <div class="card" id="cGuest" hidden><h2>Agregar por nombre</h2><p class="muted">Queda en el grupo desde ya y podés sumarlo a los gastos. Cuando quieras, mandale su link personal para que se una con su cuenta.</p><label for="guName">Nombre</label><input id="guName" maxlength="40" placeholder="Ej. Bruno" autocomplete="off"><button id="btnGuestAdd">Agregar</button><button class="sec" id="btnGuestCancel">Cancelar</button></div>
  <input id="inviteLink" readonly hidden aria-label="Link de invitación">
  </div>
@@ -282,20 +285,19 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  <div data-pane="gastos">
   <div class="card" id="cEmpty" hidden><h2>Sumá a tu grupo</h2><p class="muted">Cuentas sirve para dividir gastos entre varias personas. Sumalas con un link o por nombre.</p><button id="btnInvite2"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" style="vertical-align:-3px;margin-right:6px"><path d="M12 5v14M5 12h14"/></svg>Agregar personas</button></div>
   <details class="card" id="cExpense"><summary>+ Agregar gasto</summary>
-   <h2>Nuevo gasto</h2>
+   <button type="button" class="lnk" id="btnExpBack"><svg class="icn" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Volver</button>
+   <h2 id="eTitle">Nuevo gasto</h2><div class="muted" id="eGrp"></div>
    <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300" placeholder="Ej. Asado, Nafta, Vinos">
    <label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00" style="font-size:1.6rem;font-weight:700">
-   <label id="eCatsLbl">Categoría</label><div id="eCats" class="chips" role="group" aria-labelledby="eCatsLbl"></div>
    <div class="rcpt" id="eRcptBox"><input type="file" id="eRcptIn" accept="image/*" hidden><button type="button" class="sec" id="btnRcpt"></button><span class="muted" id="eRcptName"></span><button type="button" class="lnk" id="btnRcptX" hidden>Quitar</button></div>
-   <details id="eAdv" class="adv"><summary id="eAdvSum">Pagó Vos · En partes iguales</summary>
-    <label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select>
-    <label for="eCur">Moneda</label><select id="eCur"></select>
-    <div id="eFxBox" hidden><label for="eFx" id="eFxLbl">Cotización</label><input id="eFx" inputmode="decimal" placeholder="0,00"><p id="eFxNote" class="muted" style="margin:6px 0 0"></p></div>
-    <label for="ePayer">Pagó</label><select id="ePayer"></select>
-    <label for="eMode">Cómo dividir</label>
-    <select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select>
+   <label id="eCatsLbl">Categoría</label><div id="eCats" class="chips" role="group" aria-labelledby="eCatsLbl"></div>
+   <div class="pm"><div><label for="ePayer">Pagó</label><select id="ePayer"></select></div><div><label for="eMode">Dividir</label><select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select></div></div>
+   <details id="eAdv" class="adv"><summary id="eAdvSum">Entre todos</summary>
     <label>Entre quiénes</label><div id="eParts"></div>
     <p id="eSum" class="muted" hidden></p>
+    <label for="eCur">Moneda</label><select id="eCur"></select>
+    <div id="eFxBox" hidden><label for="eFx" id="eFxLbl">Cotización</label><input id="eFx" inputmode="decimal" placeholder="0,00"><p id="eFxNote" class="muted" style="margin:6px 0 0"></p></div>
+    <label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select>
    </details>
    <button id="btnExpense">Guardar gasto</button>
    <button class="sec" id="btnEditCancel" hidden>Cancelar edición</button>
@@ -312,6 +314,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  </div>
  <div data-pane="saldos" hidden>
   <button class="lnk" data-goto="gastos">‹ Volver a gastos</button>
+  <div class="card" id="cSug"><h2>Para saldar</h2><div id="sugList"></div></div>
   <div class="card"><h2>Saldos</h2><div id="balances"></div>
   </div>
    <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
@@ -730,7 +733,7 @@ async function openGroup(id){
   $('gSub').textContent=(pos>0&&neg>0)?'A favor '+moneyS(pos,cur)+' · Debés '+moneyS(neg,cur):(net===0?(()=>{const ne=mvAll.filter(m=>m.kind==='expense'&&!m.voided).length;return 'No tenés saldos pendientes'+(ne?' · '+ne+(ne===1?' gasto cargado':' gastos cargados'):'')})():'')}
  $('inviteLink').hidden=true;$('cGuest').hidden=true;
  $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(b.user_id).charAt(0).toUpperCase())}</span><span><b>${esc(name(b.user_id))}</b><div class="muted">${Number(b.balance_minor)===0?'al día':(Number(b.balance_minor)>0?'le deben':'debe')}${wardsOf(b.user_id)}</div></span></span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(Math.abs(Number(b.balance_minor)),b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
- sug=settleSuggestions(bal);
+ sug=settleSuggestions(bal);renderSug();
  $('btnSettle').hidden=g.status!=='open'||active.length<2;$('btnSaldos').hidden=active.length<2;
 
  const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
@@ -783,7 +786,7 @@ async function openGroup(id){
   const equal=(vals.length>0&&Math.max(...vals)-Math.min(...vals)<=1)||!!(wsh&&ids.every(k=>Math.abs((wsh[k]||0)-Number(sh[k]))<=1));
   $('eMode').value=equal?'eq':'ex';syncMode();
   $('eParts').querySelectorAll('label').forEach(l=>{const cb=l.querySelector('input[type=checkbox]');const a=l.querySelector('.amt');cb.checked=ids.includes(cb.value);if(!equal&&sh[cb.value]!=null)a.value=(Number(sh[cb.value])/100).toFixed(2).replace('.',',')});
-  updSum();updAdv();$('btnExpense').textContent='Guardar cambios';$('btnEditCancel').hidden=false;
+  updSum();updAdv();$('btnExpense').textContent='Guardar cambios';$('eTitle').textContent='Editar gasto';$('btnEditCancel').hidden=false;
   say('Editando un gasto: al guardar, el anterior queda anulado y se crea el corregido.');$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});
  });
  $('moves').querySelectorAll('[data-crev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_compensation_reverse_propose',{p_compensation:b.dataset.crev,p_reason:null});await openGroup(gid);say('Propuesta de reversión creada: necesita la aprobación de las dos personas.')}));
@@ -792,17 +795,17 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
 function repVis(){const on=!editId;$('eRep').hidden=$('eRepLbl').hidden=!on;if(!on)$('eRep').value=''}
-function resetEdit(){rcptBlob=null;try{$('eRcptIn').value='';rcptUi()}catch(_){}editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true}
+function resetEdit(){rcptBlob=null;try{$('eRcptIn').value='';rcptUi()}catch(_){}editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('eTitle').textContent='Nuevo gasto';$('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true}
 function updAdv(){
- const p=$('ePayer');const pn=p.selectedOptions[0]?p.selectedOptions[0].textContent:'';
  const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')];const n=cs.filter(c=>c.checked).length;
  const wd=weightsDiffer(cs.filter(c=>c.checked).map(c=>c.value));
- const m={eq:wd?'Según el peso de cada uno':'En partes iguales',ex:'Importes exactos',pc:'Porcentajes'}[$('eMode').value]+(group&&$('eCur').value!==group.reference_currency?' · '+$('eCur').value:'');
- $('eAdvSum').innerHTML='<span class="st">Pagó '+esc(pn)+' · '+m+(cs.length&&n<cs.length?' · entre '+n+' de '+cs.length:' · entre todos')+'</span><span class="go">'+ic('right',20)+'</span>';
+ const ent=cs.length&&n<cs.length?'Entre '+n+' de '+cs.length:'Entre todos';
+ const ex=[wd&&$('eMode').value==='eq'?'según el peso de cada uno':'',group&&$('eCur').value!==group.reference_currency?$('eCur').value:'',$('eRep').value?'se repite':''].filter(Boolean);
+ $('eAdvSum').innerHTML='<span class="st">'+ent+(ex.length?' · '+ex.join(' · '):'')+'</span><span class="go">'+ic('right',20)+'</span>';
 }
 function syncMode(){
  const ex=$('eMode').value!=='eq';
- updAdv();$('eParts').classList.toggle('exact',ex);$('eSum').hidden=!ex;
+ updAdv();$('eParts').classList.toggle('exact',ex);$('eSum').hidden=!ex;if(ex)$('eAdv').open=true;
  $('eParts').querySelectorAll('.amt').forEach(i=>i.placeholder=$('eMode').value==='pc'?'0 %':'0,00');updSum();
 }
 function exactShares(){
@@ -1353,6 +1356,9 @@ $('btnStatus').onclick=busy($('btnStatus'),async()=>{
 $('eMode').onchange=syncMode;
 $('fab').onclick=()=>{if(!$('vHome').hidden){$('btnHomeAdd').onclick();return}$('fab').hidden=true;resetEdit();$('cExpense').open=true;$('eAdv').open=false;$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});$('eDesc').focus()};
 $('eDesc').addEventListener('input',autoCat);$('eCur').addEventListener('change',()=>{$('eFx').value='';syncFx()});$('eFx').addEventListener('input',fxNote);$('eAmt').addEventListener('input',fxNote);$('ePayer').addEventListener('change',updAdv);$('eParts').addEventListener('change',updAdv);
+$('cExpense').addEventListener('toggle',()=>{const o=$('cExpense').open;$('vGroup').classList.toggle('ex-open',o);if(o){$('eGrp').textContent=group?group.name:'';window.scrollTo(0,0)}});
+$('eRep').addEventListener('change',updAdv);
+$('btnExpBack').onclick=()=>$('btnExpClose').click();
 $('btnExpClose').onclick=()=>{$('fab').hidden=false;resetEdit();$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;say('')};
 $('btnEditCancel').onclick=()=>{$('fab').hidden=false;resetEdit();$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;say('Edición cancelada.')};
 $('eAmt').oninput=updSum;$('eParts').addEventListener('input',updSum);$('eParts').addEventListener('change',updSum);
@@ -1383,21 +1389,28 @@ $('btnExpense').onclick=busy($('btnExpense'),async()=>{
 });
 let sug=[],payBy={},guestIds=new Set(),mvAll=[],showVoided=false;
 const nm=u=>{const m=group.members.find(x=>x.user_id===u);return (m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
-function openSettle(){
- const pend=sug.filter(x=>x.from===myId&&guestIds.has(x.to));
- const mine=sug.filter(x=>x.from===myId&&!guestIds.has(x.to));
- $('sPay').hidden=true;$('sPick').hidden=false;
- $('sList').innerHTML=mine.length?mine.map((x,k)=>`<button class="opt" data-pay="${k}"><span class="tile ${hue(x.to)}">${esc(nm(x.to).charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(nm(x.to))}</b></span><span class="mr"><b class="bad">${money(x.amount,x.currency)}</b><small>debés</small></span><span class="chev">›</span></button>`).join(''):'<p class="muted">'+(pend.length?'Por ahora no podés saldar nada.':'No tenés ningún saldo por liquidar en este grupo.')+'</p>';
- if(pend.length)$('sList').insertAdjacentHTML('beforeend','<p class="muted">'+esc(pend.map(x=>nm(x.to)).join(', '))+(pend.length>1?' todavía no aceptaron':' todavía no aceptó')+' la invitación: cuando lo hagan vas a poder saldarles.</p>');
- $('sList').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{
-  const x=mine[Number(b.dataset.pay)],p=payBy[x.to];
+function startPay(x){
+  const p=payBy[x.to];
   $('pTo').value=x.to;$('pAmt').value=(x.amount/100).toFixed(2).replace('.',',');
   $('sTitle').textContent='Le pagaste a '+nm(x.to);$('sAv').textContent=nm(x.to).charAt(0).toUpperCase();$('sAv').className='av big '+hue(x.to);
   const dest=p&&(p.alias||p.cbu);
   $('sInfo').innerHTML=dest?`<small>${p.alias?'Alias':'CBU / CVU'} para transferir</small><div class="irow"><b>${esc(dest)}</b><button class="sec" style="width:auto;margin:0;padding:6px 12px" data-copy="${esc(dest)}">Copiar</button></div>${p.holder_name?'<small>'+esc(p.holder_name)+(p.bank?' · '+esc(p.bank):'')+'</small>':''}`:'';
   $('sInfo').querySelectorAll('[data-copy]').forEach(c=>c.onclick=copyBtn(c));
   $('sPick').hidden=true;$('sPay').hidden=false;
- });
+}
+function renderSug(){
+ const L=sug.filter(x=>Number(x.amount)>0);
+ $('sugList').innerHTML=L.length?L.map((x,k)=>{const mineP=x.from===myId&&!guestIds.has(x.to),wait=x.from===myId&&guestIds.has(x.to);
+  return `<div class="item" style="align-items:center"><span><b>${esc(x.from===myId?'Vos':nm(x.from))} → ${esc(x.to===myId?'Vos':nm(x.to))}</b><div class="muted">${wait?'todavía no aceptó la invitación':'sugerido para dejar todo en cero'}</div></span><span style="display:flex;gap:8px;align-items:center"><b class="${x.from===myId?'bad':''}">${money(x.amount,x.currency)}</b>${mineP?`<button style="width:auto;margin:0" data-sp="${k}">Pagar</button>`:''}</span></div>`}).join(''):'<p class="muted">No hay nada para saldar: están todos al día.</p>';
+ $('sugList').querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{startPay(L[Number(b.dataset.sp)]);show('vSettle');window.scrollTo(0,0)});
+}
+function openSettle(){
+ const pend=sug.filter(x=>x.from===myId&&guestIds.has(x.to));
+ const mine=sug.filter(x=>x.from===myId&&!guestIds.has(x.to));
+ $('sPay').hidden=true;$('sPick').hidden=false;
+ $('sList').innerHTML=mine.length?mine.map((x,k)=>`<button class="opt" data-pay="${k}"><span class="tile ${hue(x.to)}">${esc(nm(x.to).charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(nm(x.to))}</b></span><span class="mr"><b class="bad">${money(x.amount,x.currency)}</b><small>debés</small></span><span class="chev">›</span></button>`).join(''):'<p class="muted">'+(pend.length?'Por ahora no podés saldar nada.':'No tenés ningún saldo por liquidar en este grupo.')+'</p>';
+ if(pend.length)$('sList').insertAdjacentHTML('beforeend','<p class="muted">'+esc(pend.map(x=>nm(x.to)).join(', '))+(pend.length>1?' todavía no aceptaron':' todavía no aceptó')+' la invitación: cuando lo hagan vas a poder saldarles.</p>');
+ $('sList').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>startPay(mine[Number(b.dataset.pay)]));
  show('vSettle');window.scrollTo(0,0);
 }
 $('btnSettle').onclick=openSettle;

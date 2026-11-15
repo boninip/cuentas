@@ -244,6 +244,18 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('[data-rs$="|paused"]');await t.page.waitForTimeout(250);
  ok(t.calls.some(c=>c.startsWith('cuentas_recurring_set_status')&&c.includes('paused')),'repetidos: se puede pausar');
  ok(t.errs.length===0,'repetidos: sin errores de JS');
+ // UX: gasto como pantalla propia, Pagó/Dividir visibles, saldos con Pagar
+ t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ await t.page.click('#fab');await t.page.waitForTimeout(300);
+ ok(!(await t.page.isVisible('#gTop'))&&!(await t.page.isVisible('#gTitle')),'ux: al cargar un gasto se ocultan el resumen y los botones del grupo');
+ ok(await t.page.isVisible('#ePayer')&&await t.page.isVisible('#eMode'),'ux: «Pagó» y «Dividir» están visibles sin abrir opciones');
+ ok(/Viaje 1/.test(await t.page.textContent('#eGrp')),'ux: se indica de qué grupo es el gasto');
+ await t.page.click('#btnExpBack');await t.page.waitForTimeout(300);
+ ok(await t.page.isVisible('#gTop')&&await t.page.isVisible('#fab'),'ux: Volver regresa al grupo');
+ await t.page.click('#btnSaldos');await t.page.waitForTimeout(300);
+ ok(/Para saldar/.test(await t.page.textContent('#cSug')),'ux: la pantalla Saldos tiene la sección «Para saldar»');
+ if(await t.page.locator('[data-sp]').count()){await t.page.locator('[data-sp]').first().click();await t.page.waitForTimeout(300);ok(await t.page.isVisible('#sPay')&&(await t.page.inputValue('#pAmt'))!=='','ux: «Pagar» abre el pago con el importe cargado')}else ok(true,'ux: sin transferencias sugeridas para vos');
+ ok(t.errs.length===0,'ux: sin errores de JS');
  // fila Nuevo grupo arriba de la lista
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
  ok(await t.page.evaluate(()=>{const n=document.getElementById('optNew'),g=document.getElementById('groups');return !n.hidden&&!!(n.compareDocumentPosition(g)&Node.DOCUMENT_POSITION_FOLLOWING)}),'nuevo grupo: la fila queda arriba de la lista de grupos');
