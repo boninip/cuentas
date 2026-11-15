@@ -44,6 +44,7 @@ details.card[open]>summary{margin-bottom:10px}
 .fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:auto;margin:0;padding:14px 20px;border-radius:99px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:8;font-size:1.05rem}
 main{padding-bottom:96px}
 #cExpense:not([open]){display:none}#cExpense>summary{display:none}
+.adv{border:1px solid var(--line);border-radius:10px;padding:10px;margin:4px 0 12px}.adv>summary{color:var(--accent)}.adv[open]>summary{margin-bottom:8px}
 .mv{border-top:1px solid var(--line)}.mv:first-child{border-top:0}
 .mv>summary{display:flex;justify-content:space-between;gap:8px;padding:10px 0;font-weight:400}
 .mv .mvbody{padding:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mv .mvbody>*{margin:0}
@@ -141,13 +142,16 @@ main{padding-bottom:96px}
  <div data-pane="gastos">
   <div class="card" id="cEmpty" hidden><h2>Sumá a tu grupo</h2><p class="muted">Cuentas sirve para dividir gastos entre varias personas. Invitalas con un link.</p><button id="btnInvite2">+ Agregar personas</button></div>
   <details class="card" id="cExpense"><summary>+ Agregar gasto</summary>
-   <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300">
-   <div class="row"><div><label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00"></div>
-   <div><label for="ePayer">Pagó</label><select id="ePayer"></select></div></div>
-   <label for="eMode">Cómo dividir</label>
-   <select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select>
-   <label>Entre quiénes</label><div id="eParts"></div>
-   <p id="eSum" class="muted" hidden></p>
+   <h2>Nuevo gasto</h2>
+   <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300" placeholder="Ej. Asado, Nafta, Vinos">
+   <label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00" style="font-size:1.6rem;font-weight:700">
+   <details id="eAdv" class="adv"><summary id="eAdvSum">Pagó Vos · En partes iguales</summary>
+    <label for="ePayer">Pagó</label><select id="ePayer"></select>
+    <label for="eMode">Cómo dividir</label>
+    <select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select>
+    <label>Entre quiénes</label><div id="eParts"></div>
+    <p id="eSum" class="muted" hidden></p>
+   </details>
    <button id="btnExpense">Guardar gasto</button>
    <button class="sec" id="btnEditCancel" hidden>Cancelar edición</button>
    <button class="sec" id="btnExpClose">Cancelar</button>
@@ -364,12 +368,12 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
   const m=mv.find(x=>x.id===b.dataset.edit);if(!m)return;
   editId=m.id;editDate=m.occurred_on||null;
-  $('cExpense').open=true;$('eDesc').value=m.description||'';$('eAmt').value=(Number(m.amount_minor)/100).toFixed(2).replace('.',',');$('ePayer').value=m.from_user;
+  $('cExpense').open=true;$('fab').hidden=true;$('eAdv').open=true;$('eDesc').value=m.description||'';$('eAmt').value=(Number(m.amount_minor)/100).toFixed(2).replace('.',',');$('ePayer').value=m.from_user;
   const sh=m.shares||{};const ids=Object.keys(sh);const vals=ids.map(k=>Number(sh[k]));
   const equal=vals.length>0&&Math.max(...vals)-Math.min(...vals)<=1;
   $('eMode').value=equal?'eq':'ex';syncMode();
   $('eParts').querySelectorAll('label').forEach(l=>{const cb=l.querySelector('input[type=checkbox]');const a=l.querySelector('.amt');cb.checked=ids.includes(cb.value);if(!equal&&sh[cb.value]!=null)a.value=(Number(sh[cb.value])/100).toFixed(2).replace('.',',')});
-  updSum();$('btnExpense').textContent='Guardar cambios';$('btnEditCancel').hidden=false;
+  updSum();updAdv();$('btnExpense').textContent='Guardar cambios';$('btnEditCancel').hidden=false;
   say('Editando un gasto: al guardar, el anterior queda anulado y se crea el corregido.');$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});
  });
  $('moves').querySelectorAll('[data-crev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_compensation_reverse_propose',{p_compensation:b.dataset.crev,p_reason:null});await openGroup(gid);say('Propuesta de reversión creada: necesita la aprobación de las dos personas.')}));
@@ -378,9 +382,15 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
 function resetEdit(){editId=null;editDate=null;$('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true}
+function updAdv(){
+ const p=$('ePayer');const pn=p.selectedOptions[0]?p.selectedOptions[0].textContent:'';
+ const m={eq:'En partes iguales',ex:'Importes exactos',pc:'Porcentajes'}[$('eMode').value];
+ const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')];const n=cs.filter(c=>c.checked).length;
+ $('eAdvSum').textContent='Pagó '+pn+' · '+m+(cs.length&&n<cs.length?' · entre '+n+' de '+cs.length:' · entre todos')+' ▾';
+}
 function syncMode(){
  const ex=$('eMode').value!=='eq';
- $('eParts').classList.toggle('exact',ex);$('eSum').hidden=!ex;
+ updAdv();$('eParts').classList.toggle('exact',ex);$('eSum').hidden=!ex;
  $('eParts').querySelectorAll('.amt').forEach(i=>i.placeholder=$('eMode').value==='pc'?'0 %':'0,00');updSum();
 }
 function exactShares(){
@@ -532,9 +542,10 @@ $('btnStatus').onclick=busy($('btnStatus'),async()=>{
  await rpc('cuentas_group_set_status',{p_group:gid,p_status:group.status==='open'?'closed':'open'});await openGroup(gid);
 });
 $('eMode').onchange=syncMode;
-$('fab').onclick=()=>{resetEdit();$('cExpense').open=true;$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});$('eDesc').focus()};
-$('btnExpClose').onclick=()=>{resetEdit();$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;say('')};
-$('btnEditCancel').onclick=()=>{resetEdit();$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;say('Edición cancelada.')};
+$('fab').onclick=()=>{$('fab').hidden=true;resetEdit();$('cExpense').open=true;$('eAdv').open=false;$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});$('eDesc').focus()};
+$('ePayer').addEventListener('change',updAdv);$('eParts').addEventListener('change',updAdv);
+$('btnExpClose').onclick=()=>{$('fab').hidden=false;resetEdit();$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;say('')};
+$('btnEditCancel').onclick=()=>{$('fab').hidden=false;resetEdit();$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;say('Edición cancelada.')};
 $('eAmt').oninput=updSum;$('eParts').addEventListener('input',updSum);$('eParts').addEventListener('change',updSum);
 $('btnExpense').onclick=busy($('btnExpense'),async()=>{
  const amt=toMinor($('eAmt').value);if(!amt)throw Error('Importe inválido');
