@@ -417,8 +417,8 @@ async function openGroup(id){
    if(m.from_user===myId){const d=Number(m.amount_minor)-sh;if(d>0)mineTxt=`<div class="good">pediste ${money(d,m.currency)}</div>`}
    else if(sh>0)mineTxt=`<div class="bad">debés ${money(sh,m.currency)}</div>`}
   const rep=isE&&m.shares&&Object.keys(m.shares).length?`<div class="muted" style="flex-basis:100%">Reparto: ${Object.entries(m.shares).map(([u,v])=>esc(name(u))+' '+money(v,m.currency)).join(', ')}</div>`:'';
-  return hd+`<details class="mv"><summary><span><span class="muted">${dt}</span> <b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b> ${st}<div class="muted">${who}${isE?' '+money(m.amount_minor,m.currency):''}</div></span><span style="text-align:right">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}</span></summary><div class="mvbody">${rep}${act}</div></details>`}).join(''):'<p class="muted">Sin movimientos.</p>';
- $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{try{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}catch(e){if(!/propuesta/i.test(e.message))throw e;await rpc('cuentas_proposal_create',{p_kind:'void_expense',p_target:b.dataset.void,p_reason:null});await openGroup(gid);say('Este gasto ya tiene pagos confirmados: creé una propuesta de anulación que necesita la aprobación de los afectados.')}}));
+  return hd+`<details class="mv"><summary><span><span class="muted">${dt}</span> <b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b> ${st}<div class="muted">${who}${isE?' '+money(m.amount_minor,m.currency):''}</div></span><span style="text-align:right">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}</span></summary><div class="mvbody">${rep}${act}</div></details>`}).join(''):'<div style="text-align:center;padding:18px 0"><div class="tile" style="margin:0 auto 10px;width:56px;height:56px">🧾</div><b>Todavía no hay gastos</b><p class="muted" style="margin:4px 0 0">Tocá “+ Añadir gasto” para cargar el primero.</p></div>';
+ $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{try{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}catch(e){if(!/propuesta/i.test(e.message))throw e;await rpc('cuentas_proposal_create',{p_kind:'void_expense',p_target:b.dataset.void,p_reason:null});await openGroup(gid);say('Este gasto ya tiene pagos confirmados, así que no se puede anular directo: creé una propuesta de anulación. Aparece en “Propuestas pendientes” y se aplica cuando los afectados la aprueben.')}}));
  $('moves').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
   const m=mv.find(x=>x.id===b.dataset.edit);if(!m)return;
   editId=m.id;editDate=m.occurred_on||null;
@@ -612,7 +612,7 @@ $('btnExpense').onclick=busy($('btnExpense'),async()=>{
  else if(!parts.length)throw Error('Elegí al menos una persona');
  const wasEdit=!!editId;
  const args={p_currency:group.reference_currency,p_amount_minor:amt,p_payer:$('ePayer').value,p_participants:ex?null:parts,p_shares:shares,p_description:$('eDesc').value.trim()||null,p_occurred_on:wasEdit&&editDate?editDate:today(),p_key:newKey()};
- if(wasEdit)await rpc('cuentas_expense_edit',{p_expense:editId,...args});else await rpc('cuentas_expense_add',{p_group:gid,...args});
+ if(wasEdit){try{await rpc('cuentas_expense_edit',{p_expense:editId,...args})}catch(e){if(/confirmad|propuesta|anul/i.test(e.message))throw Error('Este gasto ya tiene pagos confirmados y no se puede editar directo. Anulalo con una propuesta (aprobada por los afectados) y cargá el corregido.');throw e}}else await rpc('cuentas_expense_add',{p_group:gid,...args});
  $('eDesc').value='';$('eAmt').value='';await openGroup(gid);say(wasEdit?'Gasto editado: el anterior quedó anulado.':'Gasto guardado.');
 });
 let sug=[],payBy={};
