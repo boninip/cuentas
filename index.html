@@ -176,7 +176,6 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 #rcptView img{max-width:100%;max-height:78vh;border-radius:12px;background:#fff}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
 .opt.sk{min-height:64px;border-color:transparent;background:var(--tinte);animation:skm 1.4s ease-in-out infinite;pointer-events:none}@keyframes skm{50%{opacity:.45}}@media(prefers-reduced-motion:reduce){.opt.sk{animation:none}}
-.sync{opacity:.78;transition:opacity .2s}
 #cTheme .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 6px}#cTheme .chip{justify-content:center;width:100%;min-height:48px;padding:12px 4px;border-radius:12px;border:1px solid var(--borde);background:var(--tarjeta);color:var(--primario-txt);font-weight:700;font-size:.95rem}#cTheme .chip.on{background:var(--tinte);border:2px solid var(--primario-txt)}
 .chip{display:inline-flex;align-items:center;gap:6px;width:auto;margin:0;min-height:0;padding:8px 12px 8px 8px;border-radius:99px;border:1.5px solid var(--line);background:transparent;color:var(--fg);font-size:.9rem;font-weight:600;box-shadow:none}
 .chip .ci{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--ck,var(--accent)) 20%,transparent);color:var(--ck,var(--accent-text))}
@@ -522,7 +521,7 @@ function setHp(t){if(t!==hp)toTop();hp=t;document.querySelectorAll('[data-hp]').
 function show(v){if(v!==curView){curView=v;toTop()}if(v==='vHome')setHp(hp);$('burger').hidden=v==='vLogin'||(v==='vInvite'&&!session);['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v)}
 function busy(btn,fn){return async()=>{btn.disabled=true;say('Guardando…');try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
 
-let gsAll=[],rowsBal=null,showAll=false;
+let gsAll=[],rowsBal=null,showAll=false,lastGH='';
 const moneyS=(m,c)=>{m=Number(m);try{return new Intl.NumberFormat('es-AR',{style:'currency',currency:c,minimumFractionDigits:m%100===0?0:2,maximumFractionDigits:2}).format(m/100)}catch(_){return money(m,c)}};
 async function fetchBalances(gs){
  return Promise.all(gs.filter(g=>g.member_status!=='former').map(async g=>{const bal=await rpcC('cuentas_balances',{p_group:g.id});return {g,mine:(bal||[]).filter(b=>b.user_id===myId&&Number(b.balance_minor)!==0)}}));
@@ -530,23 +529,25 @@ async function fetchBalances(gs){
 function renderStats(rows){
  const tot={};rows.forEach(r=>r.mine.forEach(b=>{const t=tot[b.currency]=tot[b.currency]||{pos:0,neg:0};const v=Number(b.balance_minor);if(v>0)t.pos+=v;else t.neg+=-v}));
  const cur=tot.ARS?'ARS':Object.keys(tot)[0]||'ARS';const t=tot[cur]||{pos:0,neg:0};const net=t.pos-t.neg;
- $('stBig').textContent=moneyS(Math.abs(net),cur);
- $('stLbl').textContent=net>0?'En total, te deben':net<0?'En total, debés':'Estás al día';
+ const sv=(id,v)=>{if($(id).textContent!==v)$(id).textContent=v};
+ sv('stBig',moneyS(Math.abs(net),cur));
+ sv('stLbl',net>0?'En total, te deben':net<0?'En total, debés':'Estás al día');
  $('optBal').classList.toggle('minus',net<0);$('optBal').classList.toggle('zero',net===0);
- $('stSub').textContent=(t.pos>0&&t.neg>0)?'A favor '+moneyS(t.pos,cur)+' · Debés '+moneyS(t.neg,cur):(net===0?'No tenés saldos pendientes':'');
+ sv('stSub',(t.pos>0&&t.neg>0)?'A favor '+moneyS(t.pos,cur)+' · Debés '+moneyS(t.neg,cur):(net===0?'No tenés saldos pendientes':''));
 }
 function renderGroups(){
  const lim=showAll?99:4;const isSettled=g=>g.member_status!=='former'&&rowsBal&&!(rowsBal.find(x=>x.g.id===g.id)||{mine:[]}).mine[0];
  const ordered=gsAll.slice();if(rowsBal)ordered.sort((a,b)=>Number(isSettled(a))-Number(isSettled(b)));const list=ordered.slice(0,lim);
  $('btnAllG').hidden=gsAll.length<=4;$('btnAllG').textContent=showAll?'Ver menos ›':'Ver todos ›';
   let sepDone=false;
- $('groups').innerHTML=list.map(g=>{
+ const html=list.map(g=>{
   let sep='';if(rowsBal&&!sepDone&&isSettled(g)&&list.some(x=>!isSettled(x))){sepDone=true;sep='<div class="grp-h">Sin saldos pendientes</div>'}
   let pill='';
   if(g.member_status==='former')pill='<span class="mr"><small>ex miembro</small></span>';
   else if(rowsBal){const r=rowsBal.find(x=>x.g.id===g.id);const b=r&&r.mine[0];
    pill=!b?'<span class="mr"><small>Al día</small></span>':(Number(b.balance_minor)>0?`<span class="mr"><b class="good">${esc(moneyS(b.balance_minor,b.currency))}</b><small>te deben</small></span>`:`<span class="mr"><b class="bad">${esc(moneyS(-Number(b.balance_minor),b.currency))}</b><small>debés</small></span>`)}
   return sep+`<button class="opt${isSettled(g)?' settled':''}" data-g="${g.id}"><span class="tile ${hue(g.id)}">${esc((g.name||'?').trim().charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(g.name)}</b></span>${pill}<span class="chev">›</span></button>`}).join('');
+ if(html===lastGH&&$('groups').querySelector('[data-g]'))return;lastGH=html;$('groups').innerHTML=html;
  $('groups').querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const g=gsAll.find(x=>x.id===b.dataset.g);(g.member_status==='former'?openFormer(g):openGroup(g.id)).catch(e=>say(e.message,true))});
 }
 const cacheGet=(fn,a)=>{try{const c=JSON.parse(localStorage.getItem(cKey(fn,a))||'null');return c&&c.d}catch(_){return null}};
@@ -564,10 +565,10 @@ async function home(){
  gid=null;tab='gastos';show('vHome');
  // primero lo crítico: pendientes+avisos y grupos; perfil y datos de cobro después
  loadPending().catch(()=>{});
- if(paintFromCache())syncing(true);else{$('groups').innerHTML=SK;syncing(false)}
+ if(paintFromCache())syncing(true);else{$('groups').innerHTML=SK;lastGH='';syncing(false)}
  offAt=0;let fresh_;
  try{fresh_=(await rpcC('cuentas_my_groups_all')).filter(g=>g.status!=='archived')}catch(e){syncing(false);if(!$('groups').querySelector('[data-g]'))$('groups').innerHTML='';throw e}
- gsAll=fresh_;rowsBal=null;if(offAt)say('Sin conexión: mostrando lo último guardado (hace '+agoTxt(offAt)+').');
+ gsAll=fresh_;if(!(rowsBal&&gsAll.every(g=>g.member_status==='former'||rowsBal.some(r=>r.g.id===g.id))))rowsBal=null;if(offAt)say('Sin conexión: mostrando lo último guardado (hace '+agoTxt(offAt)+').');
  loadProfile().catch(()=>{});loadPayout().catch(()=>{});
  $('noGroups').hidden=gsAll.length>0;renderGroups();
  fetchBalances(gsAll).then(r=>{rowsBal=r;renderStats(r);renderGroups()}).catch(()=>{}).finally(()=>syncing(false));
