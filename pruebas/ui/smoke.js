@@ -256,6 +256,20 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(/Para saldar/.test(await t.page.textContent('#cSug')),'ux: la pantalla Saldos tiene la sección «Para saldar»');
  if(await t.page.locator('[data-sp]').count()){await t.page.locator('[data-sp]').first().click();await t.page.waitForTimeout(300);ok(await t.page.isVisible('#sPay')&&(await t.page.inputValue('#pAmt'))!=='','ux: «Pagar» abre el pago con el importe cargado')}else ok(true,'ux: sin transferencias sugeridas para vos');
  ok(t.errs.length===0,'ux: sin errores de JS');
+ // Paleta común de Pinto: textos en pantalla, theme-color y apariencia
+ t=await mk(b,{});await t.page.goto(URL);await t.page.waitForTimeout(300);
+ await t.page.evaluate(()=>{document.querySelectorAll('section[id^=v]').forEach(x=>x.hidden=x.id!=='vLogin');document.getElementById('burger').hidden=true});await t.page.waitForTimeout(200);
+ ok(/Ingresá con Pintó ID/.test(await t.page.textContent('#vLogin'))&&/PINTÓ ID/.test(await t.page.textContent('#vLogin')),'paleta: el login dice «Pintó ID» con acento');
+ ok(!/Pinto ID|PINTO ID|Planazo/.test(await t.page.evaluate(()=>document.body.innerText)),'paleta: no queda «Pinto ID» sin acento en pantalla');
+ await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="dark"]').click()});
+ ok(await t.page.evaluate(()=>document.querySelector('meta[name="theme-color"]').content)==='#12201F','paleta: theme-color oscuro #12201F');
+ ok(await t.page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().toUpperCase())==='#12201F','paleta: fondo oscuro #12201F');
+ await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="light"]').click()});
+ ok(await t.page.evaluate(()=>document.querySelector('meta[name="theme-color"]').content)==='#FAF8F4','paleta: theme-color claro #FAF8F4');
+ ok(await t.page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toUpperCase())==='#1F5F6B','paleta: primario claro #1F5F6B');
+ ok(await t.page.evaluate(()=>localStorage.getItem('cuentas_theme'))==='light','paleta: la apariencia sigue usando la clave cuentas_theme');
+ await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="auto"]').click()});
+ ok(t.errs.length===0,'paleta: sin errores de JS');
  // fila Nuevo grupo arriba de la lista
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
  ok(await t.page.evaluate(()=>{const n=document.getElementById('optNew'),g=document.getElementById('groups');return !n.hidden&&!!(n.compareDocumentPosition(g)&Node.DOCUMENT_POSITION_FOLLOWING)}),'nuevo grupo: la fila queda arriba de la lista de grupos');
