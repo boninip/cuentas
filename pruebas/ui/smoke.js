@@ -5,12 +5,16 @@ const URL='file://'+path.resolve(__dirname,'../../index.html');
 const ME='11111111-1111-1111-1111-111111111111',BR='22222222-2222-2222-2222-222222222222',G='33333333-3333-3333-3333-333333333333',TOK='a'.repeat(64);
 let fails=0;const ok=(c,m)=>{if(!c){fails++;console.log('FALLA:',m)}else console.log('ok   ',m)};
 const LU='44444444-4444-4444-4444-444444444444';
-async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false,pay=false,notices=false}={}){
+async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false,pay=false,notices=false,delay=0,expired=false,cache=null}={}){
  const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();
  const jwt='x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y';
- await page.addInitScript(([j])=>{localStorage.setItem('cuentas_auth_v1',JSON.stringify({access_token:j,refresh_token:'r',expires_at:Date.now()+3600000,email:'b@test.com'}))},[jwt]);
- const state={down:false};const calls=[];let prof=profile?{display_name:'Pau'}:null,debt=owe;
+ await page.addInitScript(([e,c])=>{window.__exp=e;if(c)for(const k in c)localStorage.setItem(k,JSON.stringify(c[k]))},[expired,cache]);
+ await page.addInitScript(([j])=>{localStorage.setItem('cuentas_auth_v1',JSON.stringify({access_token:j,refresh_token:'r',expires_at:Date.now()+(window.__exp?-1000:3600000),email:'b@test.com'}))},[jwt]);
+ const state={down:false,times:{},tokens:0};const calls=[];let prof=profile?{display_name:'Pau'}:null,debt=owe;
  await page.route('**/*',async r=>{const u=r.request().url();if(!u.includes('supabase.co'))return r.continue();
+  {const f0=u.split('/rpc/')[1]||u.split('/v1/')[1];if(f0&&!(f0 in state.times))state.times[f0]=Date.now()}
+  if(u.includes('/auth/v1/token')){state.tokens++;if(delay)await new Promise(z=>setTimeout(z,delay));return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({access_token:jwt,refresh_token:'r2',expires_in:3600,user:{}})})}
+  if(delay)await new Promise(z=>setTimeout(z,delay));
   if(u.includes('/storage/v1/object/')){calls.push('STORAGE '+r.request().method()+' '+u);if(r.request().method()==='POST')return r.fulfill({status:200,contentType:'application/json',body:'{"Key":"x"}'});return r.fulfill({status:200,contentType:'image/jpeg',body:Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=','base64')})}
   if(state.down)return r.abort('failed');const fn=u.split('/rpc/')[1],body=r.request().postData();calls.push(fn+' '+body);const J=v=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(v)});
   switch(fn){
@@ -270,6 +274,33 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(await t.page.evaluate(()=>localStorage.getItem('cuentas_theme'))==='light','paleta: la apariencia sigue usando la clave cuentas_theme');
  await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="auto"]').click()});
  ok(t.errs.length===0,'paleta: sin errores de JS');
+ // rendimiento del home
+ {const G0='11111111-1111-1111-1111-111111111111';
+  // sin copia: esqueleto mientras llega la red, después los grupos
+  let r=await mk(b,{delay:300});const t0=Date.now();await r.page.goto(URL);await r.page.waitForTimeout(150);
+  ok(await r.page.evaluate(()=>document.querySelectorAll('#groups .opt.sk').length===3&&!document.querySelector('#groups [data-g]')),'rendimiento: sin copia guardada muestra esqueleto');
+  await r.page.waitForSelector('#groups [data-g]');
+  ok(await r.page.evaluate(()=>!document.querySelector('#groups .sk')),'rendimiento: el esqueleto se reemplaza por los grupos');
+  // avisos y pendientes en paralelo (no uno tras otro)
+  await r.page.waitForTimeout(900);
+  const tp=r.state.times['cuentas_my_pending'],tn=r.state.times['core_notifications_list'];
+  ok(tp&&tn&&Math.abs(tn-tp)<250,'rendimiento: avisos y pendientes salen juntos ('+(tn-tp)+' ms de diferencia, latencia 300)');
+  ok(r.state.times['cuentas_balances']-r.state.times['cuentas_my_groups_all']>=250&&r.state.times['core_profile_get']>=r.state.times['cuentas_my_groups_all'],'rendimiento: perfil y cobro salen después de pedir los grupos');
+  // con copia guardada: pinta al instante, antes de que responda la red
+  const cc={};const me=await r.page.evaluate(()=>{const j=JSON.parse(localStorage.getItem('cuentas_auth_v1')).access_token;return JSON.parse(atob(j.split('.')[1])).sub});
+  const keys=await r.page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('cuentas_cache_v1_')).map(k=>[k,localStorage.getItem(k)]));
+  for(const [k,v] of keys)cc[k]=JSON.parse(v);
+  r=await mk(b,{delay:1500,cache:cc});await r.page.goto(URL);await r.page.waitForSelector('#groups [data-g]',{timeout:1000});
+  ok(true,'rendimiento: con copia guardada la lista aparece antes de la red (1500 ms de latencia)');
+  ok(await r.page.evaluate(()=>document.getElementById('groups').classList.contains('sync')),'rendimiento: marca «actualizando» mientras revalida');
+  await r.page.waitForFunction(()=>!document.getElementById('groups').classList.contains('sync'),null,{timeout:6000});
+  ok(true,'rendimiento: al terminar quita la marca de actualización');
+  // token vencido: un solo pedido de renovación aunque haya varios pedidos a la vez
+  r=await mk(b,{expired:true,delay:100});await r.page.goto(URL);await r.page.waitForSelector('#groups [data-g]');await r.page.waitForTimeout(600);
+  ok(r.state.tokens===1,'rendimiento: token vencido → '+r.state.tokens+' renovación (esperado 1)');
+  // imagen del encabezado fuera del HTML
+  ok(!/data:image\/jpeg;base64/.test(require('fs').readFileSync(URL.replace('file://',''),'utf8')),'rendimiento: el HTML no lleva imágenes en base64');
+ }
  // tokens comunes: verificador + selector efectivo data-eff
  {const cp=require('child_process'),pa=require('path'),R=pa.join(__dirname,'../..');
   let rc=0,out='';try{out=cp.execFileSync('python3',['-I',pa.join(R,'tools/pinto_tokens_check.py'),pa.join(R,'tokens/pinto-tokens.css'),pa.join(R,'index.html')],{encoding:'utf8'})}catch(e){rc=e.status||1;out=(e.stdout||'')+(e.stderr||'')}
