@@ -1,0 +1,16 @@
+{
+  "name": "Cuentas",
+  "short_name": "Cuentas",
+  "description": "Gastos compartidos, claros y sin vueltas.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F7F5EA",
+  "theme_color": "#637B55",
+  "lang": "es-AR",
+  "icons": [
+    {"src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
