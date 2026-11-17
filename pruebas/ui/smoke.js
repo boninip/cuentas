@@ -293,8 +293,11 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   r=await mk(b,{delay:1500,cache:cc});await r.page.goto(URL);await r.page.waitForSelector('#groups [data-g]',{timeout:1000});
   ok(true,'rendimiento: con copia guardada la lista aparece antes de la red (1500 ms de latencia)');
   ok(await r.page.evaluate(()=>document.getElementById('groups').classList.contains('sync')),'rendimiento: marca «actualizando» mientras revalida');
+  await r.page.evaluate(()=>{window.__mut=0;window.__big=[document.getElementById('stBig').textContent];new MutationObserver(()=>window.__mut++).observe(document.getElementById('groups'),{childList:true,subtree:true,characterData:true});new MutationObserver(()=>window.__big.push(document.getElementById('stBig').textContent)).observe(document.getElementById('stBig'),{childList:true,characterData:true,subtree:true})});
   await r.page.waitForFunction(()=>!document.getElementById('groups').classList.contains('sync'),null,{timeout:6000});
   ok(true,'rendimiento: al terminar quita la marca de actualización');
+  ok(await r.page.evaluate(()=>window.__mut===0),'sin parpadeo: la lista no se redibuja si los datos no cambiaron ('+await r.page.evaluate(()=>window.__mut)+' cambios)');
+  ok(await r.page.evaluate(()=>window.__big.length===1&&window.__big[0]!=='–'),'sin parpadeo: el total del encabezado no cambia de valor al revalidar');
   // token vencido: un solo pedido de renovación aunque haya varios pedidos a la vez
   r=await mk(b,{expired:true,delay:100});await r.page.goto(URL);await r.page.waitForSelector('#groups [data-g]');await r.page.waitForTimeout(600);
   ok(r.state.tokens===1,'rendimiento: token vencido → '+r.state.tokens+' renovación (esperado 1)');
