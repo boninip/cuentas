@@ -175,6 +175,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 #rcptView{position:fixed;inset:0;z-index:30;background:#000d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}#rcptView[hidden]{display:none}
 #rcptView img{max-width:100%;max-height:78vh;border-radius:12px;background:#fff}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
+#cTheme .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 6px}#cTheme .chip{justify-content:center;width:100%;min-height:48px;padding:12px 4px;border-radius:12px;border:1px solid var(--borde);background:var(--tarjeta);color:var(--primario-txt);font-weight:700;font-size:.95rem}#cTheme .chip.on{background:var(--tinte);border:2px solid var(--primario-txt)}
 .chip{display:inline-flex;align-items:center;gap:6px;width:auto;margin:0;min-height:0;padding:8px 12px 8px 8px;border-radius:99px;border:1.5px solid var(--line);background:transparent;color:var(--fg);font-size:.9rem;font-weight:600;box-shadow:none}
 .chip .ci{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--ck,var(--accent)) 20%,transparent);color:var(--ck,var(--accent-text))}
 .chip.on{border-color:var(--ck,var(--accent-text));background:color-mix(in srgb,var(--ck,var(--accent)) 14%,transparent)}
@@ -1549,7 +1550,7 @@ start();
   try{if(t==="auto")localStorage.removeItem("cuentas_theme");else localStorage.setItem("cuentas_theme",t)}catch(e){}
   var dark=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);
   var m=document.querySelector('meta[name="theme-color"]');if(m)m.content=dark?"#12201F":"#FAF8F4";
-  document.querySelectorAll("[data-theme-opt]").forEach(function(b){var on=b.dataset.themeOpt===t;b.setAttribute("aria-checked",on);b.classList.toggle("on",on);b.style.outline=on?"2px solid var(--accent)":"";b.style.fontWeight=on?"700":""});
+  document.querySelectorAll("[data-theme-opt]").forEach(function(b){var on=b.dataset.themeOpt===t;b.setAttribute("aria-checked",on);b.classList.toggle("on",on);b.style.fontWeight=on?"700":""});
  }
  document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-theme-opt]");if(b)apply(b.dataset.themeOpt)});
  apply(cur());
