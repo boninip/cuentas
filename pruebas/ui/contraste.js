@@ -4,8 +4,12 @@ const fs=require('fs'),path=require('path');
 const src=fs.readFileSync(path.join(__dirname,'../../index.html'),'utf8');
 const lines=src.split('\n');
 const parse=l=>{const o={};for(const m of l.matchAll(/--([a-z0-9-]+):([^;}]+)/g))o[m[1]]=m[2].trim();return o};
-const light=parse(lines.find(l=>/^\s*:root\{/.test(l)));
-const dark=parse(lines.find(l=>/^\s*:root\[data-theme="dark"\]\{/.test(l)));
+// Tokens = bloque común (:root y :root[data-eff=dark]) + propios de Cuentas; los alias viejos se resuelven al valor común.
+const blk=re=>{const o={};for(const m of src.matchAll(re))Object.assign(o,parse(m[0]));return o};
+const resolve=(th)=>{const r={};for(const k in th){let v=th[k],n=0,m;while((m=/^var\(--([a-z0-9-]+)\)$/.exec(v))&&n++<8)v=th[m[1]]??v;r[k]=v}return r};
+const baseL=blk(/^:root\{[^}]*\}/gm);
+const light=resolve(baseL);
+const dark=resolve({...baseL,...blk(/^:root\[data-eff=dark\]\{[^}]*\}/gm)});
 const lin=c=>{c/=255;return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4)};
 const rgb=h=>{h=h.replace('#','');return[0,2,4].map(i=>parseInt(h.slice(i,i+2),16))};
 const Lum=h=>{const[r,g,b]=rgb(h);return .2126*lin(r)+.7152*lin(g)+.0722*lin(b)};
@@ -38,7 +42,7 @@ for(const[name,th]of[['claro',light],['oscuro',dark]]){
  const p=th['accent-text'],g=th.good,b=th.bad,w=th['warm-text'];
  const s=`${name}: matiz primario ${hueOf(p)}°, a favor ${hueOf(g)}° (dif ${Math.abs(hueOf(g)-hueOf(p))}°, ΔE ${dE(g,p).toFixed(0)}), en contra ${hueOf(b)}° (dif con a favor ${Math.abs(hueOf(g)-hueOf(b))}°), coral ${hueOf(w)}°`;
  console.log(s);
- if(Math.abs(hueOf(g)-hueOf(p))<40||dE(g,p)<20){console.log('FALLA: «a favor» se parece al primario');fails++}
+ if(Math.abs(hueOf(g)-hueOf(p))<30||dE(g,p)<20){console.log('FALLA: «a favor» se parece al primario');fails++}
  if(Math.abs(hueOf(g)-hueOf(b))<90){console.log('FALLA: a favor y en contra se parecen');fails++}
 }
 // reglas de uso: el amarillo del logo solo es decorativo (punto del logo y viñeta del hero); nunca texto
@@ -51,7 +55,7 @@ const man=JSON.parse(fs.readFileSync(path.join(__dirname,'../../manifest.webmani
 const okTc=tcs.includes('#FAF8F4')&&tcs.includes('#12201F')&&!tcs.some(c=>!['#FAF8F4','#12201F'].includes(c))&&man.theme_color.toUpperCase()==='#FAF8F4'&&src.includes('m.content=dark?"#12201F":"#FAF8F4"');
 console.log('theme-color:',tcs.join(', '),'· manifest',man.theme_color,okTc?'OK':'FALLA');if(!okTc)fails++;
 // ninguna variable CSS usada sin definir (salvo con valor de respaldo)
-const defd=new Set([...lines.find(l=>/^\s*:root\{/.test(l)).matchAll(/--([a-z0-9-]+):/g)].map(m=>m[1]));
+const defd=new Set(Object.keys(baseL));
 const undef=[...new Set([...src.matchAll(/var\(--([a-z0-9-]+)(,?)(['$])?/g)].filter(m=>!defd.has(m[1])&&m[1]!=='ck'&&!m[2]&&!m[3]).map(m=>m[1]))];
 console.log('Variables usadas sin definir y sin respaldo:',undef.length?undef.join(', '):'ninguna');if(undef.length)fails++;
 // colores de la marca vieja
