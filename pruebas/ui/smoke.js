@@ -270,6 +270,15 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(await t.page.evaluate(()=>localStorage.getItem('cuentas_theme'))==='light','paleta: la apariencia sigue usando la clave cuentas_theme');
  await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="auto"]').click()});
  ok(t.errs.length===0,'paleta: sin errores de JS');
+ // tokens comunes: verificador + selector efectivo data-eff
+ {const cp=require('child_process'),pa=require('path'),R=pa.join(__dirname,'../..');
+  let rc=0,out='';try{out=cp.execFileSync('python3',['-I',pa.join(R,'tools/pinto_tokens_check.py'),pa.join(R,'tokens/pinto-tokens.css'),pa.join(R,'index.html')],{encoding:'utf8'})}catch(e){rc=e.status||1;out=(e.stdout||'')+(e.stderr||'')}
+  ok(rc===0,'tokens comunes: verificador sin FALTA/DISTINTO '+(rc?out.split('\n').slice(0,3).join(' / '):out.trim()));}
+ await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="dark"]').click()});
+ ok(await t.page.evaluate(()=>document.documentElement.getAttribute('data-eff')==='dark'&&getComputedStyle(document.documentElement).getPropertyValue('--fondo').trim().toUpperCase()==='#12201F'),'tokens comunes: oscuro activa data-eff=dark y --fondo común');
+ await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="light"]').click()});
+ ok(await t.page.evaluate(()=>!document.documentElement.hasAttribute('data-eff')&&getComputedStyle(document.documentElement).getPropertyValue('--primario').trim().toUpperCase()==='#1F5F6B'),'tokens comunes: claro sin data-eff y --primario común');
+ await t.page.evaluate(()=>{document.querySelector('[data-theme-opt="auto"]').click()});
  // fila Nuevo grupo arriba de la lista
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
  ok(await t.page.evaluate(()=>{const n=document.getElementById('optNew'),g=document.getElementById('groups');return !n.hidden&&!!(n.compareDocumentPosition(g)&Node.DOCUMENT_POSITION_FOLLOWING)}),'nuevo grupo: la fila queda arriba de la lista de grupos');

@@ -4,12 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#FAF8F4">
-<script>try{var t=localStorage.getItem("cuentas_theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>(function(){var r=document.documentElement,t="auto";try{var s=localStorage.getItem("cuentas_theme");if(s==="dark"||s==="light"){t=s;r.setAttribute("data-theme",s)}}catch(e){}function e(){var d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);if(d)r.setAttribute("data-eff","dark");else r.removeAttribute("data-eff")}e();try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",function(){t=r.getAttribute("data-theme")||"auto";e()})}catch(x){}})()</script>
 <title>Cuentas</title>
 <style>
-:root{--k1:#1F5F6B;--k2:#B7791F;--k3:#BE4B2C;--k4:#3B6EA5;--k5:#7A5C9E;--k6:#6F8082;--a1bg:#F8ECCB;--a1fg:#6B4E0A;--a2bg:#F8E1D9;--a2fg:#8A3A22;--a3bg:#E6F1F0;--a3fg:#1F5F6B;--outer:#E6F1F0;--bg:#FAF8F4;--card:#FFFFFF;--field:#FAF8F4;--fg:#1D2F33;--muted:#5B6E70;--line:#DCE6E4;--accent:#1F5F6B;--accent-fg:#FFFFFF;--accent-text:#1F5F6B;--tile:#E6F1F0;--bad:#A82A3A;--bad-solid:#A82A3A;--good:#2D7A3E;--warm:#BE4B2C;--warm-fg:#FFFFFF;--warm-text:#B8472A;--gold:#F2C14E;--logo:#1F5F6B;--pos-bg:#E3F1E5;--neg-bg:#F8E4E6;--shadow:0 3px 12px #1D2F3318}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--k1:#6FB8C4;--k2:#E3B04B;--k3:#F0907A;--k4:#7FB0E0;--k5:#B592C6;--k6:#9DB5B3;--a1bg:#4A3E1C;--a1fg:#F2D58A;--a2bg:#4A2A22;--a2fg:#F0B8A6;--a3bg:#244240;--a3fg:#9ED3DC;--outer:#0E1A19;--bg:#12201F;--card:#1B2D2C;--field:#12201F;--fg:#E8F0EE;--muted:#9DB5B3;--line:#2F4644;--accent:#2A7A89;--accent-fg:#FFFFFF;--accent-text:#6FB8C4;--tile:#244240;--bad:#F08A97;--bad-solid:#B3243F;--good:#7FD08A;--warm:#BE4B2C;--warm-fg:#FFFFFF;--warm-text:#F0907A;--gold:#F2C14E;--logo:#6FB8C4;--pos-bg:#1F3A27;--neg-bg:#4A2430;--shadow:0 3px 12px #0006;color-scheme:dark}}
-:root[data-theme="dark"]{--k1:#6FB8C4;--k2:#E3B04B;--k3:#F0907A;--k4:#7FB0E0;--k5:#B592C6;--k6:#9DB5B3;--a1bg:#4A3E1C;--a1fg:#F2D58A;--a2bg:#4A2A22;--a2fg:#F0B8A6;--a3bg:#244240;--a3fg:#9ED3DC;--outer:#0E1A19;--bg:#12201F;--card:#1B2D2C;--field:#12201F;--fg:#E8F0EE;--muted:#9DB5B3;--line:#2F4644;--accent:#2A7A89;--accent-fg:#FFFFFF;--accent-text:#6FB8C4;--tile:#244240;--bad:#F08A97;--bad-solid:#B3243F;--good:#7FD08A;--warm:#BE4B2C;--warm-fg:#FFFFFF;--warm-text:#F0907A;--gold:#F2C14E;--logo:#6FB8C4;--pos-bg:#1F3A27;--neg-bg:#4A2430;--shadow:0 3px 12px #0006;color-scheme:dark}
+/* ===== Bloque común Pinto v1 (copia idéntica de tokens/pinto-tokens.css; no editar acá) ===== */
+:root{color-scheme:light;
+--primario:#1F5F6B;--primario-txt:#1F5F6B;--foco:#1F5F6B;
+--coral-btn:#BE4B2C;--coral-txt:#B8472A;--punto-logo:#F2C14E;
+--fondo:#FAF8F4;--tarjeta:#FFFFFF;--tinte:#E6F1F0;
+--texto:#1D2F33;--texto-sec:#5B6E70;--borde:#DCE6E4;
+--sobre-primario:#FFFFFF;--sobre-foto:#FFFFFF;
+--ok-bg:#D5F2E2;--ok-txt:#146842;--ok-brd:#19835A;
+--aviso-bg:#FFF0BC;--aviso-txt:#775600;--aviso-brd:#B18A1D;
+--error-bg:#F8D5CF;--error-txt:#A33B37;
+--neutro-bg:#E9EDF3;--neutro-txt:#51647B;
+--velo-rgb:18 32 31;--sombra-rgb:29 47 51}
+:root[data-eff=dark]{color-scheme:dark;
+--primario:#2A7A89;--primario-txt:#6FB8C4;--foco:#6FB8C4;
+--coral-btn:#BE4B2C;--coral-txt:#F0907A;--punto-logo:#F2C14E;
+--fondo:#12201F;--tarjeta:#1B2D2C;--tinte:#244240;
+--texto:#E8F0EE;--texto-sec:#9DB5B3;--borde:#2F4644;
+--sobre-primario:#FFFFFF;--sobre-foto:#FFFFFF;
+--ok-bg:#1F3B2E;--ok-txt:#8FD6B0;--ok-brd:#3F8F68;
+--aviso-bg:#3F3715;--aviso-txt:#EBCB6A;--aviso-brd:#A98A26;
+--error-bg:#432622;--error-txt:#F4A595;
+--neutro-bg:#2A3A3B;--neutro-txt:#B5C6C4;
+--velo-rgb:6 14 14;--sombra-rgb:0 0 0}
+/* ===== Propios de Cuentas (no son del bloque común) ===== */
+:root{--k1:#1F5F6B;--k2:#B7791F;--k3:#BE4B2C;--k4:#3B6EA5;--k5:#7A5C9E;--k6:#6F8082;--a1bg:#F8ECCB;--a1fg:#6B4E0A;--a2bg:#F8E1D9;--a2fg:#8A3A22;--a3bg:#E6F1F0;--a3fg:#1F5F6B;--outer:#E6F1F0;--bad-solid:#A82A3A;--shadow:0 3px 12px rgb(var(--sombra-rgb)/.094);
+/* alias de nombres viejos → tokens comunes */
+--bg:var(--fondo);--card:var(--tarjeta);--field:var(--fondo);--fg:var(--texto);--muted:var(--texto-sec);--line:var(--borde);--accent:var(--primario);--accent-fg:var(--sobre-primario);--accent-text:var(--primario-txt);--tile:var(--tinte);--warm:var(--coral-btn);--warm-fg:var(--sobre-primario);--warm-text:var(--coral-txt);--gold:var(--punto-logo);--logo:var(--primario-txt);--good:var(--ok-txt);--bad:var(--error-txt);--pos-bg:var(--ok-bg);--neg-bg:var(--error-bg)}
+:root[data-eff=dark]{--k1:#6FB8C4;--k2:#E3B04B;--k3:#F0907A;--k4:#7FB0E0;--k5:#B592C6;--k6:#9DB5B3;--a1bg:#4A3E1C;--a1fg:#F2D58A;--a2bg:#4A2A22;--a2fg:#F0B8A6;--a3bg:#244240;--a3fg:#9ED3DC;--outer:#0E1A19;--bad-solid:#B3243F;--shadow:0 3px 12px rgb(var(--sombra-rgb)/.4)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--outer);color:var(--fg);font:16px/1.45 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;letter-spacing:-.1px}
 main{max-width:460px;margin:0 auto;padding:16px;background:var(--bg);min-height:100dvh}
@@ -1519,7 +1544,7 @@ start();
  function cur(){try{var t=localStorage.getItem("cuentas_theme");return t==="dark"||t==="light"?t:"auto"}catch(e){return"auto"}}
  function apply(t){
   var r=document.documentElement;
-  if(t==="auto")r.removeAttribute("data-theme");else r.setAttribute("data-theme",t);
+  if(t==="auto")r.removeAttribute("data-theme");else r.setAttribute("data-theme",t);var dk=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);if(dk)r.setAttribute("data-eff","dark");else r.removeAttribute("data-eff");
   try{if(t==="auto")localStorage.removeItem("cuentas_theme");else localStorage.setItem("cuentas_theme",t)}catch(e){}
   var dark=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);
   var m=document.querySelector('meta[name="theme-color"]');if(m)m.content=dark?"#12201F":"#FAF8F4";
