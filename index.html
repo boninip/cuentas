@@ -175,7 +175,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 #rcptView{position:fixed;inset:0;z-index:30;background:#000d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}#rcptView[hidden]{display:none}
 #rcptView img{max-width:100%;max-height:78vh;border-radius:12px;background:#fff}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
-.opt.sk{min-height:64px;border-color:transparent;background:linear-gradient(90deg,var(--tinte) 25%,var(--tarjeta) 50%,var(--tinte) 75%);background-size:200% 100%;animation:skm 1.4s linear infinite;pointer-events:none}@keyframes skm{to{background-position:-200% 0}}@media(prefers-reduced-motion:reduce){.opt.sk{animation:none}}
+.opt.sk{min-height:64px;border-color:transparent;background:var(--tinte);animation:skm 1.4s ease-in-out infinite;pointer-events:none}@keyframes skm{50%{opacity:.45}}@media(prefers-reduced-motion:reduce){.opt.sk{animation:none}}
 .sync{opacity:.78;transition:opacity .2s}
 #cTheme .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 6px}#cTheme .chip{justify-content:center;width:100%;min-height:48px;padding:12px 4px;border-radius:12px;border:1px solid var(--borde);background:var(--tarjeta);color:var(--primario-txt);font-weight:700;font-size:.95rem}#cTheme .chip.on{background:var(--tinte);border:2px solid var(--primario-txt)}
 .chip{display:inline-flex;align-items:center;gap:6px;width:auto;margin:0;min-height:0;padding:8px 12px 8px 8px;border-radius:99px;border:1.5px solid var(--line);background:transparent;color:var(--fg);font-size:.9rem;font-weight:600;box-shadow:none}
