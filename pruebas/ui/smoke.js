@@ -389,10 +389,10 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok((await t.errs).length===0,'nuevas funciones: sin errores de JS');
 
  // vínculo bilateral
- const RQ=(o={})=>({id:'a1b2c3d4-0000-4000-8000-000000000001',group_id:G,group_name:'Viaje 1',ref_type:'escapada_trip',ref_id:'a1b2c3d4-0000-4000-8000-0000000000aa',needs:'cuentas',status:'pending',expires_at:'2026-11-27T10:00:00Z',created_at:'2026-11-20T10:00:00Z',mine:false,i_can_approve:true,version_hash:'h1',...o});
+ const RQ=(o={})=>({id:'a1b2c3d4-0000-4000-8000-000000000001',group_id:G,group_name:'Viaje 1',ref_type:'escapada_trip',ref_id:'a1b2c3d4-0000-4000-8000-0000000000aa',ref_name:'Playa 2027',requested_by_name:'Bruno',needs:'cuentas',status:'pending',expires_at:'2026-11-27T10:00:00Z',created_at:'2026-11-20T10:00:00Z',mine:false,i_can_approve:true,version_hash:'h1',...o});
  const openLinks=async t=>{await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);await t.page.click('#btnGear');await t.page.evaluate(()=>{document.querySelector('#lList').closest('details').open=true});await t.page.waitForTimeout(250)};
  t=await mk(b,{lk:{reqs:[RQ()]}});await openLinks(t);
- ok(/Piden vincular/.test(await t.page.textContent('#lReq'))&&await t.page.isVisible('[data-rqa]')&&await t.page.isVisible('[data-rqr]'),'vínculo: quien puede aprobar ve Aprobar y Rechazar');
+ ok(/Bruno pide vincular Playa 2027/.test(await t.page.textContent('#lReq'))&&await t.page.isVisible('[data-rqa]')&&await t.page.isVisible('[data-rqr]'),'vínculo: quien puede aprobar ve Aprobar y Rechazar');
  await t.page.click('[data-rqa]');await t.page.waitForTimeout(400);
  const dec=t.calls.find(c=>c.startsWith('core_link_request_decide'));
  ok(dec&&dec.includes('"p_hash":"h1"')&&dec.includes('"p_decision":"approve"'),'vínculo: aprobar manda el hash vigente y la decisión');
@@ -409,7 +409,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(/cambió: revisala/.test(await t.page.textContent('#msg')),'vínculo: LNK_VERSION muestra el motivo');
  ok(t.calls.filter(c=>c.startsWith('core_link_requests_list')).length>=3,'vínculo: LNK_VERSION refresca la lista para reintentar');
  t=await mk(b,{lk:{reqs:[RQ({mine:true,i_can_approve:false,needs:'evento'})]}});await openLinks(t);
- ok(/Pediste vincular/.test(await t.page.textContent('#lReq'))&&!(await t.page.isVisible('[data-rqa]')),'vínculo: quien pidió no se aprueba a sí mismo');
+ ok(/Pediste vincular Playa 2027/.test(await t.page.textContent('#lReq'))&&!(await t.page.isVisible('[data-rqa]')),'vínculo: quien pidió no se aprueba a sí mismo');
  await t.page.click('[data-rqc]');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('core_link_request_cancel'))&&/cancelada/i.test(await t.page.textContent('#msg')),'vínculo: cancelar la propia');
  t=await mk(b,{lk:{member:true}});await openLinks(t);
@@ -423,7 +423,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.evaluate(()=>{document.getElementById('lHistW').open=true});await t.page.waitForTimeout(300);
  const hh=await t.page.textContent('#lHist');
  ok(t.calls.some(c=>c.startsWith('core_link_requests_history')&&c.includes('"p_days":7')),'vínculo: historial de 7 días');
- ok(/invalidada/.test(hh)&&/vencida/.test(hh)&&/rechazada/.test(hh)&&/cancelada/.test(hh),'vínculo: historial muestra invalidada, vencida, rechazada y cancelada');
+ ok(/Playa 2027/.test(hh)&&/Pedida por Bruno/.test(hh)&&/invalidada/.test(hh)&&/vencida/.test(hh)&&/rechazada/.test(hh)&&/cancelada/.test(hh),'vínculo: historial muestra invalidada, vencida, rechazada y cancelada');
  ok(/en papelera/.test(await t.page.textContent('#lList')),'vínculo: evento o viaje en papelera se marca');
  ok(t.errs.length===0,'vínculo: sin errores de JS (historial)');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();

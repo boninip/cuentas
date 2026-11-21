@@ -934,7 +934,8 @@ let lCan=false,lStatus='open',lNames={},lReqs=[];
 const uuid4=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});
 const lKind=t=>t==='juntada'?'evento':'viaje';
 const lDay=iso=>{try{return new Date(iso).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}catch(_){return ''}};
-const lRefName=q=>esc(lNames[q.ref_id]||('un '+lKind(q.ref_type)));
+const lRefName=q=>esc(q.ref_name||lNames[q.ref_id]||('un '+lKind(q.ref_type)));
+const lWho=q=>q.mine?'vos':(q.requested_by_name?esc(q.requested_by_name):'otra persona');
 const lStEs={approved:'aprobada',rejected:'rechazada',cancelled:'cancelada',expired:'vencida',invalidated:'invalidada'};
 function renderLinkUI(links,reqs){
  const closed=lStatus!=='open';
@@ -949,7 +950,7 @@ function renderLinkReqs(reqs){
  lReqs=reqs;
  $('lReq').innerHTML=reqs.length?'<h3 class="muted" style="margin:.8rem 0 .2rem">Solicitudes pendientes</h3>'+reqs.map(q=>{
   const exp=`<small class="muted"> · vence el ${lDay(q.expires_at)}</small>`;
-  if(q.i_can_approve&&!q.mine)return `<div class="item" data-rq="${q.id}"><span>Piden vincular ${lRefName(q)} <span class="tag">${lKind(q.ref_type)}</span>${exp}</span><span style="display:flex;gap:.4rem"><button class="sec" style="width:auto;margin:0" data-rqa="${q.id}">Aprobar</button><button class="sec" style="width:auto;margin:0" data-rqr="${q.id}">Rechazar</button></span></div>`;
+  if(q.i_can_approve&&!q.mine)return `<div class="item" data-rq="${q.id}"><span>${lWho(q)==='otra persona'?'Piden':lWho(q)+' pide'} vincular ${lRefName(q)} <span class="tag">${lKind(q.ref_type)}</span>${exp}</span><span style="display:flex;gap:.4rem"><button class="sec" style="width:auto;margin:0" data-rqa="${q.id}">Aprobar</button><button class="sec" style="width:auto;margin:0" data-rqr="${q.id}">Rechazar</button></span></div>`;
   const quien=q.needs==='cuentas'?'quien administra el grupo':'quien organiza el '+lKind(q.ref_type);
   return `<div class="item" data-rq="${q.id}"><span>Pediste vincular ${lRefName(q)} <span class="tag">${lKind(q.ref_type)}</span><br><small class="muted">Esperando a ${quien}</small>${exp}</span><button class="sec" style="width:auto;margin:0" data-rqc="${q.id}">Cancelar</button></div>`}).join(''):'';
  const run=(b,id,dec)=>busy(b,async()=>{
@@ -969,7 +970,7 @@ function renderLinkReqs(reqs){
 async function refreshLinkReqs(){renderLinkReqs(await rpc('core_link_requests_list',{p_group:gid}));if($('lHistW').open)await loadLinkHist()}
 async function loadLinkHist(){
  const h=await rpc('core_link_requests_history',{p_group:gid,p_days:7});
- $('lHist').innerHTML=h.length?h.map(q=>`<div class="item"><span>${lRefName(q)} <span class="tag">${lKind(q.ref_type)}</span> <span class="tag">${lStEs[q.status]||esc(q.status)}</span><br><small class="muted">${q.mine?'La pediste vos':'Pedida por otra persona'} · ${lDay(q.decided_at||q.expires_at||q.created_at)}${q.status==='invalidated'?' · cambió el grupo o los permisos; hace falta una solicitud nueva':''}</small></span></div>`).join(''):'<p class="muted">Sin solicitudes en los últimos 7 días.</p>';
+ $('lHist').innerHTML=h.length?h.map(q=>`<div class="item"><span>${lRefName(q)} <span class="tag">${lKind(q.ref_type)}</span> <span class="tag">${lStEs[q.status]||esc(q.status)}</span><br><small class="muted">${q.mine?'La pediste vos':'Pedida por '+lWho(q)} · ${lDay(q.decided_at||q.expires_at||q.created_at)}${q.status==='invalidated'?' · cambió el grupo o los permisos; hace falta una solicitud nueva':''}</small></span></div>`).join(''):'<p class="muted">Sin solicitudes en los últimos 7 días.</p>';
 }
 $('lHistW').addEventListener('toggle',()=>{if($('lHistW').open)loadLinkHist().catch(e=>say(e.message,true))});
 async function loadTrips(){
