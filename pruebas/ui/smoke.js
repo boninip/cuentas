@@ -6,7 +6,7 @@ const ME='11111111-1111-1111-1111-111111111111',BR='22222222-2222-2222-2222-2222
 let fails=0;const ok=(c,m)=>{if(!c){fails++;console.log('FALLA:',m)}else console.log('ok   ',m)};
 const LU='44444444-4444-4444-4444-444444444444';
 async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false,pay=false,notices=false,delay=0,expired=false,cache=null,lk={}}={}){
- lk={reqs:[],hist:[],links:[],decide:'approved',status:'open',member:false,verErr:false,...lk};
+ lk={reqs:[],hist:[],links:[],decide:'approved',status:'open',member:false,verErr:false,trash:[],empty:false,...lk};
  const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();
  const jwt='x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y';
  await page.addInitScript(([e,c])=>{window.__exp=e;if(c)for(const k in c)localStorage.setItem(k,JSON.stringify(c[k]))},[expired,cache]);
@@ -25,7 +25,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'core_profile_set':prof={display_name:JSON.parse(body).p_name};return J(null);
    case 'cuentas_invite_accept':return J(G);
    case 'cuentas_my_groups_all':return J([{id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',member_status:'active'}]);
-   case 'cuentas_group_get':return J({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])});
+   case 'cuentas_group_get':return J(((o)=>{if(lk.empty)o.members=o.members.filter(m=>m.user_id===ME);return o})({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])}));
    case 'cuentas_guest_add':return J(LU);
    case 'cuentas_guest_invite_create':return J('c'.repeat(64));
    case 'cuentas_balances':return J(guest?[{user_id:ME,balance_minor:'-250000',currency:'ARS'},{user_id:BR,balance_minor:'100000',currency:'ARS'},{user_id:LU,balance_minor:'150000',currency:'ARS'}]:[{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
@@ -42,13 +42,16 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_recurring_save':case 'cuentas_recurring_set_status':return J(null);
    case 'cuentas_activity_list':return J(fam?[{id:1,action:'expense_added',actor:ME,created_at:'2026-11-14T10:00:00Z',amount_minor:20000,currency:'ARS',description:'Asado'},{id:2,action:'member_weight_set',actor:ME,target:BR,weight:0.5,created_at:'2026-11-14T09:00:00Z'}]:[]);
    case 'cuentas_member_set_weight':case 'cuentas_category_save':return J(null);
-   case 'cuentas_movements_list':if(pay)return J([{id:'p1',kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:LU,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false},{id:'p2',kind:'payment',amount_minor:'50000',currency:'ARS',from_user:ME,to_user:BR,occurred_on:'2026-11-14',created_by:ME,confirmed:true,reversed:false}]);if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
+   case 'cuentas_movements_list':if(lk.empty)return J([]);if(pay)return J([{id:'p1',kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:LU,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false},{id:'p2',kind:'payment',amount_minor:'50000',currency:'ARS',from_user:ME,to_user:BR,occurred_on:'2026-11-14',created_by:ME,confirmed:true,reversed:false}]);if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
    case 'core_links_list':return J(lk.links);
    case 'core_link_requests_list':return J(lk.reqs);
    case 'core_link_requests_history':return J(lk.hist);
    case 'core_link_request_decide':if(lk.verErr){return r.fulfill({status:400,contentType:'application/json',body:JSON.stringify({message:'La solicitud cambió: revisala de nuevo',details:'LNK_VERSION'})})}lk.reqs=[];return J(lk.decide);
    case 'core_link_request_cancel':lk.reqs=[];return J(null);
    case 'core_link_request_create':return J('rq9');
+   case 'cuentas_groups_trash_list':return J(lk.trash);
+   case 'cuentas_group_delete':lk.trash=[{id:G,name:'Viaje 1',deleted_at:'2026-11-21T10:00:00Z',expires_at:'2026-12-21T10:00:00Z'}];return J(null);
+   case 'cuentas_group_restore':lk.trash=[];return J(null);
    case 'cuentas_proposals_list':case 'cuentas_delegations_list':case 'cuentas_pairs_list':case 'core_organizable_trips':return J([]);
    default:return J(null);}});
  const errs=[];page.on('pageerror',e=>errs.push(e.message));
@@ -426,4 +429,19 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(/Playa 2027/.test(hh)&&/Pedida por Bruno/.test(hh)&&/invalidada/.test(hh)&&/vencida/.test(hh)&&/rechazada/.test(hh)&&/cancelada/.test(hh),'vínculo: historial muestra invalidada, vencida, rechazada y cancelada');
  ok(/en papelera/.test(await t.page.textContent('#lList')),'vínculo: evento o viaje en papelera se marca');
  ok(t.errs.length===0,'vínculo: sin errores de JS (historial)');
+
+ // papelera de grupos
+ t=await mk(b,{lk:{empty:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);
+ await t.page.click('#btnGear');await t.page.waitForTimeout(200);
+ ok(await t.page.isVisible('#btnDelGroup'),'papelera: grupo vacío ofrece eliminar');
+ await t.page.click('#btnDelGroup');await t.page.waitForTimeout(150);
+ ok(!t.calls.some(c=>c.startsWith('cuentas_group_delete')),'papelera: el primer toque solo pide confirmar');
+ await t.page.click('#btnDelGroup');await t.page.waitForTimeout(500);
+ ok(t.calls.some(c=>c.startsWith('cuentas_group_delete')),'papelera: segundo toque elimina');
+ ok(await t.page.isVisible('#vHome')&&await t.page.isVisible('#cTrash')&&/Viaje 1/.test(await t.page.textContent('#trashList')),'papelera: vuelve al inicio y el grupo aparece en la papelera');
+ await t.page.evaluate(()=>{document.getElementById('cTrash').open=true});await t.page.click('[data-rs]');await t.page.waitForTimeout(500);
+ ok(t.calls.some(c=>c.startsWith('cuentas_group_restore'))&&/restaurado/i.test(await t.page.textContent('#msg')),'papelera: restaurar');
+ ok(t.errs.length===0,'papelera: sin errores de JS');
+ t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);await t.page.click('#btnGear');await t.page.waitForTimeout(200);
+ ok(!(await t.page.isVisible('#btnDelGroup')),'papelera: grupo con historial no ofrece eliminar');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
