@@ -5,7 +5,8 @@ const URL='file://'+path.resolve(__dirname,'../../index.html');
 const ME='11111111-1111-1111-1111-111111111111',BR='22222222-2222-2222-2222-222222222222',G='33333333-3333-3333-3333-333333333333',TOK='a'.repeat(64);
 let fails=0;const ok=(c,m)=>{if(!c){fails++;console.log('FALLA:',m)}else console.log('ok   ',m)};
 const LU='44444444-4444-4444-4444-444444444444';
-async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false,pay=false,notices=false,delay=0,expired=false,cache=null}={}){
+async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false,pay=false,notices=false,delay=0,expired=false,cache=null,lk={}}={}){
+ lk={reqs:[],hist:[],links:[],decide:'approved',status:'open',member:false,verErr:false,...lk};
  const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();
  const jwt='x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y';
  await page.addInitScript(([e,c])=>{window.__exp=e;if(c)for(const k in c)localStorage.setItem(k,JSON.stringify(c[k]))},[expired,cache]);
@@ -24,7 +25,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'core_profile_set':prof={display_name:JSON.parse(body).p_name};return J(null);
    case 'cuentas_invite_accept':return J(G);
    case 'cuentas_my_groups_all':return J([{id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',member_status:'active'}]);
-   case 'cuentas_group_get':return J({id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',members:[{user_id:ME,role:'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])});
+   case 'cuentas_group_get':return J({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])});
    case 'cuentas_guest_add':return J(LU);
    case 'cuentas_guest_invite_create':return J('c'.repeat(64));
    case 'cuentas_balances':return J(guest?[{user_id:ME,balance_minor:'-250000',currency:'ARS'},{user_id:BR,balance_minor:'100000',currency:'ARS'},{user_id:LU,balance_minor:'150000',currency:'ARS'}]:[{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
@@ -42,7 +43,13 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_activity_list':return J(fam?[{id:1,action:'expense_added',actor:ME,created_at:'2026-11-14T10:00:00Z',amount_minor:20000,currency:'ARS',description:'Asado'},{id:2,action:'member_weight_set',actor:ME,target:BR,weight:0.5,created_at:'2026-11-14T09:00:00Z'}]:[]);
    case 'cuentas_member_set_weight':case 'cuentas_category_save':return J(null);
    case 'cuentas_movements_list':if(pay)return J([{id:'p1',kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:LU,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false},{id:'p2',kind:'payment',amount_minor:'50000',currency:'ARS',from_user:ME,to_user:BR,occurred_on:'2026-11-14',created_by:ME,confirmed:true,reversed:false}]);if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
-   case 'cuentas_proposals_list':case 'cuentas_delegations_list':case 'core_links_list':case 'cuentas_pairs_list':case 'core_organizable_trips':return J([]);
+   case 'core_links_list':return J(lk.links);
+   case 'core_link_requests_list':return J(lk.reqs);
+   case 'core_link_requests_history':return J(lk.hist);
+   case 'core_link_request_decide':if(lk.verErr){return r.fulfill({status:400,contentType:'application/json',body:JSON.stringify({message:'La solicitud cambió: revisala de nuevo',details:'LNK_VERSION'})})}lk.reqs=[];return J(lk.decide);
+   case 'core_link_request_cancel':lk.reqs=[];return J(null);
+   case 'core_link_request_create':return J('rq9');
+   case 'cuentas_proposals_list':case 'cuentas_delegations_list':case 'cuentas_pairs_list':case 'core_organizable_trips':return J([]);
    default:return J(null);}});
  const errs=[];page.on('pageerror',e=>errs.push(e.message));
  return {page,calls,errs,state};
@@ -380,4 +387,43 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(await t.page.evaluate(()=>JSON.parse(localStorage.getItem('cuentas_outbox_v1')||'[]').length===1),'sin señal: queda en la cola local');
  ok(await t.page.isVisible('#obxNote'),'sin señal: aviso de gastos en espera');
  ok((await t.errs).length===0,'nuevas funciones: sin errores de JS');
+
+ // vínculo bilateral
+ const RQ=(o={})=>({id:'a1b2c3d4-0000-4000-8000-000000000001',group_id:G,group_name:'Viaje 1',ref_type:'escapada_trip',ref_id:'a1b2c3d4-0000-4000-8000-0000000000aa',needs:'cuentas',status:'pending',expires_at:'2026-11-27T10:00:00Z',created_at:'2026-11-20T10:00:00Z',mine:false,i_can_approve:true,version_hash:'h1',...o});
+ const openLinks=async t=>{await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);await t.page.click('#btnGear');await t.page.evaluate(()=>{document.querySelector('#lList').closest('details').open=true});await t.page.waitForTimeout(250)};
+ t=await mk(b,{lk:{reqs:[RQ()]}});await openLinks(t);
+ ok(/Piden vincular/.test(await t.page.textContent('#lReq'))&&await t.page.isVisible('[data-rqa]')&&await t.page.isVisible('[data-rqr]'),'vínculo: quien puede aprobar ve Aprobar y Rechazar');
+ await t.page.click('[data-rqa]');await t.page.waitForTimeout(400);
+ const dec=t.calls.find(c=>c.startsWith('core_link_request_decide'));
+ ok(dec&&dec.includes('"p_hash":"h1"')&&dec.includes('"p_decision":"approve"'),'vínculo: aprobar manda el hash vigente y la decisión');
+ ok(t.calls.filter(c=>c.startsWith('core_link_requests_list')).length>=2,'vínculo: vuelve a listar antes de decidir (hash actual)');
+ ok(/Vinculado/.test(await t.page.textContent('#msg')),'vínculo: aprobado avisa que quedó vinculado');
+ ok(t.errs.length===0,'vínculo: sin errores de JS (aprobar)');
+ t=await mk(b,{lk:{reqs:[RQ()],decide:'rejected'}});await openLinks(t);await t.page.click('[data-rqr]');await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('core_link_request_decide')&&c.includes('"p_decision":"reject"'))&&/rechazada/i.test(await t.page.textContent('#msg')),'vínculo: rechazar');
+ t=await mk(b,{lk:{reqs:[RQ()],decide:'invalidated'}});await openLinks(t);await t.page.click('[data-rqa]');await t.page.waitForTimeout(300);
+ ok(/cambió algo/.test(await t.page.textContent('#msg'))&&/solicitud nueva/.test(await t.page.textContent('#msg')),'vínculo: invalidada explica el motivo y pide una solicitud nueva');
+ t=await mk(b,{lk:{reqs:[RQ()],decide:'expired'}});await openLinks(t);await t.page.click('[data-rqa]');await t.page.waitForTimeout(300);
+ ok(/venci/.test(await t.page.textContent('#msg')),'vínculo: vencida se informa');
+ t=await mk(b,{lk:{reqs:[RQ()],verErr:true}});await openLinks(t);await t.page.click('[data-rqa]');await t.page.waitForTimeout(300);
+ ok(/cambió: revisala/.test(await t.page.textContent('#msg')),'vínculo: LNK_VERSION muestra el motivo');
+ ok(t.calls.filter(c=>c.startsWith('core_link_requests_list')).length>=3,'vínculo: LNK_VERSION refresca la lista para reintentar');
+ t=await mk(b,{lk:{reqs:[RQ({mine:true,i_can_approve:false,needs:'evento'})]}});await openLinks(t);
+ ok(/Pediste vincular/.test(await t.page.textContent('#lReq'))&&!(await t.page.isVisible('[data-rqa]')),'vínculo: quien pidió no se aprueba a sí mismo');
+ await t.page.click('[data-rqc]');await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('core_link_request_cancel'))&&/cancelada/i.test(await t.page.textContent('#msg')),'vínculo: cancelar la propia');
+ t=await mk(b,{lk:{member:true}});await openLinks(t);
+ ok(/Solicitar vínculo/.test(await t.page.textContent('#btnLink')),'vínculo: sin permiso de vincular el botón es Solicitar');
+ await t.page.evaluate(()=>{const s=document.getElementById('lTrip');s.innerHTML='<option value="a1b2c3d4-0000-4000-8000-0000000000aa">Viaje</option>'});
+ await t.page.click('#btnLink');await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('core_link_request_create'))&&!t.calls.some(c=>c.startsWith('core_link_create'))&&/Solicitud enviada/.test(await t.page.textContent('#msg')),'vínculo: sin permiso crea solicitud, no vínculo directo');
+ t=await mk(b,{lk:{status:'closed',reqs:[RQ({mine:true,i_can_approve:false})]}});await openLinks(t);
+ ok(!(await t.page.isVisible('#lForm'))&&/cerrado/.test(await t.page.textContent('#lNote')),'vínculo: grupo cerrado no admite vínculos nuevos y lo explica');
+ t=await mk(b,{lk:{hist:[RQ({status:'invalidated',mine:true}),RQ({id:'x2',status:'expired'}),RQ({id:'x3',status:'rejected'}),RQ({id:'x4',status:'cancelled'})],links:[{id:'l1',ref_type:'escapada_trip',ref_id:'z',status:'active',name:'Playa',in_trash:true}]}});await openLinks(t);
+ await t.page.evaluate(()=>{document.getElementById('lHistW').open=true});await t.page.waitForTimeout(300);
+ const hh=await t.page.textContent('#lHist');
+ ok(t.calls.some(c=>c.startsWith('core_link_requests_history')&&c.includes('"p_days":7')),'vínculo: historial de 7 días');
+ ok(/invalidada/.test(hh)&&/vencida/.test(hh)&&/rechazada/.test(hh)&&/cancelada/.test(hh),'vínculo: historial muestra invalidada, vencida, rechazada y cancelada');
+ ok(/en papelera/.test(await t.page.textContent('#lList')),'vínculo: evento o viaje en papelera se marca');
+ ok(t.errs.length===0,'vínculo: sin errores de JS (historial)');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();

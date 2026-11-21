@@ -369,13 +369,15 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
    <label for="dUser">Delegar en</label><select id="dUser"></select>
    <div id="dScopes"><label class="chk"><input type="checkbox" value="invite"><span>Invitar</span></label><label class="chk"><input type="checkbox" value="close"><span>Cerrar grupo</span></label><label class="chk"><input type="checkbox" value="void"><span>Anular gastos ajenos</span></label><label class="chk"><input type="checkbox" value="link"><span>Vincular eventos</span></label></div>
    <button id="btnGrant">Delegar</button></details>
-  <details class="card"><summary class="srow"><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg></span><span class="ot"><b>Viajes y eventos</b><small>Vinculá el grupo a Escapada o Juntada</small></span><span class="chev">›</span></summary><p class="muted">Eliminar un viaje o evento nunca borra deudas, pagos ni historial.</p><div id="lList"></div>
+  <details class="card"><summary class="srow"><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg></span><span class="ot"><b>Viajes y eventos</b><small>Vinculá el grupo a Escapada o Juntada</small></span><span class="chev">›</span></summary><p class="muted">Eliminar un viaje o evento nunca borra deudas, pagos ni historial.</p><div id="lList"></div><div id="lReq"></div>
+   <p class="muted" id="lNote" hidden></p>
    <div id="lForm"><label for="lType">Tipo</label><select id="lType"><option value="escapada_trip">Viaje (Escapada)</option><option value="juntada">Evento (Juntada)</option></select>
    <div id="lRefW"><label for="lTrip">Tus viajes</label><select id="lTrip"></select></div>
    <div id="lEvW" hidden><label for="lEv">Tus eventos</label><select id="lEv"></select>
     <details><summary class="muted">¿No aparece tu evento? Reclamalo</summary><p class="muted">Pegá el ID y el código de organizador de Juntada una sola vez: el evento queda a tu nombre y después lo elegís de la lista.</p>
     <input id="lClaimId" placeholder="ID del evento (uuid)" autocapitalize="none"><input id="lClaimOrg" placeholder="Código de organizador (uuid)" autocapitalize="none"><button class="sec" id="btnClaim">Reclamar evento</button></details></div>
-   <button class="sec" id="btnLink">Vincular</button><p class="muted">Elegí de tu lista. Los viajes que organizás aparecen solos; los eventos hay que reclamarlos una vez.</p></div></details>
+   <button class="sec" id="btnLink">Vincular</button><p class="muted" id="lHelp">Elegí de tu lista. Los viajes que organizás aparecen solos; los eventos hay que reclamarlos una vez.</p></div>
+   <details id="lHistW"><summary class="muted">Solicitudes anteriores (últimos 7 días)</summary><div id="lHist" aria-live="polite"></div></details></details>
   <details class="card"><summary class="srow"><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></span><span class="ot"><b>Cuenta compartida</b><small>Pareja o familia que comparten gastos</small></span><span class="chev">›</span></summary><p class="muted">Dos personas que comparten gastos. Agrupa saldos, no reemplaza las deudas de cada una. Una compensación solo se aplica si las dos la aprueban. Provisorio: aún no aprobado para producción.</p><div id="pairs"></div><div id="pairNew" hidden><label for="pairWith">Pedirle una cuenta compartida a</label><select id="pairWith"></select><button class="sec" id="btnPairReq">Enviar solicitud</button></div></details>
  </div>
 </section>
@@ -450,7 +452,7 @@ async function req(path,body,tok){
  try{r=await fetch(BASE+path,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json',...(tok?{Authorization:'Bearer '+tok}:{})},body:JSON.stringify(body)})}
  catch(_){const e=Error(NETERR);e.net=true;throw e}
  const d=await r.json().catch(()=>({}));
- if(!r.ok){const e=Error(d.message||d.msg||d.error_description||(r.status>=500?'El servidor tuvo un problema. Probá de nuevo en un momento.':'Error '+r.status));e.status=r.status;throw e}
+ if(!r.ok){const e=Error(d.message||d.msg||d.error_description||(r.status>=500?'El servidor tuvo un problema. Probá de nuevo en un momento.':'Error '+r.status));e.status=r.status;e.code=d.details||null;throw e}
  return d;
 }
 let freshP=null;
@@ -699,7 +701,7 @@ async function openGroup(id){
  if(gid!==id)toTop();
  gid=id;offAt=0;
  let ran=0;try{ran=Number(await rpc('cuentas_recurring_run',{p_group:id}))||0}catch(_){}
- const [g,bal,mv,pay,props,dels,links,pairs,cl,act,rl,rcl]=await Promise.all([rpcC('cuentas_group_get',{p_group:id}),rpcC('cuentas_balances',{p_group:id}),rpcC('cuentas_movements_list',{p_group:id}),rpcC('cuentas_group_payouts',{p_group:id}),rpcC('cuentas_proposals_list',{p_group:id}),rpcC('cuentas_delegations_list',{p_group:id}),rpcC('core_links_list',{p_group:id}),rpcC('cuentas_pairs_list',{p_group:id}),rpcC('cuentas_categories_list',{p_group:id}).catch(()=>[]),rpcC('cuentas_activity_list',{p_group:id,p_limit:30}).catch(()=>[]),rpcC('cuentas_recurring_list',{p_group:id}).catch(()=>[]),rpcC('cuentas_receipts_list',{p_group:id}).catch(()=>[])]);
+ const [g,bal,mv,pay,props,dels,links,pairs,cl,act,rl,rcl,lreq]=await Promise.all([rpcC('cuentas_group_get',{p_group:id}),rpcC('cuentas_balances',{p_group:id}),rpcC('cuentas_movements_list',{p_group:id}),rpcC('cuentas_group_payouts',{p_group:id}),rpcC('cuentas_proposals_list',{p_group:id}),rpcC('cuentas_delegations_list',{p_group:id}),rpcC('core_links_list',{p_group:id}),rpcC('cuentas_pairs_list',{p_group:id}),rpcC('cuentas_categories_list',{p_group:id}).catch(()=>[]),rpcC('cuentas_activity_list',{p_group:id,p_limit:30}).catch(()=>[]),rpcC('cuentas_recurring_list',{p_group:id}).catch(()=>[]),rpcC('cuentas_receipts_list',{p_group:id}).catch(()=>[]),rpcC('core_link_requests_list',{p_group:id}).catch(()=>[])]);
  recs=Array.isArray(rl)?rl:[];rcpts={};(Array.isArray(rcl)?rcl:[]).forEach(x=>{rcpts[x.movement]=x.path});
  catsAll=Array.isArray(cl)?cl:[];cats=catsAll.filter(c=>!c.archived);
  group=g;show('vGroup');offNote();say(ran>0?'Se cargaron '+ran+(ran===1?' gasto repetido que vencía.':' gastos repetidos que vencían.'):'');setTab(tab);
@@ -728,8 +730,8 @@ async function openGroup(id){
  $('dUser').innerHTML=active.filter(m=>m.role!=='admin'&&!dBy[m.user_id]).map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('dList').querySelectorAll('[data-rv]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_delegate_revoke',{p_group:gid,p_user:b.dataset.rv});await openGroup(gid);say('Delegación revocada.')}));
  const canLink=isAdmin||(me&&dBy[myId]&&dBy[myId].scopes.includes('link'));
- $('lForm').hidden=!canLink;
- $('lList').innerHTML=(links||[]).length?links.map(l=>`<div class="item"><span>${esc(l.name||'(eliminado)')} <span class="tag">${l.ref_type==='juntada'?'evento':'viaje'}</span> <span class="tag">${l.status==='active'?'vinculado':'desvinculado'}</span></span>${l.status==='active'&&canLink?`<button class="sec" style="width:auto;margin:0" data-ul="${l.id}">Desvincular</button>`:''}</div>`).join(''):'<p class="muted">Sin vínculos.</p>';
+ lCan=!!canLink;lStatus=g.status;renderLinkUI(links||[],lreq||[]);
+ $('lList').innerHTML=(links||[]).length?links.map(l=>`<div class="item"><span>${esc(l.name||'(eliminado)')} <span class="tag">${l.ref_type==='juntada'?'evento':'viaje'}</span> <span class="tag">${l.status==='active'?'vinculado':'desvinculado'}</span>${l.in_trash?' <span class="tag">en papelera</span>':''}</span>${l.status==='active'&&canLink?`<button class="sec" style="width:auto;margin:0" data-ul="${l.id}">Desvincular</button>`:''}</div>`).join(''):'<p class="muted">Sin vínculos.</p>';
  $('lList').querySelectorAll('[data-ul]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('core_link_remove',{p_link:b.dataset.ul});await openGroup(gid);say('Desvinculado. Las deudas y el historial se mantienen.')}));
  const myPair=(pairs||[]).find(x=>x.member_a===myId||x.member_b===myId);
  $('pairNew').hidden=!!myPair;
@@ -926,13 +928,57 @@ $('btnArchive').onclick=busy($('btnArchive'),async()=>{
  const b=$('btnArchive');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: archivar';say('Archivar oculta el grupo de la lista; el historial se conserva. Tocá de nuevo para confirmar.');return}
  b.dataset.armed='';b.textContent='Archivar grupo';await rpc('cuentas_group_archive',{p_group:gid});await home();say('Grupo archivado.');
 });
+
+// ---- Vínculo bilateral (Core): solicitar, aprobar, rechazar, cancelar ----
+let lCan=false,lStatus='open',lNames={},lReqs=[];
+const uuid4=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});
+const lKind=t=>t==='juntada'?'evento':'viaje';
+const lDay=iso=>{try{return new Date(iso).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}catch(_){return ''}};
+const lRefName=q=>esc(lNames[q.ref_id]||('un '+lKind(q.ref_type)));
+const lStEs={approved:'aprobada',rejected:'rechazada',cancelled:'cancelada',expired:'vencida',invalidated:'invalidada'};
+function renderLinkUI(links,reqs){
+ const closed=lStatus!=='open';
+ $('lForm').hidden=closed;$('lNote').hidden=!closed;
+ $('lNote').textContent=lStatus==='archived'?'El grupo está archivado: no admite vínculos nuevos.':'El grupo está cerrado: no admite vínculos nuevos. Los vínculos y solicitudes anteriores se conservan.';
+ $('btnLink').textContent=lCan?'Vincular':'Solicitar vínculo';
+ $('lHelp').textContent=lCan?'Elegí de tu lista. Los viajes que organizás aparecen solos; los eventos hay que reclamarlos una vez.':'No tenés permiso para vincular en este grupo. Si organizás el viaje o el evento, podés solicitarlo: lo aprueba quien administra el grupo.';
+ renderLinkReqs(reqs);
+ if(reqs.some(q=>q.ref_type==='juntada'&&!lNames[q.ref_id]))loadEvents().catch(()=>{});
+}
+function renderLinkReqs(reqs){
+ lReqs=reqs;
+ $('lReq').innerHTML=reqs.length?'<h3 class="muted" style="margin:.8rem 0 .2rem">Solicitudes pendientes</h3>'+reqs.map(q=>{
+  const exp=`<small class="muted"> · vence el ${lDay(q.expires_at)}</small>`;
+  if(q.i_can_approve&&!q.mine)return `<div class="item" data-rq="${q.id}"><span>Piden vincular ${lRefName(q)} <span class="tag">${lKind(q.ref_type)}</span>${exp}</span><span style="display:flex;gap:.4rem"><button class="sec" style="width:auto;margin:0" data-rqa="${q.id}">Aprobar</button><button class="sec" style="width:auto;margin:0" data-rqr="${q.id}">Rechazar</button></span></div>`;
+  const quien=q.needs==='cuentas'?'quien administra el grupo':'quien organiza el '+lKind(q.ref_type);
+  return `<div class="item" data-rq="${q.id}"><span>Pediste vincular ${lRefName(q)} <span class="tag">${lKind(q.ref_type)}</span><br><small class="muted">Esperando a ${quien}</small>${exp}</span><button class="sec" style="width:auto;margin:0" data-rqc="${q.id}">Cancelar</button></div>`}).join(''):'';
+ const run=(b,id,dec)=>busy(b,async()=>{
+  try{
+   const cur=(await rpc('core_link_requests_list',{p_group:gid})).find(x=>x.id===id);
+   if(!cur){await refreshLinkReqs();say('Esa solicitud ya no está pendiente.');return}
+   const r=await rpc('core_link_request_decide',{p_request:id,p_hash:cur.version_hash,p_decision:dec,p_correlation:uuid4()});
+   if(r==='approved'){await openGroup(gid);say('Vinculado. Las deudas y el historial se mantienen.');return}
+   await refreshLinkReqs();
+   say(r==='rejected'?'Solicitud rechazada.':r==='expired'?'La solicitud venció. Quien la pidió puede enviar otra.':'No se pudo vincular: cambió algo (el grupo se cerró, cambiaron los permisos o ya está vinculado). Para seguir hace falta una solicitud nueva.',r==='invalidated');
+  }catch(e){if(e.code==='LNK_VERSION'||e.code==='LNK_NO_PENDIENTE')await refreshLinkReqs().catch(()=>{});throw e}
+ });
+ $('lReq').querySelectorAll('[data-rqa]').forEach(b=>b.onclick=run(b,b.dataset.rqa,'approve'));
+ $('lReq').querySelectorAll('[data-rqr]').forEach(b=>b.onclick=run(b,b.dataset.rqr,'reject'));
+ $('lReq').querySelectorAll('[data-rqc]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('core_link_request_cancel',{p_request:b.dataset.rqc});await refreshLinkReqs();say('Solicitud cancelada.')}));
+}
+async function refreshLinkReqs(){renderLinkReqs(await rpc('core_link_requests_list',{p_group:gid}));if($('lHistW').open)await loadLinkHist()}
+async function loadLinkHist(){
+ const h=await rpc('core_link_requests_history',{p_group:gid,p_days:7});
+ $('lHist').innerHTML=h.length?h.map(q=>`<div class="item"><span>${lRefName(q)} <span class="tag">${lKind(q.ref_type)}</span> <span class="tag">${lStEs[q.status]||esc(q.status)}</span><br><small class="muted">${q.mine?'La pediste vos':'Pedida por otra persona'} · ${lDay(q.decided_at||q.expires_at||q.created_at)}${q.status==='invalidated'?' · cambió el grupo o los permisos; hace falta una solicitud nueva':''}</small></span></div>`).join(''):'<p class="muted">Sin solicitudes en los últimos 7 días.</p>';
+}
+$('lHistW').addEventListener('toggle',()=>{if($('lHistW').open)loadLinkHist().catch(e=>say(e.message,true))});
 async function loadTrips(){
  const t=await rpc('core_organizable_trips');
- $('lTrip').innerHTML=t.length?t.map(x=>`<option value="${x.id}">${esc(x.name)}${x.destination?' · '+esc(x.destination):''}</option>`).join(''):'<option value="">Todavía no organizás ningún viaje</option>';
+ t.forEach(x=>lNames[x.id]=x.name);if(lReqs.length)renderLinkReqs(lReqs);$('lTrip').innerHTML=t.length?t.map(x=>`<option value="${x.id}">${esc(x.name)}${x.destination?' · '+esc(x.destination):''}</option>`).join(''):'<option value="">Todavía no organizás ningún viaje</option>';
 }
 async function loadEvents(){
  const ev=await rpc('juntada_mis_eventos');
- $('lEv').innerHTML=ev.length?ev.map(e=>`<option value="${e.id}">${esc(e.nombre)}${e.fecha_texto?' · '+esc(e.fecha_texto):''}</option>`).join(''):'<option value="">Todavía no tenés eventos</option>';
+ ev.forEach(e=>lNames[e.id]=e.nombre);if(lReqs.length)renderLinkReqs(lReqs);$('lEv').innerHTML=ev.length?ev.map(e=>`<option value="${e.id}">${esc(e.nombre)}${e.fecha_texto?' · '+esc(e.fecha_texto):''}</option>`).join(''):'<option value="">Todavía no tenés eventos</option>';
 }
 $('lType').onchange=async()=>{const j=$('lType').value==='juntada';$('lRefW').hidden=j;$('lEvW').hidden=!j;try{j?await loadEvents():await loadTrips()}catch(e){say(e.message,true)}};
 $('btnClaim').onclick=busy($('btnClaim'),async()=>{
@@ -949,7 +995,9 @@ $('btnLink').onclick=busy($('btnLink'),async()=>{
  const j=$('lType').value==='juntada';
  const ref=j?$('lEv').value:$('lTrip').value;
  if(!/^[0-9a-f-]{36}$/i.test(ref))throw Error(j?'Elegí un evento (o reclamá uno)':'Elegí un viaje');
- await rpc('core_link_create',{p_group:gid,p_ref_type:$('lType').value,p_ref_id:ref,p_organizer:null});await openGroup(gid);say('Vinculado.');
+ if(lCan){await rpc('core_link_create',{p_group:gid,p_ref_type:$('lType').value,p_ref_id:ref,p_organizer:null});await openGroup(gid);say('Vinculado.');return}
+ await rpc('core_link_request_create',{p_group:gid,p_ref_type:$('lType').value,p_ref_id:ref,p_correlation:uuid4()});await refreshLinkReqs();
+ say('Solicitud enviada. La tiene que aprobar alguien con permiso de vincular en este grupo. Vence en 7 días.');
 });
 $('btnBackF').onclick=()=>home().catch(e=>say(e.message,true));
 let fGroup=null,fPayees=[];
