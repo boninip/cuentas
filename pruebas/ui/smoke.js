@@ -456,6 +456,15 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
 
  // cotización automática
  const openExp=async t=>{await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eAdv').open=true})};
+ // avisos de error cortos
+ t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
+ ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');
+ await t.page.fill('#eAmt','5');await t.page.waitForTimeout(100);
+ ok(!(await t.page.isVisible('#msg')),'avisos: el error se va al volver a escribir');
+ await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);await t.page.click('#msg');
+ ok(!(await t.page.isVisible('#msg')),'avisos: el error se cierra tocándolo');
+ await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(4400);
+ ok(!(await t.page.isVisible('#msg')),'avisos: el error se va solo en pocos segundos');
  t=await mk(b);await openExp(t);
  await t.page.selectOption('#eCur','USD');await t.page.waitForTimeout(600);
  ok(await t.page.inputValue('#eFx')==='1455,00','cotización: se precarga la oficial del día');

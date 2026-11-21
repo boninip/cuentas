@@ -434,7 +434,11 @@ const inv=url.searchParams.get('invite');
 let token=/^[a-f0-9]{64}$/.test(inv||'')?inv:null;
 let session=null,group=null,gid=null,myId=null,tab='gastos',editId=null,editDate=null;
 try{const r=JSON.parse(localStorage.getItem(STORE)||'null');if(r&&r.access_token&&r.refresh_token)session=r}catch(_){}
-let sayT=0;const say=(t,bad)=>{const m=$('msg');clearTimeout(sayT);m.textContent=t||'';m.className=bad?'bad':'';if(t)sayT=setTimeout(()=>{m.textContent=''},bad?9000:3500)};
+let sayT=0;const sayOff=()=>{clearTimeout(sayT);const m=$('msg');m.textContent=''};
+// Avisos: duran según el largo (errores 4 a 7 s, confirmaciones 2,5 s), se cierran tocándolos o al volver a escribir.
+const say=(t,bad)=>{const m=$('msg');clearTimeout(sayT);m.textContent=t||'';m.className=bad?'bad':'';if(t)sayT=setTimeout(()=>{m.textContent=''},bad?Math.min(7000,Math.max(4000,String(t).length*60)):2500)};
+$('msg').addEventListener('click',sayOff);
+document.addEventListener('input',()=>{if($('msg').className==='bad')sayOff()});
 $('msg').onclick=()=>say('');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hue=k=>{let h=0;for(const ch of String(k))h=(h*31+ch.charCodeAt(0))%97;return ['','c1','c2','c3'][h%4]};
