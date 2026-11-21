@@ -6,13 +6,16 @@ const ME='11111111-1111-1111-1111-111111111111',BR='22222222-2222-2222-2222-2222
 let fails=0;const ok=(c,m)=>{if(!c){fails++;console.log('FALLA:',m)}else console.log('ok   ',m)};
 const LU='44444444-4444-4444-4444-444444444444';
 async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false,pay=false,notices=false,delay=0,expired=false,cache=null,lk={}}={}){
- lk={reqs:[],hist:[],links:[],decide:'approved',status:'open',member:false,verErr:false,trash:[],empty:false,...lk};
+ lk={reqs:[],hist:[],links:[],decide:'approved',status:'open',member:false,verErr:false,trash:[],empty:false,fx:true,fxFail:false,fxType:'oficial',...lk};
  const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();
  const jwt='x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y';
  await page.addInitScript(([e,c])=>{window.__exp=e;if(c)for(const k in c)localStorage.setItem(k,JSON.stringify(c[k]))},[expired,cache]);
  await page.addInitScript(([j])=>{localStorage.setItem('cuentas_auth_v1',JSON.stringify({access_token:j,refresh_token:'r',expires_at:Date.now()+(window.__exp?-1000:3600000),email:'b@test.com'}))},[jwt]);
  const state={down:false,times:{},tokens:0};const calls=[];let prof=profile?{display_name:'Pau'}:null,debt=owe;
- await page.route('**/*',async r=>{const u=r.request().url();if(!u.includes('supabase.co'))return r.continue();
+ await page.route('**/*',async r=>{const u=r.request().url();
+  if(u.includes('dolarapi.com')){state.fxCalls=(state.fxCalls||[]).concat(u);if(lk.fxFail)return r.abort('failed');return r.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify({compra:1405,venta:1455,casa:'x',fechaActualizacion:'2026-11-21T14:35:00.000Z'})})}
+  if(u.includes('frankfurter.dev')){state.fxCalls=(state.fxCalls||[]).concat(u);if(lk.fxFail||/from=CLP/.test(u))return r.fulfill({status:404,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:'{}'});const to=(u.match(/to=([A-Z]{3})/)||[])[1];return r.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify({date:'2026-11-20',rates:{[to]:/from=EUR/.test(u)?1.1:1}})})}
+  if(!u.includes('supabase.co'))return r.continue();
   {const f0=u.split('/rpc/')[1]||u.split('/v1/')[1];if(f0&&!(f0 in state.times))state.times[f0]=Date.now()}
   if(u.includes('/auth/v1/token')){state.tokens++;if(delay)await new Promise(z=>setTimeout(z,delay));return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({access_token:jwt,refresh_token:'r2',expires_in:3600,user:{}})})}
   if(delay)await new Promise(z=>setTimeout(z,delay));
@@ -25,7 +28,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'core_profile_set':prof={display_name:JSON.parse(body).p_name};return J(null);
    case 'cuentas_invite_accept':return J(G);
    case 'cuentas_my_groups_all':return J([{id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',member_status:'active'}]);
-   case 'cuentas_group_get':return J(((o)=>{if(lk.empty)o.members=o.members.filter(m=>m.user_id===ME);return o})({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])}));
+   case 'cuentas_group_get':return J(((o)=>{if(lk.empty)o.members=o.members.filter(m=>m.user_id===ME);if(lk.fx){o.fx_rate_type=lk.fxType;o.fx_auto=true;o.fx_warn_pct=10}return o})({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])}));
    case 'cuentas_guest_add':return J(LU);
    case 'cuentas_guest_invite_create':return J('c'.repeat(64));
    case 'cuentas_balances':return J(guest?[{user_id:ME,balance_minor:'-250000',currency:'ARS'},{user_id:BR,balance_minor:'100000',currency:'ARS'},{user_id:LU,balance_minor:'150000',currency:'ARS'}]:[{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
@@ -49,6 +52,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'core_link_request_decide':if(lk.verErr){return r.fulfill({status:400,contentType:'application/json',body:JSON.stringify({message:'La solicitud cambió: revisala de nuevo',details:'LNK_VERSION'})})}lk.reqs=[];return J(lk.decide);
    case 'core_link_request_cancel':lk.reqs=[];return J(null);
    case 'core_link_request_create':return J('rq9');
+   case 'cuentas_group_set_fx_type':lk.fxType=JSON.parse(body).p_type;return J(null);
    case 'cuentas_groups_trash_list':return J(lk.trash);
    case 'cuentas_group_delete':lk.trash=[{id:G,name:'Viaje 1',deleted_at:'2026-11-21T10:00:00Z',expires_at:'2026-12-21T10:00:00Z'}];return J(null);
    case 'cuentas_group_restore':lk.trash=[];return J(null);
@@ -209,6 +213,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('#eCats [data-ck=comida]');ok((await t.page.getAttribute('#eCats [data-ck=comida]','aria-pressed'))==='true','categorías: se elige una');
  await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','300');
  await t.page.evaluate(()=>{document.getElementById('eAdv').open=true});await t.page.selectOption('#eCur','USD');ok(await t.page.isVisible('#eFx'),'moneda: otra moneda pide cotización');
+ await t.page.waitForTimeout(500);await t.page.fill('#eFx','');
  await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(/cotizaci/i.test(await t.page.textContent('#msg')),'moneda: no guarda sin cotización');
  await t.page.fill('#eFx','1000');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
@@ -444,4 +449,35 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(t.errs.length===0,'papelera: sin errores de JS');
  t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);await t.page.click('#btnGear');await t.page.waitForTimeout(200);
  ok(!(await t.page.isVisible('#btnDelGroup')),'papelera: grupo con historial no ofrece eliminar');
+
+ // cotización automática
+ const openExp=async t=>{await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eAdv').open=true})};
+ t=await mk(b);await openExp(t);
+ await t.page.selectOption('#eCur','USD');await t.page.waitForTimeout(600);
+ ok(await t.page.inputValue('#eFx')==='1455,00','cotización: se precarga la oficial del día');
+ ok(/oficial de hoy/.test(await t.page.textContent('#eFxNote'))&&/DolarApi/.test(await t.page.textContent('#eFxNote')),'cotización: avisa la fuente y que se puede editar');
+ await t.page.fill('#eDesc','Hotel');await t.page.fill('#eAmt','100');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
+ let ea=t.calls.find(c=>c.startsWith('cuentas_expense_add'));
+ ok(ea&&ea.includes('"p_fx":1455')&&ea.includes('"p_fx_source":"DolarApi oficial"')&&ea.includes('"p_fx_at":"2026-11-21T14:35'),'cotización: se guarda con la fuente y la hora');
+ ok(t.errs.length===0,'cotización: sin errores de JS');
+ t=await mk(b);await openExp(t);await t.page.selectOption('#eCur','USD');await t.page.waitForTimeout(600);
+ await t.page.fill('#eFx','1700');await t.page.waitForTimeout(100);
+ ok(/Ojo: se aparta más de 10%/.test(await t.page.textContent('#eFxNote')),'cotización: avisa si se aparta más del 10%');
+ await t.page.fill('#eDesc','Hotel');await t.page.fill('#eAmt','100');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
+ ea=t.calls.find(c=>c.startsWith('cuentas_expense_add'));
+ ok(ea&&ea.includes('"p_fx":1700')&&ea.includes('"p_fx_source":"manual"')&&ea.includes('"p_fx_at":null'),'cotización: editada queda como manual');
+ t=await mk(b,{lk:{fxFail:true}});await openExp(t);await t.page.selectOption('#eCur','USD');await t.page.waitForTimeout(600);
+ ok(/No pude traer la cotización/.test(await t.page.textContent('#eFxNote'))&&await t.page.inputValue('#eFx')==='','cotización: si la fuente falla se carga a mano');
+ await t.page.fill('#eFx','1500');await t.page.fill('#eDesc','Hotel');await t.page.fill('#eAmt','100');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
+ ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')&&c.includes('"p_fx":1500')&&c.includes('"p_fx_source":"manual"')),'cotización: con la fuente caída el gasto se guarda igual');
+ t=await mk(b);await openExp(t);await t.page.selectOption('#eCur','EUR');await t.page.waitForTimeout(600);
+ ok(await t.page.inputValue('#eFx')==='1600,50','cotización: otra moneda cruza con USD (EUR×USD×oficial)');
+ t=await mk(b,{lk:{fx:false}});await openExp(t);await t.page.selectOption('#eCur','USD');await t.page.waitForTimeout(500);
+ ok(!(t.state.fxCalls||[]).length,'cotización: con el interruptor apagado no consulta nada');
+ t=await mk(b,{lk:{fxType:'mep'}});await openExp(t);await t.page.selectOption('#eCur','USD');await t.page.waitForTimeout(500);
+ ok((t.state.fxCalls||[]).some(u=>u.includes('/dolares/bolsa')),'cotización: usa el tipo elegido por el grupo (MEP)');
+ t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#vGroup',{state:'visible'});await t.page.waitForTimeout(300);await t.page.click('#btnGear');await t.page.waitForTimeout(200);
+ ok(await t.page.isVisible('#cFx'),'cotización: la administración ve el tipo de cotización');
+ await t.page.evaluate(()=>{document.getElementById('cFx').open=true});await t.page.selectOption('#fxType','blue');await t.page.waitForTimeout(400);
+ ok(t.calls.some(c=>c.startsWith('cuentas_group_set_fx_type')&&c.includes('"p_type":"blue"')),'cotización: cambiar el tipo lo guarda');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();

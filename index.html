@@ -366,6 +366,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
   <details class="card" id="cImp" hidden><summary class="srow"><span class="tile" data-ic="download"></span><span class="ot"><b>Importar de Splitwise</b><small>Traé tu historial desde un archivo CSV</small></span><span class="chev">›</span></summary><p class="muted" style="margin:0 0 8px">En Splitwise: grupo, Exportar como CSV. Los gastos se cargan con el reparto original; los pagos («Payment») no se importan, así que los saldos reflejan solo los gastos.</p><input type="file" id="impIn" accept=".csv,text/csv,text/plain"><div id="impBody"></div></details>
   <details class="card" id="cAct"><summary class="srow"><span class="tile" data-ic="receipt"></span><span class="ot"><b>Actividad del grupo</b><small>Lo último que pasó</small></span><span class="chev">›</span></summary><div id="actList"></div></details>
   <details class="card"><summary class="srow"><span class="tile" data-ic="download"></span><span class="ot"><b>Exportar</b><small>Todos los movimientos en un archivo</small></span><span class="chev">›</span></summary><p class="muted" style="margin:0 0 8px">Para abrir en Excel o Google Sheets.</p><button class="sec" id="btnCsv"></button></details>
+  <details class="card" id="cFx" hidden><summary class="srow"><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg></span><span class="ot"><b>Cotización del dólar</b><small id="fxTypeSm"></small></span><span class="chev">›</span></summary><p class="muted">Se precarga al cargar un gasto en otra moneda, y siempre se puede editar. Si la fuente falla, la cargás a mano.</p><label for="fxType">Cuál usar</label><select id="fxType"><option value="oficial">Oficial</option><option value="mep">MEP (bolsa)</option><option value="blue">Blue</option></select></details>
   <details class="card" id="cDeleg" hidden><summary class="srow"><span class="tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M17 11l2 2 3-3"/></svg></span><span class="ot"><b>Coadministración</b><small>Delegar tareas con permiso revocable</small></span><span class="chev">›</span></summary><p class="muted">Delegación expresa, revocable y auditada. Reabrir y archivar quedan solo para quien administra.</p><div id="dList"></div>
    <label for="dUser">Delegar en</label><select id="dUser"></select>
    <div id="dScopes"><label class="chk"><input type="checkbox" value="invite"><span>Invitar</span></label><label class="chk"><input type="checkbox" value="close"><span>Cerrar grupo</span></label><label class="chk"><input type="checkbox" value="void"><span>Anular gastos ajenos</span></label><label class="chk"><input type="checkbox" value="link"><span>Vincular eventos</span></label></div>
@@ -649,15 +650,59 @@ function fillCur(sel){
  $('eCur').innerHTML=L.map(c=>`<option value="${c}">${c}${c===ref?' (moneda del grupo)':''}</option>`).join('');$('eCur').value=sel||ref;
 }
 const fxKey=c=>'cuentas_fx_'+c+'_'+group.reference_currency;
+// ---- Cotización automática (Q2b): se precarga y siempre se puede editar; si la fuente falla, se carga a mano ----
+const FX_TTL=6*3600e3,FX_ES={oficial:'oficial',mep:'MEP',blue:'blue'};
+let fxSug=null;
+const fxNum=s=>Number(String(s).replace(/\./g,'').replace(',','.'));
+const fxStr=n=>n.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:n>=100?2:n>=1?4:6,useGrouping:false});
+async function fxJson(u){const c=new AbortController(),t=setTimeout(()=>c.abort(),5000);try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw Error('fx '+r.status);return await r.json()}finally{clearTimeout(t)}}
+async function fxUsdArs(type){const k={oficial:'oficial',mep:'bolsa',blue:'blue'}[type]||'oficial';const d=await fxJson('https://dolarapi.com/v1/dolares/'+k);const v=Number(d.venta);if(!(v>0))throw Error('fx');return {rate:v,at:d.fechaActualizacion||new Date().toISOString(),src:'DolarApi'}}
+async function fxCross(from,to){const d=await fxJson('https://api.frankfurter.dev/v1/latest?from='+from+'&to='+to);const v=Number(d.rates&&d.rates[to]);if(!(v>0))throw Error('fx');return {rate:v,at:(d.date||new Date().toISOString().slice(0,10))+'T12:00:00Z',src:'BCE'}}
+async function fxAuto(cur,ref,type){
+ if(!cur||!ref||cur===ref)return null;
+ const key='cuentas_fxa_v1_'+cur+'_'+ref+'_'+type;
+ try{const c=JSON.parse(localStorage.getItem(key)||'null');if(c&&Date.now()-c.t<FX_TTL)return c.v}catch(_){}
+ let v;
+ if(cur==='ARS'||ref==='ARS'){
+  const other=cur==='ARS'?ref:cur,ua=await fxUsdArs(type);let xArs=ua.rate,src='DolarApi '+FX_ES[type];
+  if(other!=='USD'){const x=await fxCross(other,'USD');xArs=x.rate*ua.rate;src+=' + BCE'}
+  v={rate:cur==='ARS'?1/xArs:xArs,at:ua.at,src};
+ }else{const x=await fxCross(cur,ref);v={rate:x.rate,at:x.at,src:'BCE'}}
+ v.rate=Number(v.rate.toPrecision(8));
+ try{localStorage.setItem(key,JSON.stringify({t:Date.now(),v}))}catch(_){}
+ return v;
+}
+const fxHora=iso=>{try{const d=new Date(iso);return d.toLocaleDateString('es-AR',{day:'numeric',month:'short'})+', '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}catch(_){return ''}};
+async function fxPrefill(c,ref){
+ fxSug=null;if(!group||!group.fx_auto)return;
+ $('eFxNote').textContent='Buscando la cotización de hoy…';
+ try{
+  const v=await fxAuto(c,ref,group.fx_rate_type||'oficial');
+  if($('eCur').value!==c)return;
+  const s=fxStr(v.rate);fxSug={cur:c,rate:fxNum(s),src:v.src,at:v.at};
+  if(!$('eFx').value||$('eFx').dataset.auto==='1'){$('eFx').value=s;$('eFx').dataset.auto='1'}
+ }catch(_){
+  if($('eCur').value!==c)return;
+  if(!$('eFx').value){try{$('eFx').value=localStorage.getItem(fxKey(c))||''}catch(_){}}
+  fxSug=null;fxFail=true;
+ }
+ fxNote();
+}
+let fxFail=false;
 function syncFx(){
  const c=$('eCur').value,ref=group.reference_currency,show=c!==ref;$('eFxBox').hidden=!show;
- if(show){if(!$('eFx').value){try{$('eFx').value=localStorage.getItem(fxKey(c))||''}catch(_){}}$('eFxLbl').textContent='Cotización: 1 '+c+' = ? '+ref;fxNote()}
+ if(show){fxFail=false;const auto=!!(group&&group.fx_auto&&!editId);if(!auto&&!$('eFx').value){try{$('eFx').value=localStorage.getItem(fxKey(c))||''}catch(_){}}$('eFxLbl').textContent='Cotización: 1 '+c+' = ? '+ref;fxNote();if(auto&&(!$('eFx').value||$('eFx').dataset.auto==='1'))fxPrefill(c,ref)}
  updAdv();
 }
 function fxNote(){
  const c=$('eCur').value,ref=group.reference_currency;if(c===ref){$('eFxNote').textContent='';return}
  const f=Number(String($('eFx').value).replace(/\./g,'').replace(',','.')),a=toMinor($('eAmt').value);
- $('eFxNote').textContent=f>0&&a?`Equivale a ${money(Math.round(a*f),ref)}. Los saldos quedan en ${c}; la cotización se usa solo para totales y gráficos.`:`Cuántos ${ref} vale 1 ${c} el día del gasto. Los saldos quedan en ${c}.`;
+ let t=f>0&&a?`Equivale a ${money(Math.round(a*f),ref)}. Los saldos quedan en ${c}; la cotización se usa solo para totales y gráficos.`:`Cuántos ${ref} vale 1 ${c} el día del gasto. Los saldos quedan en ${c}.`;
+ if(fxSug&&fxSug.cur===c){
+  if(f===fxSug.rate)t=`Cotización ${FX_ES[group.fx_rate_type||'oficial']} de hoy (${fxSug.src}, ${fxHora(fxSug.at)}). Podés editarla. `+t;
+  else if(f>0&&fxSug.rate>0&&Math.abs(f-fxSug.rate)/fxSug.rate*100>(group.fx_warn_pct||10))t=`Ojo: se aparta más de ${group.fx_warn_pct||10}% de la cotización sugerida (${fxStr(fxSug.rate)}). `+t;
+ }else if(fxFail)t='No pude traer la cotización de hoy: cargala a mano. '+t;
+ $('eFxNote').textContent=t;
 }
 let recs=[],rcpts={},rcptBlob=null;
 /* ===== Comprobante (foto del ticket) ===== */
@@ -729,6 +774,7 @@ async function openGroup(id){
  const canVoid=!!(me&&(me.role==='admin'||(dBy[myId]&&dBy[myId].scopes.includes('void'))));
  const scEs={invite:'invitar',close:'cerrar',void:'anular',link:'vincular'};
  $('cDeleg').hidden=!isAdmin;
+ $('cFx').hidden=!(isAdmin&&g.fx_auto!==undefined);$('fxType').value=g.fx_rate_type||'oficial';$('fxTypeSm').textContent=FX_ES[g.fx_rate_type||'oficial']||'';
  $('dList').innerHTML=(dels||[]).length?dels.map(d=>`<div class="item"><span>${esc(name(d.delegate_id))}: ${d.scopes.map(x=>scEs[x]||x).join(', ')}</span><button class="sec" style="width:auto;margin:0" data-rv="${d.delegate_id}">Revocar</button></div>`).join(''):'<p class="muted">Sin delegaciones.</p>';
  $('dUser').innerHTML=active.filter(m=>m.role!=='admin'&&!dBy[m.user_id]).map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('dList').querySelectorAll('[data-rv]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_delegate_revoke',{p_group:gid,p_user:b.dataset.rv});await openGroup(gid);say('Delegación revocada.')}));
@@ -927,6 +973,7 @@ $('btnLeave').onclick=busy($('btnLeave'),async()=>{
  const b=$('btnLeave');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: salir';say('Salir no borra tus deudas ni el historial; seguís viendo tu saldo. Tocá de nuevo para confirmar.');return}
  b.dataset.armed='';b.textContent='Salir del grupo';await rpc('cuentas_member_leave',{p_group:gid});await home();say('Saliste del grupo.');
 });
+$('fxType').onchange=async()=>{try{await rpc('cuentas_group_set_fx_type',{p_group:gid,p_type:$('fxType').value});await openGroup(gid);say('Listo: la cotización de referencia es '+FX_ES[$('fxType').value]+'.')}catch(e){say(e.message,true)}};
 $('btnDelGroup').onclick=busy($('btnDelGroup'),async()=>{
  const b=$('btnDelGroup');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: eliminar';say('El grupo va a la papelera 30 días y lo podés restaurar desde Inicio. Tocá de nuevo para confirmar.');return}
  b.dataset.armed='';b.textContent='Eliminar grupo vacío';await rpc('cuentas_group_delete',{p_group:gid});await home();say('Grupo en la papelera. Lo podés restaurar durante 30 días.');
@@ -1467,7 +1514,7 @@ $('btnStatus').onclick=busy($('btnStatus'),async()=>{
 });
 $('eMode').onchange=syncMode;
 $('fab').onclick=()=>{if(!$('vHome').hidden){$('btnHomeAdd').onclick();return}$('fab').hidden=true;resetEdit();$('cExpense').open=true;$('eAdv').open=false;$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});$('eDesc').focus()};
-$('eDesc').addEventListener('input',autoCat);$('eCur').addEventListener('change',()=>{$('eFx').value='';syncFx()});$('eFx').addEventListener('input',fxNote);$('eAmt').addEventListener('input',fxNote);$('ePayer').addEventListener('change',updAdv);$('eParts').addEventListener('change',updAdv);
+$('eDesc').addEventListener('input',autoCat);$('eCur').addEventListener('change',()=>{$('eFx').value='';$('eFx').dataset.auto='';fxSug=null;syncFx()});$('eFx').addEventListener('input',()=>{$('eFx').dataset.auto='';fxNote()});$('eAmt').addEventListener('input',fxNote);$('ePayer').addEventListener('change',updAdv);$('eParts').addEventListener('change',updAdv);
 $('cExpense').addEventListener('toggle',()=>{const o=$('cExpense').open;$('vGroup').classList.toggle('ex-open',o);if(o){$('eGrp').textContent=group?group.name:'';window.scrollTo(0,0)}});
 $('eRep').addEventListener('change',updAdv);
 $('btnExpBack').onclick=()=>$('btnExpClose').click();
@@ -1491,7 +1538,9 @@ $('btnExpense').onclick=busy($('btnExpense'),async()=>{
   await rpc('cuentas_recurring_save',{p_group:gid,p_description:$('eDesc').value.trim(),p_amount_minor:amt,p_currency:curX,p_payer:$('ePayer').value,p_participants:shares?null:parts,p_shares:shares,p_category:catSel||null,p_fx:fx,p_frequency:rep,p_start:today(),p_ends:null});
   $('eDesc').value='';$('eAmt').value='';$('eRep').value='';rcptBlob=null;rcptUi();await openGroup(gid);say('Gasto repetido guardado: se carga solo '+(rep==='weekly'?'cada semana':'cada mes')+'. Lo ves en Ajustes.');return;
  }
- const args={p_currency:curX,p_category:catSel||null,p_fx:fx,p_amount_minor:amt,p_payer:$('ePayer').value,p_participants:shares?null:parts,p_shares:shares,p_description:$('eDesc').value.trim()||null,p_occurred_on:wasEdit&&editDate?editDate:today(),p_key:newKey()};
+  const fxArgs={};
+ if(fx&&group.fx_auto!==undefined&&!wasEdit){const same=fxSug&&fxSug.cur===curX&&fx===fxSug.rate;fxArgs.p_fx_source=same?fxSug.src:'manual';fxArgs.p_fx_at=same?fxSug.at:null}
+ const args={...fxArgs,p_currency:curX,p_category:catSel||null,p_fx:fx,p_amount_minor:amt,p_payer:$('ePayer').value,p_participants:shares?null:parts,p_shares:shares,p_description:$('eDesc').value.trim()||null,p_occurred_on:wasEdit&&editDate?editDate:today(),p_key:newKey()};
  let newId=null;
  if(wasEdit){try{newId=await rpc('cuentas_expense_edit',{p_expense:editId,...args})}catch(e){if(/confirmad|propuesta|anul/i.test(e.message))throw Error('Este gasto ya tiene pagos confirmados y no se puede editar directo. Anulalo con una propuesta (aprobada por los afectados) y cargá el corregido.');throw e}}else{try{newId=await rpc('cuentas_expense_add',{p_group:gid,...args})}catch(e){if(!e.net)throw e;obxPush({gid,args:{p_group:gid,...args},desc:$('eDesc').value.trim(),amt:amt,cur:curX,ts:Date.now()});$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;$('fab').hidden=false;resetEdit();say('Sin señal: guardé el gasto en este celular y lo envío solo cuando vuelva la conexión.'+(rcptBlob?' La foto no se guarda sin conexión: agregala después desde el gasto.':''));rcptBlob=null;rcptUi();return}}
  let rcptMsg='';
