@@ -129,6 +129,10 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(await t.page.locator('#anBody [data-av]').count()===4,'análisis: 4 vistas seleccionables');
  await t.page.click('[data-av="tiempo"]');await t.page.click('[data-as="acum"]');await t.page.waitForTimeout(100);
  ok(await t.page.isVisible('#anBody svg.line'),'análisis: gráfico de línea acumulada');
+ await t.page.click('[data-as="sems"]');await t.page.waitForTimeout(100);
+ ok(await t.page.locator('#anBody .col, #anBody [data-sel]').count()>=1&&/Total de cada semana/.test(await t.page.textContent('#anBody')),'análisis: total por semana (lunes a domingo)');
+ await t.page.click('[data-as="sem"]');await t.page.waitForTimeout(100);
+ ok(/día de la semana/.test(await t.page.textContent('#anBody')),'análisis: día de la semana sigue disponible');
  await t.page.click('[data-av="categorias"]');await t.page.click('.lrow[data-sel="0"]');await t.page.waitForTimeout(100);
  ok(/Comida y bebida/.test(await t.page.textContent('#anBody .an-det'))&&/Asado/.test(await t.page.textContent('#anBody .an-det')),'análisis: dona por categoría estimada y detalle al tocar');
  await t.page.click('[data-av="saldos"]');await t.page.waitForTimeout(100);

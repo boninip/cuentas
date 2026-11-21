@@ -1346,7 +1346,7 @@ $('btnCsv').onclick=exportCsv;
 $('btnCsv').innerHTML=ic('download',18)+' Descargar CSV';
 /* ===== Análisis: varias vistas seleccionables ===== */
 const AN_VIEWS=[['personas','Personas'],['tiempo','Tiempo'],['categorias','En qué'],['saldos','Balance']];
-const AN_SUBS={personas:[['barras','Pagó y le tocó'],['dona','Reparto']],tiempo:[['mes','Mes'],['dia','Día'],['acum','Acumulado'],['sem','Semana']],categorias:[['dona','Dona'],['barras','Barras']],saldos:[]};
+const AN_SUBS={personas:[['barras','Pagó y le tocó'],['dona','Reparto']],tiempo:[['mes','Mes'],['dia','Día'],['acum','Acumulado'],['sems','Semana'],['sem','Día de la semana']],categorias:[['dona','Dona'],['barras','Barras']],saldos:[]};
 let anView=(()=>{try{return localStorage.getItem('cuentas_an_view')}catch(e){return null}})()||'personas';
 if(!AN_VIEWS.some(v=>v[0]===anView))anView='personas';
 let anSub={personas:'barras',tiempo:'mes',categorias:'dona',saldos:''},anSel=null,anCtx=null;
@@ -1395,6 +1395,12 @@ function anItems(exp,cur){
    let ks=Object.keys(g).sort();ks=s==='mes'?ks.slice(-6):ks.slice(-14);
    const yrs=new Set(ks.map(k=>k.slice(0,4))).size>1;
    return {kind:'cols',items:ks.map(k=>({label:s==='mes'?MN[Number(k.slice(5,7))-1]+(yrs?' '+k.slice(2,4):''):k.slice(8,10)+'/'+k.slice(5,7),v:sum(g[k]),ids:g[k],ci:0})),note:s==='mes'?'Total de cada mes (últimos 6).':'Total de cada día con movimiento (últimos 14).'};
+  }
+  if(s==='sems'){
+   const g={};
+   ids.forEach(i=>{const t=String(exp[i].occurred_on||'');const d=new Date(Number(t.slice(0,4)),Number(t.slice(5,7))-1,Number(t.slice(8,10)));d.setDate(d.getDate()-((d.getDay()+6)%7));const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');(g[k]=g[k]||[]).push(i)});
+   const ks=Object.keys(g).sort().slice(-8);
+   return {kind:'cols',items:ks.map(k=>({label:k.slice(8,10)+'/'+k.slice(5,7),v:sum(g[k]),ids:g[k],ci:0})),note:'Total de cada semana, de lunes a domingo; la fecha es el lunes (últimas 8).'};
   }
   if(s==='sem'){
    const D=['lun','mar','mié','jue','vie','sáb','dom'],g=D.map(()=>[]);
