@@ -219,6 +219,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  <button class="newrow" id="optNew"><span class="plus" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>Nuevo grupo</button>
  <div class="opts" id="groups"></div>
  <p id="noGroups" class="muted" hidden>Todavía no tenés grupos. Creá el primero con “Nuevo grupo”.</p>
+ <details class="card" id="cTrash" hidden><summary class="srow"><span class="ot"><b>Papelera</b><small id="trashN"></small></span><span class="chev">›</span></summary><p class="muted">Grupos vacíos eliminados. Se pueden restaurar durante 30 días.</p><div id="trashList"></div></details>
   <details class="card" id="cNew">
   <summary>Nuevo grupo</summary><h2>Nuevo grupo</h2>
   <label for="gName">Nombre</label><input id="gName" maxlength="120" placeholder="Ej. Viaje a Mendoza">
@@ -354,7 +355,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
   <h2 style="margin:6px 0">Ajustes del grupo</h2>
   <div class="card"><h2>Miembros</h2><div id="mList"></div>
    <button class="sec" id="btnStatus"></button>
-   <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div></div>
+   <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div><div class="row"><button class="sec" id="btnDelGroup" hidden>Eliminar grupo vacío</button></div><p class="muted" id="delNote" hidden>Un grupo sin gastos ni pagos se puede eliminar: va a la papelera 30 días y lo restaurás desde Inicio. Uno con historial solo se archiva.</p></div>
   <details class="card" id="cCats"><summary class="srow"><span class="tile" data-ic="fork"></span><span class="ot"><b>Categorías</b><small>Para ver en qué se va la plata</small></span><span class="chev">›</span></summary><div id="catList"></div>
    <div id="catForm" hidden><label for="catName">Nombre</label><input id="catName" maxlength="30" placeholder="Ej. Mascotas">
     <label id="catIcLbl">Ícono</label><div id="catIcons" class="icopick" role="group" aria-labelledby="catIcLbl"></div>
@@ -571,7 +572,7 @@ async function home(){
  offAt=0;let fresh_;
  try{fresh_=(await rpcC('cuentas_my_groups_all')).filter(g=>g.status!=='archived')}catch(e){syncing(false);if(!$('groups').querySelector('[data-g]'))$('groups').innerHTML='';throw e}
  gsAll=fresh_;if(!(rowsBal&&gsAll.every(g=>g.member_status==='former'||rowsBal.some(r=>r.g.id===g.id))))rowsBal=null;if(offAt)say('Sin conexión: mostrando lo último guardado (hace '+agoTxt(offAt)+').');
- loadProfile().catch(()=>{});loadPayout().catch(()=>{});
+ loadProfile().catch(()=>{});loadPayout().catch(()=>{});loadTrash().catch(()=>{});
  $('noGroups').hidden=gsAll.length>0;renderGroups();
  fetchBalances(gsAll).then(r=>{rowsBal=r;renderStats(r);renderGroups()}).catch(()=>{}).finally(()=>syncing(false));
 }
@@ -722,6 +723,8 @@ async function openGroup(id){
  $('mList').querySelectorAll('[data-gl]').forEach(b=>b.onclick=busy(b,()=>guestLink(b.dataset.gl)));
  $('mList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: quitar';say(guestIds.has(b.dataset.rm)?'Si todavía no tiene gastos, se quita del grupo. Tocá de nuevo para confirmar.':'Quitar a alguien no borra sus deudas ni el historial. Tocá de nuevo para confirmar.');return}if(guestIds.has(b.dataset.rm))await rpc('cuentas_guest_remove',{p_group:gid,p_guest:b.dataset.rm});else await rpc('cuentas_member_remove',{p_group:gid,p_user:b.dataset.rm});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')}));
  $('btnArchive').hidden=!(isAdmin&&g.status==='closed');
+ const canDel=!!(isAdmin&&g.status!=='archived'&&!(mv||[]).length&&!(props||[]).length&&!(rl||[]).length&&!(links||[]).some(l=>l.status==='active')&&active.every(m=>m.user_id===myId));
+ $('btnDelGroup').hidden=!canDel;$('delNote').hidden=!canDel;$('btnDelGroup').dataset.armed='';$('btnDelGroup').textContent='Eliminar grupo vacío';
  const dBy={};(dels||[]).forEach(d=>dBy[d.delegate_id]=d);
  const canVoid=!!(me&&(me.role==='admin'||(dBy[myId]&&dBy[myId].scopes.includes('void'))));
  const scEs={invite:'invitar',close:'cerrar',void:'anular',link:'vincular'};
@@ -924,6 +927,16 @@ $('btnLeave').onclick=busy($('btnLeave'),async()=>{
  const b=$('btnLeave');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: salir';say('Salir no borra tus deudas ni el historial; seguís viendo tu saldo. Tocá de nuevo para confirmar.');return}
  b.dataset.armed='';b.textContent='Salir del grupo';await rpc('cuentas_member_leave',{p_group:gid});await home();say('Saliste del grupo.');
 });
+$('btnDelGroup').onclick=busy($('btnDelGroup'),async()=>{
+ const b=$('btnDelGroup');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: eliminar';say('El grupo va a la papelera 30 días y lo podés restaurar desde Inicio. Tocá de nuevo para confirmar.');return}
+ b.dataset.armed='';b.textContent='Eliminar grupo vacío';await rpc('cuentas_group_delete',{p_group:gid});await home();say('Grupo en la papelera. Lo podés restaurar durante 30 días.');
+});
+async function loadTrash(){
+ const t=await rpc('cuentas_groups_trash_list');
+ $('cTrash').hidden=!t.length;$('trashN').textContent=t.length?t.length+(t.length===1?' grupo':' grupos'):'';
+ $('trashList').innerHTML=t.map(x=>`<div class="item"><span>${esc(x.name)}<br><small class="muted">Se puede restaurar hasta el ${lDay(x.expires_at)}</small></span><button class="sec" style="width:auto;margin:0" data-rs="${x.id}">Restaurar</button></div>`).join('');
+ $('trashList').querySelectorAll('[data-rs]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_group_restore',{p_group:b.dataset.rs});await home();say('Grupo restaurado.')}));
+}
 $('btnArchive').onclick=busy($('btnArchive'),async()=>{
  const b=$('btnArchive');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: archivar';say('Archivar oculta el grupo de la lista; el historial se conserva. Tocá de nuevo para confirmar.');return}
  b.dataset.armed='';b.textContent='Archivar grupo';await rpc('cuentas_group_archive',{p_group:gid});await home();say('Grupo archivado.');
