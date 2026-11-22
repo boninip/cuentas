@@ -37,12 +37,14 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_payment_add':debt=false;return J('p1');
    case 'cuentas_expense_add':if(offline)return r.abort('failed');return J('e1');
    case 'cuentas_group_create':return J(G);
+   case 'cuentas_notif_prefs_get':return J([['payment_to_confirm',true],['payment_confirmed',false],['payment_cancelled',false],['expense_new',false],['recurring_added',false],['expense_voided',false],['expense_edited',false],['group_status',false]].map(([kind,essential])=>({kind,enabled:true,essential})));
+   case 'cuentas_notif_pref_set':return J(null);
    case 'cuentas_categories_list':return J(fam?[{key:'comida',name:'Comida y bebida',icon:'fork',color:0,archived:false},{key:'ocio',name:'Salidas y ocio',icon:'ticket',color:4,archived:false}]:[]);
    case 'cuentas_recurring_list':return J(fam?[{id:'r1',description:'Alquiler',amount_minor:5000000,currency:'ARS',frequency:'monthly',status:'active',next_on:'2026-12-01',created_by:ME}]:[]);
    case 'cuentas_receipts_list':return J(fam?[{movement:'e1',path:G+'/e1.jpg'}]:[]);
    case 'cuentas_receipt_register':case 'cuentas_receipt_copy':return J(null);
    case 'cuentas_recurring_run':return J(0);
-   case 'core_notifications_list':return J(notices?[{id:'n1',domain:'cuentas',kind:'delegation_granted',group_id:G,group_name:'Viaje 1',data:{scopes:['invite','void']},essential:true,created_at:'2026-11-15T10:00:00Z',read_at:null},{id:'n2',domain:'cuentas',kind:'proposal_invalidated',group_id:G,group_name:'Viaje 1',data:{},essential:true,created_at:'2026-11-15T11:00:00Z',read_at:null}]:[]);
+   case 'core_notifications_list':if(lk.newNotices)return J([{id:'a1',domain:'cuentas',kind:'payment_to_confirm',group_id:G,group_name:'Viaje 1',data:{amount_minor:150000,currency:'ARS'},essential:true,read_at:null},{id:'a2',domain:'cuentas',kind:'expense_new',group_id:G,group_name:'Viaje 1',data:{count:3,description:'Cena'},essential:false,read_at:null},{id:'a3',domain:'cuentas',kind:'expense_new',group_id:G,group_name:'Viaje 2',data:{count:1,description:'Nafta'},essential:false,read_at:null},{id:'a4',domain:'cuentas',kind:'group_status',group_id:G,group_name:'Viaje 1',data:{status:'closed'},essential:false,read_at:null}]);return J(notices?[{id:'n1',domain:'cuentas',kind:'delegation_granted',group_id:G,group_name:'Viaje 1',data:{scopes:['invite','void']},essential:true,created_at:'2026-11-15T10:00:00Z',read_at:null},{id:'n2',domain:'cuentas',kind:'proposal_invalidated',group_id:G,group_name:'Viaje 1',data:{},essential:true,created_at:'2026-11-15T11:00:00Z',read_at:null}]:[]);
    case 'core_notifications_read':return J(1);
    case 'cuentas_recurring_save':case 'cuentas_recurring_set_status':return J(null);
    case 'cuentas_activity_list':return J(fam?[{id:1,action:'expense_added',actor:ME,created_at:'2026-11-14T10:00:00Z',amount_minor:20000,currency:'ARS',description:'Asado'},{id:2,action:'member_weight_set',actor:ME,target:BR,weight:0.5,created_at:'2026-11-14T09:00:00Z'}]:[]);
@@ -341,6 +343,23 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('#optNew');await t.page.waitForTimeout(300);
  ok(await t.page.evaluate(()=>document.getElementById('cNew').open),'nuevo grupo: la fila abre el formulario');
  ok(t.errs.length===0,'nuevo grupo: sin errores de JS');
+
+ // avisos automáticos (0060)
+ t=await mk(b,{lk:{newNotices:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ await t.page.click('#optAct');await t.page.waitForTimeout(300);
+ const nn=await t.page.textContent('#notices');
+ ok(/pago de .*1\.500.* esperando tu confirmación/.test(nn)&&/aviso esencial/.test(nn),'avisos nuevos: pago a confirmar con el monto y marcado esencial');
+ ok(/Hay 3 gastos nuevos donde participás/.test(nn)&&/Hay un gasto nuevo donde participás: Nafta/.test(nn),'avisos nuevos: gastos nuevos agrupados con la cuenta');
+ ok(/El grupo se cerró/.test(nn),'avisos nuevos: grupo cerrado');
+ ok(t.errs.length===0,'avisos nuevos: sin errores de JS');
+ t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ await t.page.click('#avatar');await t.page.waitForTimeout(300);
+ await t.page.evaluate(()=>{document.getElementById('cPrefs').open=true});await t.page.waitForTimeout(400);
+ ok(await t.page.locator('#prefList input[type=checkbox]').count()===8,'preferencias de avisos: lista los 8 tipos');
+ ok(await t.page.locator('#prefList input[data-pk="payment_to_confirm"]').isDisabled(),'preferencias de avisos: el esencial no se puede apagar');
+ await t.page.uncheck('#prefList input[data-pk="expense_new"]');await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('cuentas_notif_pref_set')&&c.includes('"p_kind":"expense_new"')&&c.includes('"p_enabled":false')),'preferencias de avisos: apagar un tipo lo guarda');
+ ok(t.errs.length===0,'preferencias de avisos: sin errores de JS');
  // avisos esenciales
  t=await mk(b,{notices:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
  await t.page.click('#optAct');await t.page.waitForTimeout(300);
