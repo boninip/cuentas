@@ -171,7 +171,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 .dtrack .df{position:absolute;top:0;bottom:0}.dtrack .df.p{background:var(--good);border-radius:0 99px 99px 0}.dtrack .df.n{background:var(--bad);border-radius:99px 0 0 99px}
 .an-det{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:var(--card)}.an-det .dh{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:4px}.an-det .dh span{color:var(--muted);font-size:.86rem}
 /* categorías, familia, búsqueda, pendientes */
-.xbtns{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}.xbtns .sec{width:auto;margin:0;display:inline-flex;align-items:center;gap:8px}.xpan{margin:4px 0 8px}.xpan textarea{width:100%;box-sizing:border-box;font:inherit}.rcpt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.rcpt .sec{width:auto;margin:0;display:inline-flex;align-items:center;gap:8px}
+.xbtns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.xbtns .sec{width:100%;min-width:0;margin:0;padding-left:8px;padding-right:8px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}.xpan{margin:4px 0 8px}.xpan textarea{width:100%;box-sizing:border-box;font:inherit}.rcpt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0}.rcpt .sec{width:auto;margin:0;display:inline-flex;align-items:center;gap:8px}
 #rcptView{position:fixed;inset:0;z-index:30;background:#000d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}#rcptView[hidden]{display:none}
 #rcptView img{max-width:100%;max-height:78vh;border-radius:12px;background:#fff}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
@@ -323,10 +323,10 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
    <h2 id="eTitle">Nuevo gasto</h2><div class="muted" id="eGrp"></div>
    <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300" placeholder="Ej. Asado, Nafta, Vinos">
    <label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00" style="font-size:1.6rem;font-weight:700"><p class="muted fine" id="eAmtNote" aria-live="polite" style="margin:4px 0 0"></p>
-   <div class="xbtns"><button type="button" class="sec" id="btnDate" aria-expanded="false" aria-controls="ePanDate"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span id="eDateLbl">Hoy</span></button><button type="button" class="sec" id="btnNotes" aria-expanded="false" aria-controls="ePanNotes"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg><span id="eNotesLbl">Notas</span></button></div>
+   <div class="xbtns"><button type="button" class="sec" id="btnDate" aria-expanded="false" aria-controls="ePanDate"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span id="eDateLbl">Hoy</span></button><button type="button" class="sec" id="btnNotes" aria-expanded="false" aria-controls="ePanNotes"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg><span id="eNotesLbl">Notas</span></button><button type="button" class="sec" id="btnRcpt"></button></div>
    <div id="ePanDate" class="xpan" hidden><label for="eDate">Fecha del gasto</label><input type="date" id="eDate"><label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select></div>
    <div id="ePanNotes" class="xpan" hidden><label for="eNotes">Notas</label><textarea id="eNotes" maxlength="1000" rows="3" placeholder="Algo que quieras recordar de este gasto"></textarea></div>
-   <div class="rcpt" id="eRcptBox"><input type="file" id="eRcptIn" accept="image/*" hidden><button type="button" class="sec" id="btnRcpt"></button><span class="muted" id="eRcptName"></span><button type="button" class="lnk" id="btnRcptX" hidden>Quitar</button></div>
+   <div class="rcpt" id="eRcptBox"><input type="file" id="eRcptIn" accept="image/*" hidden><span class="muted" id="eRcptName"></span><button type="button" class="lnk" id="btnRcptX" hidden>Quitar</button></div>
    <label id="eCatsLbl">Categoría</label><div id="eCats" class="chips" role="group" aria-labelledby="eCatsLbl"></div>
    <div id="eSolo" hidden><button type="button" class="lnk" id="btnSoloAdd" style="padding-left:0">+ Dividir con otra persona</button><div id="eSoloBox" hidden><label for="eSoloName">Nombre</label><div class="irow"><input id="eSoloName" maxlength="40" placeholder="Ej. Lu" autocomplete="off"><button type="button" class="sec" id="btnSoloOk" style="width:auto;margin:0">Sumar</button></div><p class="muted fine">Queda en el grupo y ya podés repartir con esa persona.</p></div></div>
    <div class="pm" id="ePm"><div><label for="ePayer">Pagó</label><select id="ePayer"></select></div><div><label for="eMode">Dividir</label><select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select></div></div>
@@ -736,7 +736,7 @@ async function compressImg(file){
  throw Error('No pude achicar la foto. Probá con otra.');
 }
 function rcptUi(){
- $('btnRcpt').innerHTML=ic('receipt',18)+(rcptBlob?' Cambiar foto':' Foto del ticket');
+ $('btnRcpt').innerHTML=ic('receipt',18)+(rcptBlob?' Foto ✓':' Foto');
  $('eRcptName').textContent=rcptBlob?'Lista ('+Math.round(rcptBlob.size/1000)+' KB)':'';$('btnRcptX').hidden=!rcptBlob;
 }
 $('btnRcpt').onclick=()=>$('eRcptIn').click();
@@ -937,7 +937,7 @@ $('btnSoloOk').onclick=busy($('btnSoloOk'),async()=>{
 });
 function xbUi(){
  const d=$('eDate').value,r=$('eRep').value&&!editId,n=$('eNotes').value.trim();
- $('eDateLbl').textContent=(d?fmtD(d)+'/'+d.slice(2,4):'Hoy')+(r?' · se repite':'');
+ $('eDateLbl').textContent=(d?fmtD(d)+'/'+d.slice(2,4):'Hoy')+(r?' ↻':'');
  $('eNotesLbl').textContent=n?'Notas ✓':'Notas';
 }
 $('btnDate').onclick=()=>{const h=!$('ePanDate').hidden;$('ePanDate').hidden=h;$('btnDate').setAttribute('aria-expanded',String(!h))};

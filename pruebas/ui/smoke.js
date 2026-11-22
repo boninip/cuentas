@@ -506,7 +506,8 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','300');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
  {const c=t.calls.find(c=>c.startsWith('cuentas_expense_add'));ok(c&&!c.includes('p_notes')&&new RegExp('"p_occurred_on":"'+new Date().getFullYear()).test(c),'formulario: sin fecha ni nota usa hoy y no manda notas');}
  t=await mk(b);await openExp(t);await t.page.click('#btnDate');await t.page.fill('#eDate','2026-12-01');await t.page.selectOption('#eRep','monthly');
- ok(/se repite/.test(await t.page.textContent('#eDateLbl')),'formulario: avisa en el botón que se repite');
+ ok(/↻/.test(await t.page.textContent('#eDateLbl')),'formulario: avisa en el botón que se repite');
+ {const bx=await t.page.evaluate(()=>[...document.querySelectorAll('.xbtns .sec')].map(b=>{const r=b.getBoundingClientRect();return [Math.round(r.top),Math.round(r.width)]}));ok(bx.length===3&&bx.every(x=>x[0]===bx[0][0])&&Math.max(...bx.map(x=>x[1]))-Math.min(...bx.map(x=>x[1]))<=1,'formulario: los tres botones (fecha, notas, foto) van en una fila y del mismo ancho')}
  await t.page.fill('#eDesc','Expensas');await t.page.fill('#eAmt','1000');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
  ok(t.calls.some(c=>c.startsWith('cuentas_recurring_save')&&c.includes('"p_start":"2026-12-01"')),'formulario: el gasto repetido arranca en la fecha elegida');
  t=await mk(b,{lk:{notes:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
