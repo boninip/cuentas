@@ -728,7 +728,11 @@ function fxNote(){
 let recs=[],rcpts={},rcptBlob=null;
 /* ===== Comprobante (foto del ticket) ===== */
 async function compressImg(file){
- const bmp=await (window.createImageBitmap?createImageBitmap(file):new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=URL.createObjectURL(file)}));
+ const viaImg=()=>new Promise((ok,no)=>{const u=URL.createObjectURL(file),i=new Image();i.onload=()=>{ok(i)};i.onerror=()=>no(Error('img'));i.src=u});
+ let bmp=null;
+ try{if(window.createImageBitmap)bmp=await createImageBitmap(file)}catch(_){bmp=null}
+ if(!bmp){try{bmp=await viaImg()}catch(_){bmp=null}}
+ if(!bmp||!(bmp.width>0))throw Error('No pude abrir esa foto. Probá con otra o sacala de nuevo con la cámara.');
  let w=bmp.width,h=bmp.height;const k=Math.min(1,1600/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
  for(let scale=1;scale>0.4;scale-=0.15){
   const c=document.createElement('canvas');c.width=Math.round(w*scale);c.height=Math.round(h*scale);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
@@ -782,7 +786,7 @@ function rcptUi(){
 }
 $('btnRcpt').onclick=()=>$('eRcptIn').click();
 $('btnRcptX').onclick=()=>{rcptBlob=null;$('eRcptIn').value='';rcptUi()};
-$('eRcptIn').onchange=async()=>{const f=$('eRcptIn').files[0];if(!f)return;try{rcptBlob=await compressImg(f)}catch(e){rcptBlob=null;say(e.message,true)}rcptUi()};
+$('eRcptIn').onchange=async()=>{const f=$('eRcptIn').files[0];if(!f)return;try{rcptBlob=await compressImg(f)}catch(e){rcptBlob=null;say(/[áéíóú]|foto/.test(e.message||'')?e.message:'No pude abrir esa foto. Probá con otra o sacala de nuevo con la cámara.',true)}rcptUi()};
 async function uploadReceipt(mid,blob){
  if(!(await fresh()))throw Error('Tu sesión venció.');
  let r;try{r=await fetch(BASE+'/storage/v1/object/cuentas-receipts/'+gid+'/'+mid+'.jpg',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'image/jpeg','x-upsert':'false'},body:blob})}catch(_){const e=Error(NETERR);e.net=true;throw e}
