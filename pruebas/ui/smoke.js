@@ -217,7 +217,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.fill('#eDesc','Cena');ok((await t.page.getAttribute('#eCats [data-ck=comida]','aria-pressed'))==='false','categoría automática: respeta la elección manual');
  await t.page.click('#eCats [data-ck=comida]');ok((await t.page.getAttribute('#eCats [data-ck=comida]','aria-pressed'))==='true','categorías: se elige una');
  await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','300');
- await t.page.evaluate(()=>{document.getElementById('eAdv').open=true});await t.page.selectOption('#eCur','USD');ok(await t.page.isVisible('#eFx'),'moneda: otra moneda pide cotización');
+ await t.page.evaluate(()=>{document.getElementById('eRepBox').hidden=false;document.getElementById('eAdv').open=true});await t.page.selectOption('#eCur','USD');ok(await t.page.isVisible('#eFx'),'moneda: otra moneda pide cotización');
  await t.page.waitForTimeout(500);await t.page.fill('#eFx','');
  await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(/cotizaci/i.test(await t.page.textContent('#msg')),'moneda: no guarda sin cotización');
@@ -258,7 +258,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(t.errs.length===0,'comprobante: sin errores de JS');
  // gastos repetidos
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
- await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eAdv').open=true});
+ await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eRepBox').hidden=false;document.getElementById('eAdv').open=true});
  await t.page.fill('#eDesc','Expensas');await t.page.fill('#eAmt','1000');await t.page.click('#btnDate');await t.page.selectOption('#eRep','monthly');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_recurring_save')&&c.includes('"p_frequency":"monthly"')&&c.includes('Expensas')),'repetidos: guarda la regla mensual');
  ok(!t.calls.some(c=>c.startsWith('cuentas_expense_add')),'repetidos: no carga el gasto a mano (lo genera el servidor)');
@@ -272,7 +272,8 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  await t.page.click('#fab');await t.page.waitForTimeout(300);
  ok(!(await t.page.isVisible('#gTop'))&&!(await t.page.isVisible('#gTitle')),'ux: al cargar un gasto se ocultan el resumen y los botones del grupo');
- ok(await t.page.isVisible('#ePayer')&&await t.page.isVisible('#eMode'),'ux: «Pagó» y «Dividir» están visibles sin abrir opciones');
+ ok(await t.page.isVisible('#btnRep')&&!(await t.page.isVisible('#ePayer')),'ux: el reparto se ve resumido en una línea');
+ await t.page.click('#btnRep');ok(await t.page.isVisible('#ePayer')&&await t.page.isVisible('#eMode'),'ux: tocando el resumen aparecen «Pagó» y «Dividir»');
  ok(/Viaje 1/.test(await t.page.textContent('#eGrp')),'ux: se indica de qué grupo es el gasto');
  await t.page.click('#btnExpBack');await t.page.waitForTimeout(300);
  ok(await t.page.isVisible('#gTop')&&await t.page.isVisible('#fab'),'ux: Volver regresa al grupo');
@@ -372,7 +373,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(t.errs.length===0,'pagos: sin errores de JS');
  // moneda sin decimales
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
- await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eAdv').open=true});
+ await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eRepBox').hidden=false;document.getElementById('eAdv').open=true});
  await t.page.selectOption('#eCur','CLP');await t.page.fill('#eFx','1,2');await t.page.fill('#eDesc','Pizza');await t.page.fill('#eAmt','1000,60');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
  ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')&&c.includes('"p_amount_minor":100100')&&c.includes('"p_currency":"CLP"')),'sin decimales: CLP se redondea a unidades enteras');
  ok(t.errs.length===0,'sin decimales: sin errores de JS');
@@ -456,7 +457,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(!(await t.page.isVisible('#btnDelGroup')),'papelera: grupo con historial no ofrece eliminar');
 
  // cotización automática
- const openExp=async t=>{await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eAdv').open=true})};
+ const openExp=async t=>{await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eRepBox').hidden=false;document.getElementById('eRepBox').hidden=false;document.getElementById('eAdv').open=true})};
 
  // liquidar entre monedas
  const openPay=async(t)=>{await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.click('#btnSettle');await t.page.click('[data-pay]')};
@@ -526,9 +527,9 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  t=await mk(b,{lk:{empty:true}});await openSolo(t);
  ok(!(await t.page.isVisible('#ePayer'))&&!(await t.page.isVisible('#eAdv'))&&await t.page.isVisible('#btnSoloAdd'),'liviano: solo, no muestra Pagó/Dividir y ofrece dividir con otra persona');
  await t.page.fill('#eDesc','Vino');await t.page.fill('#eAmt','1500.50');await t.page.waitForTimeout(100);
- ok(/1\.500,50/.test(await t.page.textContent('#eAmtNote')),'importe: con punto decimal se entiende 1.500,50 y se muestra antes de guardar');
+ ok(await t.page.inputValue('#eAmt')==='1.500,50'&&/1\.500,50/.test(await t.page.textContent('#btnExpense')),'importe: con punto decimal se entiende 1.500,50, se formatea en vivo y el botón lo muestra');
  await t.page.click('#btnSoloAdd');await t.page.fill('#eSoloName','Lu');await t.page.click('#btnSoloOk');await t.page.waitForTimeout(500);
- ok(t.calls.some(c=>c.startsWith('cuentas_guest_add')&&c.includes('Lu'))&&await t.page.inputValue('#eDesc')==='Vino'&&await t.page.inputValue('#eAmt')==='1500.50'&&await t.page.isVisible('#eAmt'),'liviano: sumar a alguien por nombre no pierde lo escrito');
+ ok(t.calls.some(c=>c.startsWith('cuentas_guest_add')&&c.includes('Lu'))&&await t.page.inputValue('#eDesc')==='Vino'&&await t.page.inputValue('#eAmt')==='1.500,50'&&await t.page.isVisible('#eAmt'),'liviano: sumar a alguien por nombre no pierde lo escrito');
  t=await mk(b,{lk:{empty:true}});await openSolo(t);await t.page.fill('#eDesc','Vino');await t.page.fill('#eAmt','1500.50');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
  ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')&&c.includes('"p_amount_minor":150050')),'importe: 1500.50 se guarda como 1.500,50 (no 150.050)');
  // sin desborde horizontal a 360 px en las pantallas principales
@@ -536,7 +537,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   const ov=()=>t.page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
   const bad=[];if(await ov()>0)bad.push('inicio');
   await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});if(await ov()>0)bad.push('grupo');
-  await t.page.click('#fab');await t.page.waitForTimeout(200);await t.page.evaluate(()=>{document.getElementById('eAdv').open=true;document.getElementById('btnDate').click();document.getElementById('btnNotes').click()});if(await ov()>0)bad.push('formulario');
+  await t.page.click('#fab');await t.page.waitForTimeout(200);await t.page.evaluate(()=>{document.getElementById('eRepBox').hidden=false;document.getElementById('eAdv').open=true;document.getElementById('btnDate').click();document.getElementById('btnNotes').click()});if(await ov()>0)bad.push('formulario');
   ok(bad.length===0,'360 px: sin desborde horizontal'+(bad.length?' (falla en '+bad.join(', ')+')':''))}
  // OCR del ticket: solo sugiere, se carga al tocar, nunca guarda solo
  {t=await mk(b,{lk:{empty:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
@@ -559,7 +560,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   ok(reqs===1&&/12\.345,50/.test(await t.page.textContent('#ocrNote'))&&/15\/11/.test(await t.page.textContent('#ocrNote'))&&/Farmacity/.test(await t.page.textContent('#ocrNote')),'ocr: al tocar, lee y muestra importe, fecha y comercio');
   ok(await t.page.inputValue('#eAmt')===''&&!t.calls.some(c=>c.startsWith('cuentas_expense_add')),'ocr: solo sugiere, no completa ni guarda solo');
   await t.page.click('#btnOcrUse');
-  ok(await t.page.inputValue('#eAmt')==='12345,50'&&await t.page.inputValue('#eDate')==='2026-11-15'&&await t.page.inputValue('#eDesc')==='Farmacity'&&!t.calls.some(c=>c.startsWith('cuentas_expense_add')),'ocr: al confirmar completa importe, fecha y descripción, sin guardar');
+  ok(await t.page.inputValue('#eAmt')==='12.345,50'&&await t.page.inputValue('#eDate')==='2026-11-15'&&await t.page.inputValue('#eDesc')==='Farmacity'&&!t.calls.some(c=>c.startsWith('cuentas_expense_add')),'ocr: al confirmar completa importe, fecha y descripción, sin guardar');
   t=await mk(b,{lk:{empty:true}});await t.page.route('**/tesseract.min.js',r=>r.abort());await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#fab',{state:'visible'});await t.page.click('#fab');
   await t.page.setInputFiles('#eRcptIn',{name:'t.png',mimeType:'image/png',buffer:png2});await t.page.waitForTimeout(500);await t.page.click('#btnOcr');await t.page.waitForTimeout(800);
   ok(/a mano/.test(await t.page.textContent('#ocrNote'))&&!(await t.page.isVisible('#btnOcrUse')),'ocr: si no carga el lector, avisa y se sigue a mano')}
@@ -574,7 +575,29 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   await t.page.setInputFiles('#eRcptIn',{name:'t.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEUlEQVR4nGM44eCAFTEMLQkALKhSAY1dq8cAAAAASUVORK5CYII=','base64')});await t.page.waitForTimeout(500);
   await t.page.click('#btnOcr');await t.page.waitForTimeout(600);
   ok(/suman/.test(await t.page.textContent('#ocrNote'))&&await t.page.isVisible('#btnOcrSum')&&/6\.000,00/.test(await t.page.textContent('#btnOcrSum')),'ocr: si el total no coincide con los renglones, avisa y ofrece la suma');
-  await t.page.click('#btnOcrSum');ok(await t.page.inputValue('#eAmt')==='6000,00'&&!t.calls.some(c=>c.startsWith('cuentas_expense_add')),'ocr: usar la suma completa el importe sin guardar')}
+  await t.page.click('#btnOcrSum');ok(await t.page.inputValue('#eAmt')==='6.000,00'&&!t.calls.some(c=>c.startsWith('cuentas_expense_add')),'ocr: usar la suma completa el importe sin guardar')}
+ // etapa 1 UX del gasto: guardar fijo, importe en vivo, reparto resumido, categorías en fila, fecha rápida, deshacer
+ {t=await mk(b);await t.page.setViewportSize({width:390,height:760});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+  await t.page.click('#fab');await t.page.waitForTimeout(300);
+  const fm=await t.page.evaluate(()=>['106100','1500.5','1.5000','12,5','0,5','1.500','','abc'].map(x=>fmtAmtLive(x)));
+  ok(JSON.stringify(fm)===JSON.stringify(['106.100','1.500,5','15.000','12,5','0,5','1.500','','']),'ux1: el importe se formatea en vivo con separadores ('+fm.join(' | ')+')');
+  await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','300000');
+  const r1=await t.page.evaluate(()=>{const b=document.getElementById('btnExpense').getBoundingClientRect();return {bottom:Math.round(b.bottom),h:window.innerHeight,txt:document.getElementById('btnExpense').textContent,cats:document.getElementById('eCats').getBoundingClientRect().height}});
+  ok(r1.bottom<=r1.h&&/300\.000,00/.test(r1.txt),'ux1: el botón Guardar queda visible abajo y muestra el importe ('+r1.txt+')');
+  ok(r1.cats<80,'ux1: las categorías ocupan una sola fila ('+r1.cats+' px)');
+  if(process.env.SHOT){await t.page.screenshot({path:'/tmp/form1.png'});await t.page.click('#btnRep');await t.page.screenshot({path:'/tmp/form2.png',fullPage:false});await t.page.click('#btnRep')}
+  const sm=await t.page.textContent('#btnRep');ok(/Pagaste vos/.test(sm)&&/entre todos/.test(sm)&&/c\/u/.test(sm),'ux1: el reparto se resume en una línea ('+sm.trim()+')');
+  await t.page.click('#btnDate');await t.page.click('[data-dd="1"]');
+  ok(/Ayer/.test(await t.page.textContent('#eDateLbl'))&&await t.page.inputValue('#eDate')!=='','ux1: chip «Ayer» completa la fecha');
+  await t.page.click('[data-dd="0"]');ok(/Hoy/.test(await t.page.textContent('#eDateLbl'))&&await t.page.inputValue('#eDate')==='','ux1: chip «Hoy» la vuelve a hoy');
+  await t.page.click('#btnExpense');await t.page.waitForTimeout(500);
+  ok(/Deshacer/.test(await t.page.textContent('#msg'))&&/Cargar otro/.test(await t.page.textContent('#msg')),'ux1: tras guardar ofrece «Deshacer» y «Cargar otro»');
+  await t.page.click('#msg .msgact >> text=Deshacer');await t.page.waitForTimeout(500);
+  ok(t.calls.some(c=>c.startsWith('cuentas_expense_void')),'ux1: «Deshacer» anula el gasto recién cargado');
+  await t.page.click('#fab');await t.page.fill('#eDesc','Otro');await t.page.fill('#eAmt','100');await t.page.click('#btnExpense');await t.page.waitForTimeout(500);
+  await t.page.click('#msg .msgact >> text=Cargar otro');await t.page.waitForTimeout(300);
+  ok(await t.page.isVisible('#eDesc')&&await t.page.inputValue('#eDesc')==='','ux1: «Cargar otro» abre el formulario vacío');
+  ok(t.errs.length===0,'ux1: sin errores de JS')}
  // avisos de error cortos
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');
