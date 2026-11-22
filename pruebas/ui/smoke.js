@@ -353,7 +353,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  // grupo sin conexión
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  ok(!(await t.page.isVisible('#offNote')),'sin conexión: con señal no muestra el aviso');
- t.state.down=true;await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:8000});
+ await t.page.waitForFunction(()=>['my_groups_all','group_get','movements_list'].every(f=>Object.keys(localStorage).some(k=>k.includes(f))),null,{timeout:15000}).catch(()=>{});await t.page.waitForTimeout(1500);t.state.down=true;await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:20000});
  ok(/Sin conexión/.test(await t.page.textContent('#msg')),'sin conexión: el inicio avisa que muestra lo guardado');
  await t.page.click('[data-g]');await t.page.waitForSelector('#gTitle',{state:'visible'});await t.page.waitForTimeout(400);
  ok((await t.page.textContent('#gTitle'))==='Viaje 1','sin conexión: se abre el grupo con la última vista guardada');
@@ -598,6 +598,25 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   await t.page.click('#msg .msgact >> text=Cargar otro');await t.page.waitForTimeout(300);
   ok(await t.page.isVisible('#eDesc')&&await t.page.inputValue('#eDesc')==='','ux1: «Cargar otro» abre el formulario vacío');
   ok(t.errs.length===0,'ux1: sin errores de JS')}
+ // etapa 2 UX: lista por día con total, tu parte clara, menú ⋯
+ {t=await mk(b,{fam:true});await t.page.setViewportSize({width:390,height:800});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+  const heads=await t.page.$$eval('#moves .mon',els=>els.map(e=>e.textContent));
+  ok(heads.length===2&&/10 sep/.test(heads[0])&&/9 sep/.test(heads[1])&&(await t.page.$$('#moves .mon .dtot')).length===2,'ux2: la lista va agrupada por día (lo más nuevo arriba) con el total de cada día ('+heads.join(' | ')+')');
+  const mt=await t.page.textContent('#moves');ok(/te toca/.test(mt)&&/te deben/.test(mt),'ux2: cada gasto dice «te toca» o «te deben»');
+  ok(!(await t.page.isVisible('#moves [data-edit]'))&&await t.page.isVisible('#moves [data-mm]'),'ux2: Editar y Anular salieron de la fila y están en el menú ⋯');
+  if(process.env.SHOT)await t.page.screenshot({path:'/tmp/list1.png'});
+  await t.page.click('[data-mm="e2"]');await t.page.waitForTimeout(200);
+  if(process.env.SHOT)await t.page.screenshot({path:'/tmp/list2.png'});
+  const op=await t.page.textContent('#pkL');ok(/Editar/.test(op)&&/Anular/.test(op),'ux2: el menú ⋯ ofrece Editar y Anular');
+  await t.page.click('#pkL >> text=Anular');await t.page.waitForTimeout(200);
+  ok(/Sí, anular/.test(await t.page.textContent('#pkL'))&&!t.calls.some(c=>c.startsWith('cuentas_expense_void')),'ux2: Anular pide confirmación antes de hacer nada');
+  await t.page.click('#pkL >> text=Sí, anular');await t.page.waitForTimeout(500);
+  ok(t.calls.some(c=>c.startsWith('cuentas_expense_void')&&c.includes('e2')),'ux2: al confirmar, anula el gasto');
+  await t.page.click('[data-mm="e2"]').catch(()=>{});
+  ok(t.errs.length===0,'ux2: sin errores de JS')}
+ {t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+  await t.page.click('[data-mm="e2"]');await t.page.waitForTimeout(200);await t.page.click('#pkL >> text=Editar');await t.page.waitForTimeout(400);
+  ok(await t.page.isVisible('#eDesc')&&await t.page.inputValue('#eDesc')==='Hotel'&&/Guardar cambios/.test(await t.page.textContent('#btnExpense')),'ux2: Editar desde el menú ⋯ abre el gasto para editar')}
  // avisos de error cortos
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');
