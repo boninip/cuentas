@@ -28,7 +28,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'core_profile_set':prof={display_name:JSON.parse(body).p_name};return J(null);
    case 'cuentas_invite_accept':return J(G);
    case 'cuentas_my_groups_all':return J([{id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',member_status:'active'}]);
-   case 'cuentas_group_get':return J(((o)=>{if(lk.empty)o.members=o.members.filter(m=>m.user_id===ME);if(lk.fx){o.fx_rate_type=lk.fxType;o.fx_auto=true;o.fx_warn_pct=10}return o})({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])}));
+   case 'cuentas_group_get':return J(((o)=>{if(lk.empty)o.members=o.members.filter(m=>m.user_id===ME);if(lk.fx){o.fx_rate_type=lk.fxType;o.fx_auto=true;o.fx_warn_pct=10;o.cross_pay=lk.cross!==false}return o})({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])}));
    case 'cuentas_guest_add':return J(LU);
    case 'cuentas_guest_invite_create':return J('c'.repeat(64));
    case 'cuentas_balances':return J(guest?[{user_id:ME,balance_minor:'-250000',currency:'ARS'},{user_id:BR,balance_minor:'100000',currency:'ARS'},{user_id:LU,balance_minor:'150000',currency:'ARS'}]:[{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
@@ -45,7 +45,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_recurring_save':case 'cuentas_recurring_set_status':return J(null);
    case 'cuentas_activity_list':return J(fam?[{id:1,action:'expense_added',actor:ME,created_at:'2026-11-14T10:00:00Z',amount_minor:20000,currency:'ARS',description:'Asado'},{id:2,action:'member_weight_set',actor:ME,target:BR,weight:0.5,created_at:'2026-11-14T09:00:00Z'}]:[]);
    case 'cuentas_member_set_weight':case 'cuentas_category_save':return J(null);
-   case 'cuentas_movements_list':if(lk.empty)return J([]);if(pay)return J([{id:'p1',kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:LU,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false},{id:'p2',kind:'payment',amount_minor:'50000',currency:'ARS',from_user:ME,to_user:BR,occurred_on:'2026-11-14',created_by:ME,confirmed:true,reversed:false}]);if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
+   case 'cuentas_movements_list':if(lk.empty)return J([]);if(lk.xpay)return J([{id:'x1',kind:'payment',amount_minor:'248805',currency:'ARS',from_user:BR,to_user:ME,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false,paid_currency:'USD',paid_amount_minor:'171',fx_rate:'1455',fx_source:'DolarApi oficial'}]);if(pay)return J([{id:'p1',kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:LU,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false},{id:'p2',kind:'payment',amount_minor:'50000',currency:'ARS',from_user:ME,to_user:BR,occurred_on:'2026-11-14',created_by:ME,confirmed:true,reversed:false}]);if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
    case 'core_links_list':return J(lk.links);
    case 'core_link_requests_list':return J(lk.reqs);
    case 'core_link_requests_history':return J(lk.hist);
@@ -456,6 +456,40 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
 
  // cotización automática
  const openExp=async t=>{await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eAdv').open=true})};
+
+ // liquidar entre monedas
+ const openPay=async(t)=>{await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.click('#btnSettle');await t.page.click('[data-pay]')};
+ t=await mk(b);await openPay(t);
+ ok(await t.page.isVisible('#pCur')&&!(await t.page.isVisible('#pFxBox')),'otra moneda: elige en qué moneda pagó, sin cotización si es la misma');
+ await t.page.selectOption('#pCur','USD');await t.page.waitForTimeout(600);
+ ok(await t.page.inputValue('#pFx')==='1455,00'&&await t.page.inputValue('#pAmt')==='1,71','otra moneda: precarga la cotización y el importe que deja la deuda casi en cero');
+ ok(/Tu deuda baja[^]*2\.488,05/.test(await t.page.textContent('#pEq'))&&/DolarApi/.test(await t.page.textContent('#pEq')),'otra moneda: muestra cuánto baja la deuda y la fuente');
+ await t.page.click('#btnPay');await t.page.waitForTimeout(400);
+ {const c=t.calls.find(c=>c.startsWith('cuentas_payment_add'));ok(c&&c.includes('"p_currency":"ARS"')&&c.includes('"p_amount_minor":248805')&&c.includes('"p_paid_currency":"USD"')&&c.includes('"p_paid_minor":171')&&c.includes('"p_fx":1455')&&c.includes('"p_fx_source":"DolarApi oficial"'),'otra moneda: guarda lo pagado, la cotización y la fuente');}
+ ok(t.errs.length===0,'otra moneda: sin errores de JS');
+ t=await mk(b);await openPay(t);await t.page.selectOption('#pCur','USD');await t.page.waitForTimeout(600);
+ await t.page.fill('#pAmt','1');await t.page.fill('#pFx','2000');await t.page.waitForTimeout(100);
+ ok(/Ojo: se aparta más de 10%/.test(await t.page.textContent('#pEq')),'otra moneda: avisa si la cotización se aparta de la sugerida');
+ await t.page.fill('#pAmt','100');await t.page.waitForTimeout(100);
+ ok(/Es más de lo que debés/.test(await t.page.textContent('#pEq')),'otra moneda: avisa si se pasa de la deuda');
+ await t.page.click('#btnPay');await t.page.waitForTimeout(300);
+ ok(/más de lo que debés/.test(await t.page.textContent('#msg'))&&!t.calls.some(c=>c.startsWith('cuentas_payment_add')),'otra moneda: no registra un pago que se pasa');
+ await t.page.fill('#pAmt','1');await t.page.click('#btnPay');await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('cuentas_payment_add')&&c.includes('"p_fx_source":"manual"')&&c.includes('"p_fx_at":null')),'otra moneda: cotización editada queda como manual');
+ t=await mk(b,{lk:{fxFail:true}});await openPay(t);await t.page.selectOption('#pCur','USD');await t.page.waitForTimeout(600);
+ ok(/No pude traer la cotización/.test(await t.page.textContent('#pEq'))&&await t.page.inputValue('#pFx')==='','otra moneda: si la fuente falla se carga a mano');
+ await t.page.fill('#pFx','1500');await t.page.fill('#pAmt','1');await t.page.click('#btnPay');await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('cuentas_payment_add')&&c.includes('"p_fx":1500')&&c.includes('"p_amount_minor":150000')),'otra moneda: con la fuente caída se paga igual');
+ t=await mk(b);await openPay(t);await t.page.click('#btnPay');await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('cuentas_payment_add')&&c.includes('"p_currency":"ARS"')&&!c.includes('p_paid_currency')),'otra moneda: pagar en la misma moneda sigue igual');
+ t=await mk(b,{lk:{cross:false}});await openPay(t);
+ ok(!(await t.page.isVisible('#pCur')),'otra moneda: con el interruptor apagado no se ofrece');
+ t=await mk(b,{lk:{member:true,xpay:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ await t.page.evaluate(()=>{document.querySelectorAll('#moves details.mv').forEach(d=>d.open=true)});
+ {const tx=await t.page.textContent('#moves');ok(/Pagó[^]*USD|US\$/.test(tx)&&/1 USD = 1455,00 ARS/.test(tx)&&/aceptás el pago y esta cotización/.test(tx),'otra moneda: quien cobra ve lo pagado y la cotización antes de confirmar');}
+ ok(await t.page.locator('[data-conf]').count()===1&&await t.page.locator('[data-pcancel][data-rej]').count()===1,'otra moneda: quien cobra puede confirmar o rechazar');
+ await t.page.locator('[data-pcancel][data-rej]').click();await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('cuentas_payment_cancel'))&&/Pago rechazado/.test(await t.page.textContent('#msg')),'otra moneda: rechazar llama a cancelar y avisa');
  // avisos de error cortos
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');

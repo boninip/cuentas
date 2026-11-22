@@ -293,7 +293,10 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  <div id="sPick"><h2 class="pg">Saldar deuda</h2><p class="muted pgsub">¿A quién le pagaste?</p><div id="sList" class="opts"></div></div>
  <div id="sPay" hidden>
   <div class="payhead"><span class="av big" id="sAv" aria-hidden="true"></span><h2 id="sTitle"></h2></div>
+  <p class="muted" id="pDebt"></p>
+  <div id="pCurBox"><label for="pCur">Pagaste en</label><select id="pCur"></select></div>
   <label for="pAmt" class="sr">Importe</label><input id="pAmt" class="bigamt" inputmode="decimal" placeholder="0,00" autocomplete="off"><input type="hidden" id="pTo">
+  <div id="pFxBox" hidden><label id="pFxLbl" for="pFx"></label><input id="pFx" inputmode="decimal" placeholder="0,00" autocomplete="off"><p class="muted fine" id="pEq" aria-live="polite"></p></div>
   <div id="sInfo" class="infocard"></div>
   <button id="btnPay">Registrar pago</button>
   <p class="muted fine">Estás registrando un pago que se hizo fuera de Cuentas. No se mueve dinero: cuenta en los saldos cuando quien cobra lo confirma.</p>
@@ -861,7 +864,7 @@ async function openGroup(id){
    if(isC&&!m.reversed&&(m.from_user===myId||m.to_user===myId))act=`<button class="sec" style="width:auto;margin:0" data-crev="${m.id}">Proponer revertir</button>`;
    if(!isE&&!isC&&!m.confirmed&&m.from_user===myId)act=`<button class="sec" style="width:auto;margin:0" data-pcancel="${m.id}">Cancelar pago</button>`;
    if(!isE&&!isC&&m.confirmed&&!m.reversed&&(m.from_user===myId||m.to_user===myId))act=`<button class="sec" style="width:auto;margin:0" data-prev="${m.id}">Proponer anular</button>`;
-   if(!isE&&!isC&&!m.confirmed&&m.to_user===myId)act=`<button style="width:auto;margin:0" data-conf="${m.id}">Confirmar</button>`;
+   if(!isE&&!isC&&!m.confirmed&&m.to_user===myId)act=`<button style="width:auto;margin:0" data-conf="${m.id}">Confirmar</button>`+(canVoid?'':` <button class="sec" style="width:auto;margin:0" data-pcancel="${m.id}" data-rej="1">Rechazar</button>`);
    if(!isE&&!isC&&!m.reversed&&canVoid&&!(m.from_user===myId&&!m.confirmed))act+=` <button class="sec" style="width:auto;margin:0" data-pcancel="${m.id}" data-adm="1">Anular pago</button>`;
   }
   const dt=m.occurred_on?esc(String(m.occurred_on).slice(5).split('-').reverse().join('/')):'';
@@ -869,7 +872,10 @@ async function openGroup(id){
   if(ym!==lastYm){lastYm=ym;const [yy,mm]=ym.split('-');const MN=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];hd=ym?`<div class="mon">${MN[Number(mm)-1]||''} ${esc(yy)}</div>`:''}
   if(!isE&&!isC){
    const who2=`${esc(name(m.from_user))} pagó a ${esc(name(m.to_user))}`;
-   return hd+`<details class="mv"><summary><span class="av" aria-hidden="true">${ic('swap',20)}</span><span class="mb"><b>${who2}</b><small>${dt}${st?' · ':''}${st}</small></span><span class="mr"><b>${money(m.amount_minor,m.currency)}</b></span></summary>${act?`<div class="mvbody">${act}</div>`:''}</details>`;
+   let pinfo='';
+   if(m.paid_currency){const d=payDir(m.paid_currency,m.currency),r=Number(m.fx_rate),shown=d.inv?1/r:r;
+    pinfo=`<div class="muted" style="flex-basis:100%">Pagó ${money(m.paid_amount_minor,m.paid_currency)} · cotización 1 ${esc(d.strong)} = ${fxStr(shown)} ${esc(d.weak)}${m.fx_source?' ('+esc(m.fx_source)+')':''}. Baja la deuda ${money(m.amount_minor,m.currency)}.${!m.confirmed&&!m.reversed&&m.to_user===myId?' Al confirmar aceptás el pago y esta cotización.':''}</div>`}
+   return hd+`<details class="mv"><summary><span class="av" aria-hidden="true">${ic('swap',20)}</span><span class="mb"><b>${who2}</b><small>${dt}${st?' · ':''}${st}${m.paid_currency?' · pagó '+money(m.paid_amount_minor,m.paid_currency):''}</small></span><span class="mr"><b>${money(m.amount_minor,m.currency)}</b></span></summary>${(act||pinfo)?`<div class="mvbody">${pinfo}${act}</div>`:''}</details>`;
   }
   let mineTxt='';
   if(isE&&!m.voided&&m.shares){const sh=Number(m.shares[myId]||0);
@@ -895,7 +901,7 @@ async function openGroup(id){
   say('Editando un gasto: al guardar, el anterior queda anulado y se crea el corregido.');$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});
  });
  $('moves').querySelectorAll('[data-crev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_compensation_reverse_propose',{p_compensation:b.dataset.crev,p_reason:null});await openGroup(gid);say('Propuesta de reversión creada: necesita la aprobación de las dos personas.')}));
- $('moves').querySelectorAll('[data-pcancel]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_cancel',{p_payment:b.dataset.pcancel});await openGroup(gid);say(b.dataset.adm?'Pago anulado. Queda registrado quién lo hizo.':'Pago cancelado: no llegó a afectar saldos.')}));
+ $('moves').querySelectorAll('[data-pcancel]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_cancel',{p_payment:b.dataset.pcancel});await openGroup(gid);say(b.dataset.adm?'Pago anulado. Queda registrado quién lo hizo.':b.dataset.rej?'Pago rechazado: no afectó los saldos.':'Pago cancelado: no llegó a afectar saldos.')}));
  $('moves').querySelectorAll('[data-prev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_create',{p_kind:'reverse_payment',p_target:b.dataset.prev,p_reason:null});await openGroup(gid);say('Propuesta creada: necesita la aprobación de todos los afectados.')}));
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
@@ -1333,13 +1339,13 @@ $('mvQ').addEventListener('input',()=>{
 function csvCell(v){const t=String(v==null?'':v);return /[";\n\r]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t}
 function exportCsv(){
  const dec=n=>(Number(n)/100).toFixed(2).replace('.',',');
- const rows=[['Fecha','Tipo','Descripción','Categoría','Moneda','Importe','Cotización','Pagó o envió','Reparto o destinatario','Estado']];
+ const rows=[['Fecha','Tipo','Descripción','Categoría','Moneda','Importe','Cotización','Pagó o envió','Reparto o destinatario','Estado','Importe pagado','Moneda pagada']];
  const kindEs={expense:'Gasto',payment:'Pago',compensation:'Compensación'};
  mvAll.filter(m=>kindEs[m.kind]).forEach(m=>{
   const c=m.category?catBy(m.category):null;
   const reparto=m.kind==='expense'?Object.entries(m.shares||{}).map(([u,v])=>nm(u)+' '+dec(v)).join(' | '):nm(m.to_user);
   const est=m.voided?'Anulado':m.kind==='payment'?(m.reversed?'Revertido':m.confirmed?'Confirmado':'Sin confirmar'):m.reversed?'Revertida':'Vigente';
-  rows.push([m.occurred_on,kindEs[m.kind],m.description||'',c?c.name:'',m.currency,dec(m.amount_minor),m.fx_rate?String(Number(m.fx_rate)).replace('.',','):'',nm(m.from_user),reparto,est]);
+  rows.push([m.occurred_on,kindEs[m.kind],m.description||'',c?c.name:'',m.currency,dec(m.amount_minor),m.fx_rate?String(Number(m.fx_rate)).replace('.',','):'',nm(m.from_user),reparto,est,m.paid_currency?dec(m.paid_amount_minor):'',m.paid_currency||'']);
  });
  const txt='﻿'+rows.map(r=>r.map(csvCell).join(';')).join('\r\n');
  const blob=new Blob([txt],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
@@ -1560,8 +1566,48 @@ $('btnExpense').onclick=busy($('btnExpense'),async()=>{
 });
 let sug=[],payBy={},guestIds=new Set(),mvAll=[],showVoided=false;
 const nm=u=>{const m=group.members.find(x=>x.user_id===u);return (m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
+// ---- Pagar en otra moneda (GF-14): el pago baja la deuda por el equivalente; se guarda lo pagado, la cotización y su fuente ----
+const STRONG=['GBP','EUR','USD','BRL','MXN','UYU','CLP','ARS'];
+let payX=null,paySug=null,payFail=false;
+const payDir=(paid,debt)=>{const a=STRONG.indexOf(paid),b=STRONG.indexOf(debt);const inv=a>=0&&b>=0&&a>b;return {inv,strong:inv?debt:paid,weak:inv?paid:debt}};
+function payCalc(){
+ if(!payX)return null;const paid=$('pCur').value,debt=payX.currency;if(paid===debt)return null;
+ const d=payDir(paid,debt),v=fxNum($('pFx').value),rate=v>0?(d.inv?1/v:v):0,pm=toMinor($('pAmt').value,paid);
+ const eq=rate>0&&pm?Math.round(pm*rate/UNIT(debt))*UNIT(debt):0;
+ return {paid,debt,d,v,rate,pm,eq};
+}
+function payNote(){
+ const c=payCalc();if(!c){$('pEq').textContent='';return}
+ let t=c.eq>0?`Tu deuda baja ${money(c.eq,c.debt)}. Quien cobra confirma el pago y esta cotización.`:'Poné el importe y la cotización.';
+ if(c.eq>payX.amount)t=`Es más de lo que debés (${money(payX.amount,c.debt)}). Bajá el importe.`;
+ else if(paySug&&paySug.paid===c.paid){
+  if(c.rate===paySug.rate)t=`Cotización ${FX_ES[group.fx_rate_type||'oficial']} de hoy (${paySug.src}, ${fxHora(paySug.at)}). Podés editarla. `+t;
+  else if(c.rate>0&&Math.abs(c.rate-paySug.rate)/paySug.rate*100>(group.fx_warn_pct||10))t=`Ojo: se aparta más de ${group.fx_warn_pct||10}% de la cotización sugerida. `+t;
+ }else if(payFail)t='No pude traer la cotización de hoy: cargala a mano. '+t;
+ $('pEq').textContent=t;
+}
+async function paySync(){
+ paySug=null;payFail=false;const c0=$('pCur').value,debt=payX.currency;
+ $('pFxBox').hidden=c0===debt;
+ if(c0===debt){$('pAmt').value=(payX.amount/100).toFixed(2).replace('.',',');return}
+ const d=payDir(c0,debt);$('pFxLbl').textContent=`Cotización: 1 ${d.strong} = ? ${d.weak}`;
+ $('pFx').value='';$('pEq').textContent='Buscando la cotización de hoy…';
+ try{
+  if(!group.fx_auto)throw Error('off');
+  const v=await fxAuto(c0,debt,group.fx_rate_type||'oficial');
+  if($('pCur').value!==c0)return;
+  paySug={paid:c0,rate:v.rate,src:v.src,at:v.at};
+  $('pFx').value=fxStr(d.inv?1/v.rate:v.rate);
+  // importe sugerido: lo que hace falta para dejar la deuda en cero, sin pasarse
+  const pmj=payX.amount/100/v.rate;$('pAmt').value=(UNIT(c0)>1?Math.floor(pmj):Math.floor(pmj*100)/100).toFixed(2).replace('.',',');
+ }catch(_){if($('pCur').value!==c0)return;payFail=true;$('pAmt').value=''}
+ payNote();
+}
 function startPay(x){
   const p=payBy[x.to];
+  payX=x;paySug=null;payFail=false;
+  {const L=[x.currency,...CUR_LIST.filter(c=>c!==x.currency)];$('pCur').innerHTML=L.map(c=>`<option value="${c}">${c}${c===x.currency?' (la de la deuda)':''}</option>`).join('');$('pCur').value=x.currency;$('pCurBox').hidden=group.cross_pay===false;$('pFxBox').hidden=true;$('pEq').textContent=''}
+  $('pDebt').textContent='Debés '+money(x.amount,x.currency)+' a '+nm(x.to)+'.';
   $('pTo').value=x.to;$('pAmt').value=(x.amount/100).toFixed(2).replace('.',',');
   $('sTitle').textContent='Le pagaste a '+nm(x.to);$('sAv').textContent=nm(x.to).charAt(0).toUpperCase();$('sAv').className='av big '+hue(x.to);
   const dest=p&&(p.alias||p.cbu);
@@ -1587,10 +1633,20 @@ function openSettle(){
 $('btnSettle').onclick=openSettle;
 $('btnSettleBack').onclick=()=>{show('vGroup')};
 $('btnPayBack').onclick=openSettle;
+$('pCur').addEventListener('change',()=>paySync());
+$('pFx').addEventListener('input',payNote);$('pAmt').addEventListener('input',payNote);
 $('btnPay').onclick=busy($('btnPay'),async()=>{
- const amt=toMinor($('pAmt').value);if(!amt)throw Error('Importe inválido');
  if(!$('pTo').value)throw Error('No hay a quién pagarle');
- await rpc('cuentas_payment_add',{p_group:gid,p_currency:group.reference_currency,p_amount_minor:amt,p_to:$('pTo').value,p_description:null,p_occurred_on:today(),p_key:newKey()});
+ const dc=payX?payX.currency:group.reference_currency,c=payCalc();
+ if(c){
+  if(!(c.rate>0))throw Error('Poné la cotización');if(!c.pm)throw Error('Importe inválido');if(!(c.eq>0))throw Error('El importe es demasiado chico para esa cotización');
+  if(c.eq>payX.amount)throw Error('Es más de lo que debés: bajá el importe');
+  const same=paySug&&paySug.paid===c.paid&&c.rate===paySug.rate;
+  await rpc('cuentas_payment_add',{p_group:gid,p_currency:dc,p_amount_minor:c.eq,p_to:$('pTo').value,p_description:null,p_occurred_on:today(),p_key:newKey(),p_paid_currency:c.paid,p_paid_minor:c.pm,p_fx:Number(c.rate.toPrecision(12)),p_fx_source:same?paySug.src:'manual',p_fx_at:same?paySug.at:null});
+ }else{
+  const amt=toMinor($('pAmt').value,dc);if(!amt)throw Error('Importe inválido');
+  await rpc('cuentas_payment_add',{p_group:gid,p_currency:dc,p_amount_minor:amt,p_to:$('pTo').value,p_description:null,p_occurred_on:today(),p_key:newKey()});
+ }
  $('pAmt').value='';await openGroup(gid);setTab('gastos');say('Pago registrado: queda pendiente hasta que lo confirme quien cobra.');
 });
 
