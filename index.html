@@ -74,7 +74,15 @@ details.card[open]>summary{margin-bottom:10px}
 .actions{gap:8px}.topbar{flex-wrap:nowrap;justify-content:space-between;gap:8px;margin-bottom:2px}.topbar>*{margin:0;min-width:0;flex:0 0 auto!important;padding:6px 2px}.actions>*{min-width:0;margin:6px 0 0}
 .fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:20;display:flex;align-items:center;gap:8px;width:auto;min-height:0;margin:0;padding:14px 22px;border-radius:999px;box-shadow:0 8px 22px #0000004d;font-size:1.02rem;font-weight:700}.fab[hidden]{display:none!important}body::after{content:'';display:block;height:96px}
 main{padding-bottom:96px}header{justify-content:flex-start}
-#cExpense:not([open]){display:none}#cExpense>summary{display:none}
+#cExpense:not([open]){display:none}
+.savebar{position:sticky;bottom:0;z-index:5;margin:18px calc(-1*max(16px,env(safe-area-inset-left,0px))) 0;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--bg);border-top:1px solid var(--line)}
+.savebar #btnExpense{margin:0;width:100%;min-height:52px;font-size:1.05rem}.sb2{display:flex;justify-content:center;gap:16px}.sb2 .lnk{margin:2px 0 0;padding:6px 8px}
+.repbtn{width:100%;margin:14px 0 0;justify-content:space-between;text-align:left;display:flex;align-items:center;gap:8px;min-height:52px;white-space:normal}.repbtn .rs{flex:1;min-width:0}.repbtn .go{display:inline-flex;transition:transform .15s}.repbtn[aria-expanded=true] .go{transform:rotate(90deg)}
+#eRepBox{margin-top:6px}
+.dchips{display:flex;gap:8px;margin:2px 0 6px}.dchips .chip{flex:1;min-width:0;justify-content:center;padding:10px 12px;min-height:44px}
+#eCats{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;padding-bottom:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}#eCats::-webkit-scrollbar{display:none}#eCats .chip{flex:0 0 auto;min-width:0;white-space:nowrap}
+.msgact{background:transparent!important;color:inherit!important;border:0!important;text-decoration:underline;font-weight:700;width:auto!important;margin:0 0 0 6px!important;padding:6px 8px!important;display:inline!important;min-height:0!important;box-shadow:none!important}
+body:has(#vGroup.ex-open) #msg{bottom:calc(150px + env(safe-area-inset-bottom,0px))}#cExpense>summary{display:none}
 .adv{border:1px solid var(--line);border-radius:10px;padding:10px;margin:4px 0 12px}.adv>summary{color:var(--accent-text)}.adv[open]>summary{margin-bottom:8px}
 .avatar{margin-left:auto!important}.burger{width:44px;height:44px;margin:0;padding:0;min-height:0;background:var(--tinte);border-radius:12px;color:var(--accent-text);box-shadow:none;position:relative;display:grid;place-items:center}.burger i{position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:50%;background:var(--warm)}#who{display:none}#cNew:not([open]){display:none}#cNew>summary{display:none}
 .avatar{width:42px;height:42px;border-radius:50%;margin:0;padding:0;min-height:0;background:var(--tile);color:var(--accent-text);font-weight:850;font-size:1.05rem;box-shadow:none}
@@ -324,12 +332,14 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
    <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300" placeholder="Ej. Asado, Nafta, Vinos">
    <label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00" style="font-size:1.6rem;font-weight:700"><p class="muted fine" id="eAmtNote" aria-live="polite" style="margin:4px 0 0"></p>
    <div class="xbtns"><button type="button" class="sec" id="btnDate" aria-expanded="false" aria-controls="ePanDate"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span id="eDateLbl">Hoy</span></button><button type="button" class="sec" id="btnNotes" aria-expanded="false" aria-controls="ePanNotes"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg><span id="eNotesLbl">Notas</span></button><button type="button" class="sec" id="btnRcpt"></button></div>
-   <div id="ePanDate" class="xpan" hidden><label for="eDate">Fecha del gasto</label><input type="date" id="eDate"><label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select></div>
+   <div id="ePanDate" class="xpan" hidden><div class="dchips" id="eDateChips"><button type="button" class="chip" data-dd="0">Hoy</button><button type="button" class="chip" data-dd="1">Ayer</button></div><label for="eDate">Otra fecha</label><input type="date" id="eDate"><label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select></div>
    <div id="ePanNotes" class="xpan" hidden><label for="eNotes">Notas</label><textarea id="eNotes" maxlength="1000" rows="3" placeholder="Algo que quieras recordar de este gasto"></textarea></div>
    <div class="rcpt" id="eRcptBox"><input type="file" id="eRcptIn" accept="image/*" hidden><span class="muted" id="eRcptName"></span><button type="button" class="lnk" id="btnRcptX" hidden>Quitar</button></div>
    <div id="ocrBox" hidden><button type="button" class="sec" id="btnOcr" style="width:auto;margin:6px 0">Leer importe y fecha del ticket</button><p class="muted fine" id="ocrNote" aria-live="polite" style="margin:4px 0"></p><button type="button" id="btnOcrUse" hidden style="width:auto;margin:4px 0">Usar estos datos</button> <button type="button" class="sec" id="btnOcrSum" hidden style="width:auto;margin:4px 0"></button><details id="ocrRawBox" hidden><summary class="muted fine">Ver lo que leyó</summary><pre id="ocrRaw" class="muted fine" style="white-space:pre-wrap;margin:4px 0"></pre></details></div>
    <label id="eCatsLbl">Categoría</label><div id="eCats" class="chips" role="group" aria-labelledby="eCatsLbl"></div>
    <div id="eSolo" hidden><button type="button" class="lnk" id="btnSoloAdd" style="padding-left:0">+ Dividir con otra persona</button><div id="eSoloBox" hidden><label for="eSoloName">Nombre</label><div class="irow"><input id="eSoloName" maxlength="40" placeholder="Ej. Lu" autocomplete="off"><button type="button" class="sec" id="btnSoloOk" style="width:auto;margin:0">Sumar</button></div><p class="muted fine">Queda en el grupo y ya podés repartir con esa persona.</p></div></div>
+   <button type="button" class="sec repbtn" id="btnRep" aria-expanded="false" aria-controls="eRepBox"></button>
+   <div id="eRepBox" hidden>
    <div class="pm" id="ePm"><div><label for="ePayer">Pagó</label><select id="ePayer"></select></div><div><label for="eMode">Dividir</label><select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select></div></div>
    <details id="eAdv" class="adv" data-adv><summary id="eAdvSum">Entre todos</summary>
     <label>Entre quiénes</label><div id="eParts"></div>
@@ -337,9 +347,8 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
     <label for="eCur">Moneda</label><select id="eCur"></select>
     <div id="eFxBox" hidden><label for="eFx" id="eFxLbl">Cotización</label><input id="eFx" inputmode="decimal" placeholder="0,00"><p id="eFxNote" class="muted" style="margin:6px 0 0"></p></div>
    </details>
-   <button id="btnExpense">Guardar gasto</button>
-   <button class="sec" id="btnEditCancel" hidden>Cancelar edición</button>
-   <button class="sec" id="btnExpClose">Cancelar</button>
+   </div>
+   <div class="savebar"><button id="btnExpense">Guardar gasto</button><div class="sb2"><button class="lnk" id="btnEditCancel" hidden>Cancelar edición</button><button class="lnk" id="btnExpClose">Cancelar</button></div></div>
   </details>
   <div class="card" id="cProps" hidden><h2>Propuestas pendientes</h2><p class="muted">Leer no es consentir: tu decisión queda ligada a esta versión exacta de la propuesta.</p><div id="props"></div></div>
   <div class="feed"><h2>Movimientos</h2><div class="search" id="mvSearch" hidden><span class="si" aria-hidden="true"></span><input id="mvQ" type="search" placeholder="Buscar por descripción, persona o categoría" aria-label="Buscar movimientos" autocomplete="off"></div><p id="mvNone" class="muted" hidden>No encontré movimientos con eso.</p><div id="moves"></div><button class="lnk" id="btnVoided" hidden></button></div>
@@ -444,6 +453,7 @@ let session=null,group=null,gid=null,myId=null,tab='gastos',editId=null,editDate
 try{const r=JSON.parse(localStorage.getItem(STORE)||'null');if(r&&r.access_token&&r.refresh_token)session=r}catch(_){}
 let sayT=0;const sayOff=()=>{clearTimeout(sayT);const m=$('msg');m.textContent=''};
 // Avisos: duran según el largo (errores 4 a 7 s, confirmaciones 2,5 s), se cierran tocándolos o al volver a escribir.
+const sayAct=(t,acts,ms)=>{const m=$('msg');clearTimeout(sayT);m.className='';m.textContent=t+' ';acts.forEach(a=>{const b=document.createElement('button');b.type='button';b.className='msgact';b.textContent=a.label;b.onclick=e=>{e.stopPropagation();clearTimeout(sayT);m.textContent='';a.fn()};m.appendChild(b)});sayT=setTimeout(()=>{m.textContent=''},ms||7000)};
 const say=(t,bad)=>{const m=$('msg');clearTimeout(sayT);m.textContent=t||'';m.className=bad?'bad':'';if(t)sayT=setTimeout(()=>{m.textContent=''},bad?Math.min(7000,Math.max(4000,String(t).length*60)):2500)};
 $('msg').addEventListener('click',sayOff);
 document.addEventListener('input',()=>{if($('msg').className==='bad')sayOff()});
@@ -798,7 +808,7 @@ $('btnOcr').onclick=busy($('btnOcr'),async()=>{
 $('btnOcrSum').onclick=()=>{if(!ocrRes||!ocrRes.sum)return;ocrRes.amount=ocrRes.sum;$('btnOcrUse').onclick()};
 $('btnOcrUse').onclick=()=>{
  if(!ocrRes)return;
- if(ocrRes.amount){$('eAmt').value=String(ocrRes.amount.toFixed(2)).replace('.',',');amtNote()}
+ if(ocrRes.amount){$('eAmt').value=fmtAmtLive(String(ocrRes.amount.toFixed(2)).replace('.',','));amtNote()}
  if(ocrRes.shop&&!$('eDesc').value.trim())$('eDesc').value=ocrRes.shop;
  if(ocrRes.date){$('eDate').value=ocrRes.date;$('ePanDate').hidden=false;$('btnDate').setAttribute('aria-expanded','true');xbUi()}
  $('btnOcrUse').hidden=true;$('btnOcrSum').hidden=true;$('ocrNote').textContent='Listo. Revisá los datos y guardá.';
@@ -974,7 +984,7 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
   const m=mv.find(x=>x.id===b.dataset.edit);if(!m)return;
   editId=m.id;editDate=m.occurred_on||null;repVis();
-  $('cExpense').open=true;$('fab').hidden=true;$('eAdv').open=true;$('eDesc').value=m.description||'';$('eDate').value=m.occurred_on?String(m.occurred_on).slice(0,10):'';$('eNotes').value=m.notes||'';if(m.notes)$('ePanNotes').hidden=false;xbUi();$('eAmt').value=(Number(m.amount_minor)/100).toFixed(2).replace('.',',');$('ePayer').value=m.from_user;fillCur(m.currency);$('eFx').value=m.fx_rate?String(Number(m.fx_rate)).replace('.',','):'';catSel=m.category&&cats.some(c=>c.key===m.category)?m.category:null;catAuto=false;renderCats();syncFx();
+  $('cExpense').open=true;$('fab').hidden=true;$('eAdv').open=true;$('eRepBox').hidden=false;$('btnRep').setAttribute('aria-expanded','true');$('eDesc').value=m.description||'';$('eDate').value=m.occurred_on?String(m.occurred_on).slice(0,10):'';$('eNotes').value=m.notes||'';if(m.notes)$('ePanNotes').hidden=false;xbUi();$('eAmt').value=fmtAmtLive((Number(m.amount_minor)/100).toFixed(2).replace('.',','));$('ePayer').value=m.from_user;fillCur(m.currency);$('eFx').value=m.fx_rate?String(Number(m.fx_rate)).replace('.',','):'';catSel=m.category&&cats.some(c=>c.key===m.category)?m.category:null;catAuto=false;renderCats();syncFx();
   const sh=m.shares||{};const ids=Object.keys(sh);const vals=ids.map(k=>Number(sh[k]));
   const wsh=weightsDiffer(ids)?weightedShares(Number(m.amount_minor),ids):null;
   const equal=(vals.length>0&&Math.max(...vals)-Math.min(...vals)<=1)||!!(wsh&&ids.every(k=>Math.abs((wsh[k]||0)-Number(sh[k]))<=1));
@@ -990,11 +1000,37 @@ async function openGroup(id){
 }
 function soloUi(){
  const solo=!!group&&group.members.filter(m=>m.status==='active').length<2&&!editId;
- $('eSolo').hidden=!solo;$('ePm').hidden=$('eAdv').hidden=solo;if(!solo)$('eSoloBox').hidden=true;
- if(solo){$('eAdv').open=false}
+ $('eSolo').hidden=!solo;$('btnRep').hidden=solo;if(solo){$('eRepBox').hidden=true;$('eAdv').open=false}else $('eSoloBox').hidden=true;repSum()
 }
-function amtNote(){const v=$('eAmt').value.trim();if(!v){$('eAmtNote').textContent='';return}const m=toMinor(v,$('eCur').value||(group&&group.reference_currency)||'ARS');$('eAmtNote').textContent=m?'Son '+money(m,$('eCur').value||group.reference_currency):'Importe inválido'}
-$('eAmt').addEventListener('input',amtNote);
+function fmtAmtLive(v){
+ let s=String(v||'').replace(/[^\d.,]/g,'');if(!s)return '';
+ let int=s,dec=null;const k=s.lastIndexOf(',');
+ if(k>=0){int=s.slice(0,k);dec=s.slice(k+1).replace(/\D/g,'').slice(0,2)}
+ else if(/^\d+\.\d{1,2}$/.test(s)){const q=s.indexOf('.');int=s.slice(0,q);dec=s.slice(q+1)}
+ int=int.replace(/\D/g,'').replace(/^0+(?=\d)/,'');if(int==='')int=dec!==null?'0':'';
+ int=int.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+ return dec!==null?int+','+dec:int;
+}
+window.fmtAmtLive=fmtAmtLive;
+function amtNote(){const v=$('eAmt').value.trim(),cur=$('eCur').value||(group&&group.reference_currency)||'ARS';const m=v?toMinor(v,cur):null;
+ $('eAmtNote').textContent=v&&!m?'Importe inválido':'';
+ if(!editId)$('btnExpense').textContent=m?'Guardar '+money(m,cur):'Guardar gasto';repSum()}
+function repSum(){
+ if(!group||!$('btnRep'))return;
+ const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')],ps=cs.filter(c=>c.checked),mode=$('eMode').value,payer=$('ePayer').value;
+ const cur=$('eCur').value||group.reference_currency,amt=toMinor($('eAmt').value,cur);
+ let t=payer===myId?'Pagaste vos':'Pagó '+nm(payer);
+ t+=' · '+(mode==='pc'?'por porcentajes':mode==='ex'?'importes exactos':(ps.length===cs.length?'entre todos ('+cs.length+')':'entre '+ps.length+' de '+cs.length));
+ if(mode==='eq'&&amt&&ps.length&&!weightsDiffer(ps.map(c=>c.value)))t+=' · '+money(Math.round(amt/ps.length),cur)+' c/u';
+ if(cur!==group.reference_currency)t=cur+' · '+t;
+ $('btnRep').innerHTML='<span class="rs">'+esc(t)+'</span><span class="go">'+ic('right',20)+'</span>';
+}
+$('btnRep').onclick=()=>{const h=!$('eRepBox').hidden;$('eRepBox').hidden=h;$('btnRep').setAttribute('aria-expanded',String(!h))};
+$('eAmt').addEventListener('input',()=>{const el=$('eAmt'),f=fmtAmtLive(el.value);if(f!==el.value){el.value=f;try{el.setSelectionRange(f.length,f.length)}catch(_){}}amtNote()});
+$('ePayer').addEventListener('change',repSum);$('eCur').addEventListener('change',amtNote);
+$('eParts').addEventListener('change',repSum);
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-dd]');if(!b)return;
+ const n=Number(b.dataset.dd);if(!n)$('eDate').value='';else{const d=new Date();d.setDate(d.getDate()-n);$('eDate').value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}xbUi()});
 $('btnSoloAdd').onclick=()=>{const h=!$('eSoloBox').hidden;$('eSoloBox').hidden=h;if(!h)$('eSoloName').focus()};
 $('eSoloName').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('btnSoloOk').click()}};
 $('btnSoloOk').onclick=busy($('btnSoloOk'),async()=>{
@@ -1002,18 +1038,20 @@ $('btnSoloOk').onclick=busy($('btnSoloOk'),async()=>{
  const d=$('eDesc').value,a=$('eAmt').value;
  await rpc('cuentas_guest_add',{p_group:gid,p_name:n});await openGroup(gid);
  $('cExpense').open=true;$('fab').hidden=true;$('eDesc').value=d;$('eAmt').value=a;amtNote();
- $('eAdv').open=true;$('eAmt').focus();say(n+' ya está en el grupo.');
+ $('eRepBox').hidden=false;$('btnRep').setAttribute('aria-expanded','true');$('eAdv').open=true;repSum();$('eAmt').focus();say(n+' ya está en el grupo.');
 });
 function xbUi(){
  const d=$('eDate').value,r=$('eRep').value&&!editId,n=$('eNotes').value.trim();
- $('eDateLbl').textContent=(d?fmtD(d)+'/'+d.slice(2,4):'Hoy')+(r?' ↻':'');
+ const yd=(()=>{const x=new Date();x.setDate(x.getDate()-1);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')})();
+ $('eDateLbl').textContent=(!d||d===today()?'Hoy':d===yd?'Ayer':fmtD(d)+'/'+d.slice(2,4))+(r?' ↻':'');
+ $('eDateChips').querySelectorAll('[data-dd]').forEach(b=>{const on=b.dataset.dd==='0'?(!d||d===today()):d===yd;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))});
  $('eNotesLbl').textContent=n?'Notas ✓':'Notas';
 }
 $('btnDate').onclick=()=>{const h=!$('ePanDate').hidden;$('ePanDate').hidden=h;$('btnDate').setAttribute('aria-expanded',String(!h))};
 $('btnNotes').onclick=()=>{const h=!$('ePanNotes').hidden;$('ePanNotes').hidden=h;$('btnNotes').setAttribute('aria-expanded',String(!h));if(h===false)$('eNotes').focus()};
 $('eDate').addEventListener('change',xbUi);$('eRep').addEventListener('change',xbUi);$('eNotes').addEventListener('input',xbUi);
 function repVis(){const on=!editId;$('eRep').hidden=$('eRepLbl').hidden=!on;if(!on)$('eRep').value=''}
-function resetEdit(){try{$('eDate').value='';$('eNotes').value='';$('eRep').value='';$('ePanDate').hidden=$('ePanNotes').hidden=true;$('btnDate').setAttribute('aria-expanded','false');$('btnNotes').setAttribute('aria-expanded','false')}catch(e){console.error('RESETERR '+e.message)}rcptBlob=null;try{$('eRcptIn').value='';rcptUi()}catch(_){}editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('eTitle').textContent='Nuevo gasto';$('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true;xbUi();try{soloUi();amtNote()}catch(_){}}
+function resetEdit(){try{$('eDate').value='';$('eNotes').value='';$('eRep').value='';$('ePanDate').hidden=$('ePanNotes').hidden=true;$('btnDate').setAttribute('aria-expanded','false');$('btnNotes').setAttribute('aria-expanded','false')}catch(e){console.error('RESETERR '+e.message)}rcptBlob=null;try{$('eRcptIn').value='';rcptUi()}catch(_){}editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('eTitle').textContent='Nuevo gasto';$('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true;xbUi();try{$('eRepBox').hidden=true;$('btnRep').setAttribute('aria-expanded','false');soloUi();amtNote()}catch(_){}}
 function updAdv(){
  const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')];const n=cs.filter(c=>c.checked).length;
  const wd=weightsDiffer(cs.filter(c=>c.checked).map(c=>c.value));
@@ -1023,7 +1061,7 @@ function updAdv(){
 }
 function syncMode(){
  const ex=$('eMode').value!=='eq';
- updAdv();$('eParts').classList.toggle('exact',ex);$('eSum').hidden=!ex;if(ex)$('eAdv').open=true;
+ updAdv();$('eParts').classList.toggle('exact',ex);$('eSum').hidden=!ex;if(ex){$('eAdv').open=true;$('eRepBox').hidden=false;$('btnRep').setAttribute('aria-expanded','true')}repSum();
  $('eParts').querySelectorAll('.amt').forEach(i=>i.placeholder=$('eMode').value==='pc'?'0 %':'0,00');updSum();
 }
 function exactShares(){
@@ -1670,7 +1708,9 @@ $('btnExpense').onclick=busy($('btnExpense'),async()=>{
  let rcptMsg='';
  if(newId){const old=editId;if(rcptBlob){try{await uploadReceipt(newId,rcptBlob)}catch(e){rcptMsg=' No se pudo subir la foto ('+e.message+'): agregala desde el gasto.'}}else if(wasEdit&&rcpts[old]){try{await rpc('cuentas_receipt_copy',{p_from:old,p_to:newId})}catch(_){}}}
  rcptBlob=null;rcptUi();
- $('eDesc').value='';$('eAmt').value='';await openGroup(gid);say((wasEdit?'Gasto editado: el anterior quedó anulado.':'Gasto guardado.')+rcptMsg,!!rcptMsg);
+ $('eDesc').value='';$('eAmt').value='';await openGroup(gid);
+ if(!wasEdit&&!rcptMsg&&newId){const nid=newId;sayAct('Gasto guardado.',[{label:'Deshacer',fn:()=>busy($('btnExpense'),async()=>{await rpc('cuentas_expense_void',{p_expense:nid,p_reason:'deshecho al instante'});await openGroup(gid);say('Gasto deshecho. Queda anulado en el historial.')})()},{label:'Cargar otro',fn:()=>$('fab').click()}]);return}
+ say((wasEdit?'Gasto editado: el anterior quedó anulado.':'Gasto guardado.')+rcptMsg,!!rcptMsg);
 });
 let sug=[],payBy={},guestIds=new Set(),mvAll=[],showVoided=false;
 const nm=u=>{const m=group.members.find(x=>x.user_id===u);return (m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
