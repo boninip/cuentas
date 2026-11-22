@@ -717,4 +717,8 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  t=await mk(b);await openExp(t);await t.page.click('span.rs');await t.page.waitForTimeout(200);
  const fs=await t.page.evaluate(()=>{const g=e=>{const c=getComputedStyle(document.querySelector(e));return c.fontSize+'/'+c.fontWeight};return {a:g('#eAdvSum .advsum'),s:g('#ePayer'),m:g('#eMode')}});
  ok(fs.a===fs.s&&fs.s===fs.m,'tipografía: «Entre todos» tiene la misma letra que Pagó y Dividir ('+fs.a+' vs '+fs.s+')');
+ // tipografía: los botones del grupo y del inicio comparten tamaño de letra
+ t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.waitForTimeout(300);
+ const bs=await t.page.evaluate(()=>['#fab','#btnSettle','#btnSaldos','#btnInvite','#btnBack'].map(e=>getComputedStyle(document.querySelector(e)).fontSize));
+ ok(new Set(bs).size===1,'tipografía: Agregar gasto, Saldar deuda, Saldos, Personas y Grupos tienen el mismo tamaño ('+bs.join(', ')+')');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
