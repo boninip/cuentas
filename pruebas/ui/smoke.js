@@ -728,4 +728,10 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(fr.box==='0px','formulario: el reparto abierto se une a la tarjeta de arriba (sin borde doble)');
  ok(fr.sbB===fr.vh,'formulario: la barra de guardar queda pegada al borde de abajo ('+fr.sbB+' de '+fr.vh+')');
  ok(await t.page.evaluate(()=>getComputedStyle(document.querySelector('#eRecent'),'::before').content)==='"Recientes"','formulario: rótulo «Recientes» sobre los atajos');
+ // íconos: «Foto» es una cámara y «Ajustes» una tuerca (no un comprobante ni un sol)
+ t=await mk(b);await openExp(t);
+ const icn=await t.page.evaluate(()=>({foto:document.querySelector('#btnRcpt svg').innerHTML.includes('cy="13"'),ajustes:document.querySelector('#btnGear svg').innerHTML.includes('1.724')}));
+ ok(icn.foto,'íconos: «Foto» usa una cámara');
+ ok(icn.ajustes,'íconos: «Ajustes» usa una tuerca');
+ ok(await t.page.evaluate(()=>document.querySelector('#btnScan svg')!==null),'íconos: «Escanear ticket» tiene ícono');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
