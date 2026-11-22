@@ -542,6 +542,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  {t=await mk(b,{lk:{empty:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
   const P=await t.page.evaluate(()=>[ocrParse('SUPER X\nCUIT 30-1234\nFecha 15/11/2026\nSUBTOTAL 10.000,00\nIVA 2.100,00\nTOTAL $ 12.100,00'),ocrParse('Cafe 1.500,00\nTorta 3.200,00'),ocrParse('12-3-26 total 350.50'),ocrParse('sin datos'),ocrParse('fecha 31/02/2026 total 10,00'),ocrParse('KIOSCO\nTOTAL $ 12.345\n'),ocrParse('Gracias\nTOTAL 8500\n')]);
   ok(P[5].amount===12345&&P[6].amount===8500,'ocr: acepta el total sin centavos (12.345 o 8500)');
+  {const R=await t.page.evaluate(x=>ocrParse(x),'SeG 1\n24-08-2025 19:34\n1 Bagel $ 11.500,00\n3 Cafe $ 10.500,00\n2 Desayuno $ 32.000,00\n1 Adicional $ 600,00\nTOTAL $ 105.100,00\nPropina Sugerida: 10% $ 10.610,00\nTotal con Propina Sugerida $ 116.710,00');ok(R.amount===105100&&R.date==='2025-08-24'&&R.sum===54600,'ocr: no confunde "Total con propina" con el total; suma los renglones');ok(R.shop===null,'ocr: no propone un comercio mal leído (SeG 1)')}
   ok(P[0].amount===12100&&P[0].date==='2026-11-15','ocr: toma el TOTAL (no subtotal ni IVA) y la fecha');
   ok(P[0].shop==='Super X'&&P[1].shop===null,'ocr: el comercio es la primera línea con nombre (sin CUIT, fecha ni números) y no se inventa');
   ok(P[1].amount===3200,'ocr: sin la palabra total, toma el mayor');
@@ -566,6 +567,13 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   await t.page.setInputFiles('#eRcptIn',{name:'raro.heic',mimeType:'image/heic',buffer:Buffer.from('no es una imagen')});await t.page.waitForTimeout(600);
   const mt=await t.page.textContent('#msg');
   ok(/No pude abrir esa foto/.test(mt)&&!/decoded/i.test(mt)&&!(await t.page.isVisible('#btnOcr')),'foto: si no se puede abrir, avisa en castellano y no ofrece leerla');}
+ // OCR: el total no coincide con la suma de renglones -> ofrece la suma
+ {t=await mk(b,{lk:{empty:true}});await t.page.route('**/tesseract.min.js',r=>r.fulfill({contentType:'application/javascript',body:"window.Tesseract={recognize:async()=>({data:{text:'KIOSCO LUNA\\n1 Pan $ 1.000,00\\n1 Cafe $ 2.000,00\\n1 Torta $ 3.000,00\\nTOTAL $ 5.000,00\\n'}})}"}));
+  await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#fab',{state:'visible'});await t.page.click('#fab');
+  await t.page.setInputFiles('#eRcptIn',{name:'t.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEUlEQVR4nGM44eCAFTEMLQkALKhSAY1dq8cAAAAASUVORK5CYII=','base64')});await t.page.waitForTimeout(500);
+  await t.page.click('#btnOcr');await t.page.waitForTimeout(600);
+  ok(/suman/.test(await t.page.textContent('#ocrNote'))&&await t.page.isVisible('#btnOcrSum')&&/6\.000,00/.test(await t.page.textContent('#btnOcrSum')),'ocr: si el total no coincide con los renglones, avisa y ofrece la suma');
+  await t.page.click('#btnOcrSum');ok(await t.page.inputValue('#eAmt')==='6000,00'&&!t.calls.some(c=>c.startsWith('cuentas_expense_add')),'ocr: usar la suma completa el importe sin guardar')}
  // avisos de error cortos
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');
