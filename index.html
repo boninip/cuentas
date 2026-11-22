@@ -556,10 +556,10 @@ function renderStats(rows){
  sv('stSub',(t.pos>0&&t.neg>0)?'A favor '+moneyS(t.pos,cur)+' · Debés '+moneyS(t.neg,cur):(net===0?'No tenés saldos pendientes':''));
 }
 function renderGroups(){
- $('optPersonal').hidden=gsAll.some(g=>g.kind==='personal');
+ $('optPersonal').hidden=false;const gl=gsAll.filter(g=>g.kind!=='personal');
  const lim=showAll?99:4;const isSettled=g=>g.member_status!=='former'&&rowsBal&&!(rowsBal.find(x=>x.g.id===g.id)||{mine:[]}).mine[0];
- const ordered=gsAll.slice();if(rowsBal)ordered.sort((a,b)=>Number(isSettled(a))-Number(isSettled(b)));const list=ordered.slice(0,lim);
- $('btnAllG').hidden=gsAll.length<=4;$('btnAllG').textContent=showAll?'Ver menos ›':'Ver todos ›';
+ const ordered=gl.slice();if(rowsBal)ordered.sort((a,b)=>Number(isSettled(a))-Number(isSettled(b)));const list=ordered.slice(0,lim);
+ $('btnAllG').hidden=gl.length<=4;$('btnAllG').textContent=showAll?'Ver menos ›':'Ver todos ›';
   let sepDone=false;
  const html=list.map(g=>{
   let sep='';if(rowsBal&&!sepDone&&isSettled(g)&&list.some(x=>!isSettled(x))){sepDone=true;sep='<div class="grp-h">Sin saldos pendientes</div>'}

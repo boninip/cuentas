@@ -517,7 +517,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('#optPersonal');await t.page.waitForTimeout(500);
  ok(t.calls.some(c=>c.startsWith('cuentas_personal_group'))&&await t.page.isVisible('#vGroup'),'sin grupo: se crea y se abre');
  t=await mk(b,{lk:{personal:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
- ok(!(await t.page.isVisible('#optPersonal')),'sin grupo: si ya existe no se ofrece de nuevo');
+ ok(await t.page.isVisible('#optPersonal')&&(await t.page.locator('#groups [data-g]').count())===1,'sin grupo: si ya existe sigue fijo en el menú principal y no se repite en la lista');
  await t.page.evaluate(()=>document.getElementById('fab').click());await t.page.waitForTimeout(200);
  ok(/Gastos sin grupo/.test(await t.page.textContent('#pkL')),'elegir grupo: "Gastos sin grupo" está entre las opciones');
  // importe con punto decimal y formulario liviano
