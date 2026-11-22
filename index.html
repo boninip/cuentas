@@ -171,7 +171,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 .dtrack .df{position:absolute;top:0;bottom:0}.dtrack .df.p{background:var(--good);border-radius:0 99px 99px 0}.dtrack .df.n{background:var(--bad);border-radius:99px 0 0 99px}
 .an-det{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:var(--card)}.an-det .dh{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:4px}.an-det .dh span{color:var(--muted);font-size:.86rem}
 /* categorías, familia, búsqueda, pendientes */
-.rcpt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.rcpt .sec{width:auto;margin:0;display:inline-flex;align-items:center;gap:8px}
+.xbtns{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}.xbtns .sec{width:auto;margin:0;display:inline-flex;align-items:center;gap:8px}.xpan{margin:4px 0 8px}.xpan textarea{width:100%;box-sizing:border-box;font:inherit}.rcpt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.rcpt .sec{width:auto;margin:0;display:inline-flex;align-items:center;gap:8px}
 #rcptView{position:fixed;inset:0;z-index:30;background:#000d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}#rcptView[hidden]{display:none}
 #rcptView img{max-width:100%;max-height:78vh;border-radius:12px;background:#fff}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
@@ -218,6 +218,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  <div class="sech"><h2>Mis grupos</h2><span class="sechr"><button class="lnk" id="btnAllG" hidden>Ver todos ›</button></span></div>
  <button class="newrow" id="optNew"><span class="plus" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>Nuevo grupo</button>
  <div class="opts" id="groups"></div>
+ <button class="newrow" id="optPersonal" hidden><span class="plus" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg></span><span class="ot"><b>Gastos sin grupo</b><small>Para gastos sueltos entre amigos</small></span></button>
  <p id="noGroups" class="muted" hidden>Todavía no tenés grupos. Creá el primero con “Nuevo grupo”.</p>
  <details class="card" id="cTrash" hidden><summary class="srow"><span class="ot"><b>Papelera</b><small id="trashN"></small></span><span class="chev">›</span></summary><p class="muted">Grupos vacíos eliminados. Se pueden restaurar durante 30 días.</p><div id="trashList"></div></details>
   <details class="card" id="cNew">
@@ -322,6 +323,9 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
    <h2 id="eTitle">Nuevo gasto</h2><div class="muted" id="eGrp"></div>
    <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300" placeholder="Ej. Asado, Nafta, Vinos">
    <label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00" style="font-size:1.6rem;font-weight:700">
+   <div class="xbtns"><button type="button" class="sec" id="btnDate" aria-expanded="false" aria-controls="ePanDate"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span id="eDateLbl">Hoy</span></button><button type="button" class="sec" id="btnNotes" aria-expanded="false" aria-controls="ePanNotes"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg><span id="eNotesLbl">Notas</span></button></div>
+   <div id="ePanDate" class="xpan" hidden><label for="eDate">Fecha del gasto</label><input type="date" id="eDate"><label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select></div>
+   <div id="ePanNotes" class="xpan" hidden><label for="eNotes">Notas</label><textarea id="eNotes" maxlength="1000" rows="3" placeholder="Algo que quieras recordar de este gasto"></textarea></div>
    <div class="rcpt" id="eRcptBox"><input type="file" id="eRcptIn" accept="image/*" hidden><button type="button" class="sec" id="btnRcpt"></button><span class="muted" id="eRcptName"></span><button type="button" class="lnk" id="btnRcptX" hidden>Quitar</button></div>
    <label id="eCatsLbl">Categoría</label><div id="eCats" class="chips" role="group" aria-labelledby="eCatsLbl"></div>
    <div class="pm"><div><label for="ePayer">Pagó</label><select id="ePayer"></select></div><div><label for="eMode">Dividir</label><select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select></div></div>
@@ -330,7 +334,6 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
     <p id="eSum" class="muted" hidden></p>
     <label for="eCur">Moneda</label><select id="eCur"></select>
     <div id="eFxBox" hidden><label for="eFx" id="eFxLbl">Cotización</label><input id="eFx" inputmode="decimal" placeholder="0,00"><p id="eFxNote" class="muted" style="margin:6px 0 0"></p></div>
-    <label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select>
    </details>
    <button id="btnExpense">Guardar gasto</button>
    <button class="sec" id="btnEditCancel" hidden>Cancelar edición</button>
@@ -547,6 +550,7 @@ function renderStats(rows){
  sv('stSub',(t.pos>0&&t.neg>0)?'A favor '+moneyS(t.pos,cur)+' · Debés '+moneyS(t.neg,cur):(net===0?'No tenés saldos pendientes':''));
 }
 function renderGroups(){
+ $('optPersonal').hidden=gsAll.some(g=>g.kind==='personal');
  const lim=showAll?99:4;const isSettled=g=>g.member_status!=='former'&&rowsBal&&!(rowsBal.find(x=>x.g.id===g.id)||{mine:[]}).mine[0];
  const ordered=gsAll.slice();if(rowsBal)ordered.sort((a,b)=>Number(isSettled(a))-Number(isSettled(b)));const list=ordered.slice(0,lim);
  $('btnAllG').hidden=gsAll.length<=4;$('btnAllG').textContent=showAll?'Ver menos ›':'Ver todos ›';
@@ -593,8 +597,11 @@ function pickGroup(title,list,cb){
  lastFocus=document.activeElement;$('pick').hidden=false;const f1=$('pkL').querySelector('button');if(f1)f1.focus();return true;
 }
 $('pkScrim').onclick=$('pkX').onclick=()=>{$('pick').hidden=true};
-$('btnHomeAdd').onclick=()=>{const l=gsAll.filter(g=>g.status==='open'&&g.member_status!=='former');
- if(!pickGroup('¿En qué grupo?',l,g=>openGroup(g.id).then(()=>$('fab').click()).catch(e=>say(e.message,true))))say('Primero creá un grupo.',true)};
+async function openPersonal(){const id=await rpc('cuentas_personal_group');await openGroup(id)}
+$('optPersonal').onclick=()=>openPersonal().catch(e=>say(e.message,true));
+$('btnHomeAdd').onclick=()=>{const l=gsAll.filter(g=>g.status==='open'&&g.member_status!=='former').map(g=>g.kind==='personal'?{...g,icon:'receipt',sub:'Gastos sueltos entre amigos'}:g);
+ if(!gsAll.some(g=>g.kind==='personal'))l.push({id:null,name:'Gastos sin grupo',icon:'receipt',sub:'Gastos sueltos entre amigos',personal:true});
+ pickGroup('¿En qué grupo?',l,g=>(g.id?openGroup(g.id):openPersonal()).then(()=>$('fab').click()).catch(e=>say(e.message,true)))};
 $('btnHomeSettle').onclick=async()=>{
  if(!rowsBal)try{rowsBal=await fetchBalances(gsAll)}catch(e){say(e.message,true);return}
  const l=rowsBal.filter(r=>r.mine.some(b=>Number(b.balance_minor)<0)).map(r=>r.g);
@@ -775,7 +782,7 @@ async function openGroup(id){
  $('mList').querySelectorAll('[data-gl]').forEach(b=>b.onclick=busy(b,()=>guestLink(b.dataset.gl)));
  $('mList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: quitar';say(guestIds.has(b.dataset.rm)?'Si todavía no tiene gastos, se quita del grupo. Tocá de nuevo para confirmar.':'Quitar a alguien no borra sus deudas ni el historial. Tocá de nuevo para confirmar.');return}if(guestIds.has(b.dataset.rm))await rpc('cuentas_guest_remove',{p_group:gid,p_guest:b.dataset.rm});else await rpc('cuentas_member_remove',{p_group:gid,p_user:b.dataset.rm});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')}));
  $('btnArchive').hidden=!(isAdmin&&g.status==='closed');
- const canDel=!!(isAdmin&&g.status!=='archived'&&!(mv||[]).length&&!(props||[]).length&&!(rl||[]).length&&!(links||[]).some(l=>l.status==='active')&&active.every(m=>m.user_id===myId));
+ const canDel=!!(isAdmin&&g.status!=='archived'&&!gsAll.some(x=>x.id===g.id&&x.kind==='personal')&&!(mv||[]).length&&!(props||[]).length&&!(rl||[]).length&&!(links||[]).some(l=>l.status==='active')&&active.every(m=>m.user_id===myId));
  $('btnDelGroup').hidden=!canDel;$('delNote').hidden=!canDel;$('btnDelGroup').dataset.armed='';$('btnDelGroup').textContent='Eliminar grupo vacío';
  const dBy={};(dels||[]).forEach(d=>dBy[d.delegate_id]=d);
  const canVoid=!!(me&&(me.role==='admin'||(dBy[myId]&&dBy[myId].scopes.includes('void'))));
@@ -883,15 +890,16 @@ async function openGroup(id){
    else if(sh>0)mineTxt=`<b class="bad">${money(sh,m.currency)}</b><small>debés</small>`}
   const rep=isE&&m.shares&&Object.keys(m.shares).length?`<div class="muted" style="flex-basis:100%">Reparto: ${Object.entries(m.shares).map(([u,v])=>esc(name(u))+' '+money(v,m.currency)).join(', ')}</div>`:'';
   const rcBtn=isE?(rcpts[m.id]?`<div style="flex-basis:100%"><button class="sec" style="width:auto;margin:0" data-rv="${m.id}">${ic('receipt',18)} Ver comprobante</button></div>`:(!m.voided?`<div style="flex-basis:100%"><button class="sec" style="width:auto;margin:0" data-ra="${m.id}">${ic('receipt',18)} Agregar foto del ticket</button></div>`:'')):'';
+  const noteT=m.notes?`<div class="muted" style="flex-basis:100%">Nota: ${esc(m.notes)}</div>`:'';
   const cg=isE&&m.category?catBy(m.category):null;const fxT=isE&&m.fx_rate?`<div class="muted" style="flex-basis:100%">Cotización: 1 ${esc(m.currency)} = ${money(Math.round(Number(m.fx_rate)*100),cur)} (≈ ${money(Math.round(Number(m.amount_minor)*Number(m.fx_rate)),cur)})</div>`:'';
-  return hd+`<details class="mv"><summary><span class="av ${cg?'cat-av':isE?hue(m.from_user):''}" ${cg?`style="--ck:${KCOL(cg.color)}"`:''} aria-hidden="true">${cg?ic(cg.icon,20):isE?esc(name(m.from_user).charAt(0).toUpperCase()):ic('swap',20)}</span><span class="mb"><b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b><small>${who}${isE?' '+money(m.amount_minor,m.currency):''} · ${dt}${cg?' · '+esc(cg.name):''}${st?' · ':''}${st}</small></span><span class="mr">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}</span></summary><div class="mvbody">${rep}${fxT}${rcBtn}${act}</div></details>`}).join(''):'<div style="text-align:center;padding:18px 0"><div class="tile" style="margin:0 auto 10px;width:56px;height:56px">'+ic('receipt',28)+'</div><b>Todavía no hay gastos</b><p class="muted" style="margin:4px 0 0">Tocá «Agregar gasto» para cargar el primero.</p></div>';
+  return hd+`<details class="mv"><summary><span class="av ${cg?'cat-av':isE?hue(m.from_user):''}" ${cg?`style="--ck:${KCOL(cg.color)}"`:''} aria-hidden="true">${cg?ic(cg.icon,20):isE?esc(name(m.from_user).charAt(0).toUpperCase()):ic('swap',20)}</span><span class="mb"><b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b><small>${who}${isE?' '+money(m.amount_minor,m.currency):''} · ${dt}${cg?' · '+esc(cg.name):''}${st?' · ':''}${st}</small></span><span class="mr">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}</span></summary><div class="mvbody">${rep}${noteT}${fxT}${rcBtn}${act}</div></details>`}).join(''):'<div style="text-align:center;padding:18px 0"><div class="tile" style="margin:0 auto 10px;width:56px;height:56px">'+ic('receipt',28)+'</div><b>Todavía no hay gastos</b><p class="muted" style="margin:4px 0 0">Tocá «Agregar gasto» para cargar el primero.</p></div>';
  $('moves').querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>showReceipt(b.dataset.rv));
  $('moves').querySelectorAll('[data-ra]').forEach(b=>b.onclick=()=>{rcptFor=b.dataset.ra;$('rcptAddIn').click()});
  $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{try{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}catch(e){if(!/propuesta/i.test(e.message))throw e;await rpc('cuentas_proposal_create',{p_kind:'void_expense',p_target:b.dataset.void,p_reason:null});await openGroup(gid);say('Este gasto ya tiene pagos confirmados, así que no se puede anular directo: creé una propuesta de anulación. Aparece en “Propuestas pendientes” y se aplica cuando los afectados la aprueben.')}}));
  $('moves').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
   const m=mv.find(x=>x.id===b.dataset.edit);if(!m)return;
   editId=m.id;editDate=m.occurred_on||null;repVis();
-  $('cExpense').open=true;$('fab').hidden=true;$('eAdv').open=true;$('eDesc').value=m.description||'';$('eAmt').value=(Number(m.amount_minor)/100).toFixed(2).replace('.',',');$('ePayer').value=m.from_user;fillCur(m.currency);$('eFx').value=m.fx_rate?String(Number(m.fx_rate)).replace('.',','):'';catSel=m.category&&cats.some(c=>c.key===m.category)?m.category:null;catAuto=false;renderCats();syncFx();
+  $('cExpense').open=true;$('fab').hidden=true;$('eAdv').open=true;$('eDesc').value=m.description||'';$('eDate').value=m.occurred_on?String(m.occurred_on).slice(0,10):'';$('eNotes').value=m.notes||'';if(m.notes)$('ePanNotes').hidden=false;xbUi();$('eAmt').value=(Number(m.amount_minor)/100).toFixed(2).replace('.',',');$('ePayer').value=m.from_user;fillCur(m.currency);$('eFx').value=m.fx_rate?String(Number(m.fx_rate)).replace('.',','):'';catSel=m.category&&cats.some(c=>c.key===m.category)?m.category:null;catAuto=false;renderCats();syncFx();
   const sh=m.shares||{};const ids=Object.keys(sh);const vals=ids.map(k=>Number(sh[k]));
   const wsh=weightsDiffer(ids)?weightedShares(Number(m.amount_minor),ids):null;
   const equal=(vals.length>0&&Math.max(...vals)-Math.min(...vals)<=1)||!!(wsh&&ids.every(k=>Math.abs((wsh[k]||0)-Number(sh[k]))<=1));
@@ -905,8 +913,16 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-prev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_create',{p_kind:'reverse_payment',p_target:b.dataset.prev,p_reason:null});await openGroup(gid);say('Propuesta creada: necesita la aprobación de todos los afectados.')}));
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
+function xbUi(){
+ const d=$('eDate').value,r=$('eRep').value&&!editId,n=$('eNotes').value.trim();
+ $('eDateLbl').textContent=(d?fmtD(d)+'/'+d.slice(2,4):'Hoy')+(r?' · se repite':'');
+ $('eNotesLbl').textContent=n?'Notas ✓':'Notas';
+}
+$('btnDate').onclick=()=>{const h=!$('ePanDate').hidden;$('ePanDate').hidden=h;$('btnDate').setAttribute('aria-expanded',String(!h))};
+$('btnNotes').onclick=()=>{const h=!$('ePanNotes').hidden;$('ePanNotes').hidden=h;$('btnNotes').setAttribute('aria-expanded',String(!h));if(h===false)$('eNotes').focus()};
+$('eDate').addEventListener('change',xbUi);$('eRep').addEventListener('change',xbUi);$('eNotes').addEventListener('input',xbUi);
 function repVis(){const on=!editId;$('eRep').hidden=$('eRepLbl').hidden=!on;if(!on)$('eRep').value=''}
-function resetEdit(){rcptBlob=null;try{$('eRcptIn').value='';rcptUi()}catch(_){}editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('eTitle').textContent='Nuevo gasto';$('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true}
+function resetEdit(){try{$('eDate').value='';$('eNotes').value='';$('eRep').value='';$('ePanDate').hidden=$('ePanNotes').hidden=true;$('btnDate').setAttribute('aria-expanded','false');$('btnNotes').setAttribute('aria-expanded','false')}catch(e){console.error('RESETERR '+e.message)}rcptBlob=null;try{$('eRcptIn').value='';rcptUi()}catch(_){}editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('eTitle').textContent='Nuevo gasto';$('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true;xbUi()}
 function updAdv(){
  const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')];const n=cs.filter(c=>c.checked).length;
  const wd=weightsDiffer(cs.filter(c=>c.checked).map(c=>c.value));
@@ -1551,12 +1567,13 @@ $('btnExpense').onclick=busy($('btnExpense'),async()=>{
  const rep=!wasEdit?$('eRep').value:'';
  if(rep){
   if(!$('eDesc').value.trim())throw Error('Poné una descripción para el gasto que se repite');
-  await rpc('cuentas_recurring_save',{p_group:gid,p_description:$('eDesc').value.trim(),p_amount_minor:amt,p_currency:curX,p_payer:$('ePayer').value,p_participants:shares?null:parts,p_shares:shares,p_category:catSel||null,p_fx:fx,p_frequency:rep,p_start:today(),p_ends:null});
+  await rpc('cuentas_recurring_save',{p_group:gid,p_description:$('eDesc').value.trim(),p_amount_minor:amt,p_currency:curX,p_payer:$('ePayer').value,p_participants:shares?null:parts,p_shares:shares,p_category:catSel||null,p_fx:fx,p_frequency:rep,p_start:$('eDate').value||today(),p_ends:null});
   $('eDesc').value='';$('eAmt').value='';$('eRep').value='';rcptBlob=null;rcptUi();await openGroup(gid);say('Gasto repetido guardado: se carga solo '+(rep==='weekly'?'cada semana':'cada mes')+'. Lo ves en Ajustes.');return;
  }
   const fxArgs={};
  if(fx&&group.fx_auto!==undefined&&!wasEdit){const same=fxSug&&fxSug.cur===curX&&fx===fxSug.rate;fxArgs.p_fx_source=same?fxSug.src:'manual';fxArgs.p_fx_at=same?fxSug.at:null}
- const args={...fxArgs,p_currency:curX,p_category:catSel||null,p_fx:fx,p_amount_minor:amt,p_payer:$('ePayer').value,p_participants:shares?null:parts,p_shares:shares,p_description:$('eDesc').value.trim()||null,p_occurred_on:wasEdit&&editDate?editDate:today(),p_key:newKey()};
+ const args={...fxArgs,p_currency:curX,p_category:catSel||null,p_fx:fx,p_amount_minor:amt,p_payer:$('ePayer').value,p_participants:shares?null:parts,p_shares:shares,p_description:$('eDesc').value.trim()||null,p_occurred_on:$('eDate').value||(wasEdit&&editDate?editDate:today()),p_key:newKey()};
+ {const nt=$('eNotes').value.trim();if(nt||wasEdit)args.p_notes=nt||null}
  let newId=null;
  if(wasEdit){try{newId=await rpc('cuentas_expense_edit',{p_expense:editId,...args})}catch(e){if(/confirmad|propuesta|anul/i.test(e.message))throw Error('Este gasto ya tiene pagos confirmados y no se puede editar directo. Anulalo con una propuesta (aprobada por los afectados) y cargá el corregido.');throw e}}else{try{newId=await rpc('cuentas_expense_add',{p_group:gid,...args})}catch(e){if(!e.net)throw e;obxPush({gid,args:{p_group:gid,...args},desc:$('eDesc').value.trim(),amt:amt,cur:curX,ts:Date.now()});$('eDesc').value='';$('eAmt').value='';$('cExpense').open=false;$('fab').hidden=false;resetEdit();say('Sin señal: guardé el gasto en este celular y lo envío solo cuando vuelva la conexión.'+(rcptBlob?' La foto no se guarda sin conexión: agregala después desde el gasto.':''));rcptBlob=null;rcptUi();return}}
  let rcptMsg='';

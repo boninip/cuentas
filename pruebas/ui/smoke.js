@@ -27,7 +27,8 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'core_profile_get':return J(prof);
    case 'core_profile_set':prof={display_name:JSON.parse(body).p_name};return J(null);
    case 'cuentas_invite_accept':return J(G);
-   case 'cuentas_my_groups_all':return J([{id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',member_status:'active'}]);
+   case 'cuentas_my_groups_all':return J([{id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',member_status:'active'}].concat(lk.personal?[{id:'33333333-3333-4333-8333-333333333333',name:'Gastos sin grupo',reference_currency:'ARS',status:'open',member_status:'active',kind:'personal'}]:[]));
+   case 'cuentas_personal_group':return J(G);
    case 'cuentas_group_get':return J(((o)=>{if(lk.empty)o.members=o.members.filter(m=>m.user_id===ME);if(lk.fx){o.fx_rate_type=lk.fxType;o.fx_auto=true;o.fx_warn_pct=10;o.cross_pay=lk.cross!==false}return o})({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])}));
    case 'cuentas_guest_add':return J(LU);
    case 'cuentas_guest_invite_create':return J('c'.repeat(64));
@@ -45,7 +46,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_recurring_save':case 'cuentas_recurring_set_status':return J(null);
    case 'cuentas_activity_list':return J(fam?[{id:1,action:'expense_added',actor:ME,created_at:'2026-11-14T10:00:00Z',amount_minor:20000,currency:'ARS',description:'Asado'},{id:2,action:'member_weight_set',actor:ME,target:BR,weight:0.5,created_at:'2026-11-14T09:00:00Z'}]:[]);
    case 'cuentas_member_set_weight':case 'cuentas_category_save':return J(null);
-   case 'cuentas_movements_list':if(lk.empty)return J([]);if(lk.xpay)return J([{id:'x1',kind:'payment',amount_minor:'248805',currency:'ARS',from_user:BR,to_user:ME,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false,paid_currency:'USD',paid_amount_minor:'171',fx_rate:'1455',fx_source:'DolarApi oficial'}]);if(pay)return J([{id:'p1',kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:LU,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false},{id:'p2',kind:'payment',amount_minor:'50000',currency:'ARS',from_user:ME,to_user:BR,occurred_on:'2026-11-14',created_by:ME,confirmed:true,reversed:false}]);if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
+   case 'cuentas_movements_list':if(lk.empty)return J([]);if(lk.xpay)return J([{id:'x1',kind:'payment',amount_minor:'248805',currency:'ARS',from_user:BR,to_user:ME,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false,paid_currency:'USD',paid_amount_minor:'171',fx_rate:'1455',fx_source:'DolarApi oficial'}]);if(pay)return J([{id:'p1',kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:LU,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false},{id:'p2',kind:'payment',amount_minor:'50000',currency:'ARS',from_user:ME,to_user:BR,occurred_on:'2026-11-14',created_by:ME,confirmed:true,reversed:false}]);if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',notes:lk.notes?'Pagado con tarjeta':undefined,amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
    case 'core_links_list':return J(lk.links);
    case 'core_link_requests_list':return J(lk.reqs);
    case 'core_link_requests_history':return J(lk.hist);
@@ -58,7 +59,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_group_restore':lk.trash=[];return J(null);
    case 'cuentas_proposals_list':case 'cuentas_delegations_list':case 'cuentas_pairs_list':case 'core_organizable_trips':return J([]);
    default:return J(null);}});
- const errs=[];page.on('pageerror',e=>errs.push(e.message));
+ const errs=[];page.on('pageerror',e=>errs.push(e.message));page.on('console',m=>{if(/RESETERR/.test(m.text()))errs.push(m.text())});
  return {page,calls,errs,state};
 }
 const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s=>!s.hidden).map(s=>s.id));
@@ -258,7 +259,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  // gastos repetidos
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  await t.page.click('#fab');await t.page.evaluate(()=>{document.getElementById('eAdv').open=true});
- await t.page.fill('#eDesc','Expensas');await t.page.fill('#eAmt','1000');await t.page.selectOption('#eRep','monthly');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
+ await t.page.fill('#eDesc','Expensas');await t.page.fill('#eAmt','1000');await t.page.click('#btnDate');await t.page.selectOption('#eRep','monthly');await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_recurring_save')&&c.includes('"p_frequency":"monthly"')&&c.includes('Expensas')),'repetidos: guarda la regla mensual');
  ok(!t.calls.some(c=>c.startsWith('cuentas_expense_add')),'repetidos: no carga el gasto a mano (lo genera el servidor)');
  ok(/repetido guardado/i.test(await t.page.textContent('#msg')),'repetidos: avisa que se carga solo');
@@ -490,6 +491,35 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(await t.page.locator('[data-conf]').count()===1&&await t.page.locator('[data-pcancel][data-rej]').count()===1,'otra moneda: quien cobra puede confirmar o rechazar');
  await t.page.locator('[data-pcancel][data-rej]').click();await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_payment_cancel'))&&/Pago rechazado/.test(await t.page.textContent('#msg')),'otra moneda: rechazar llama a cancelar y avisa');
+
+ // formulario: fecha con repetición, notas y gastos sin grupo
+ t=await mk(b);await openExp(t);
+ ok(await t.page.isVisible('#btnDate')&&await t.page.isVisible('#btnNotes')&&await t.page.isVisible('#btnRcpt'),'formulario: botones de fecha, foto y notas');
+ ok(!(await t.page.isVisible('#ePanDate'))&&!(await t.page.isVisible('#ePanNotes')),'formulario: los paneles arrancan cerrados');
+ await t.page.click('#btnDate');await t.page.fill('#eDate','2026-11-10');await t.page.dispatchEvent('#eDate','change');
+ ok(/10\/11\/26/.test(await t.page.textContent('#eDateLbl')),'formulario: la fecha elegida se ve en el botón');
+ await t.page.click('#btnNotes');await t.page.fill('#eNotes','Pagado con tarjeta');
+ ok(/Notas ✓/.test(await t.page.textContent('#eNotesLbl')),'formulario: el botón marca que hay una nota');
+ await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','300');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
+ {const c=t.calls.find(c=>c.startsWith('cuentas_expense_add'));ok(c&&c.includes('"p_occurred_on":"2026-11-10"')&&c.includes('"p_notes":"Pagado con tarjeta"'),'formulario: guarda la fecha elegida y la nota');}
+ ok(t.errs.length===0,'formulario: sin errores de JS');
+ t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','300');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
+ {const c=t.calls.find(c=>c.startsWith('cuentas_expense_add'));ok(c&&!c.includes('p_notes')&&new RegExp('"p_occurred_on":"'+new Date().getFullYear()).test(c),'formulario: sin fecha ni nota usa hoy y no manda notas');}
+ t=await mk(b);await openExp(t);await t.page.click('#btnDate');await t.page.fill('#eDate','2026-12-01');await t.page.selectOption('#eRep','monthly');
+ ok(/se repite/.test(await t.page.textContent('#eDateLbl')),'formulario: avisa en el botón que se repite');
+ await t.page.fill('#eDesc','Expensas');await t.page.fill('#eAmt','1000');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
+ ok(t.calls.some(c=>c.startsWith('cuentas_recurring_save')&&c.includes('"p_start":"2026-12-01"')),'formulario: el gasto repetido arranca en la fecha elegida');
+ t=await mk(b,{lk:{notes:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ await t.page.evaluate(()=>{document.querySelectorAll('#moves details.mv').forEach(d=>d.open=true)});
+ ok(/Nota: Pagado con tarjeta/.test(await t.page.textContent('#moves')),'lista: muestra la nota del gasto');
+ t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ ok(await t.page.isVisible('#optPersonal'),'sin grupo: aparece "Gastos sin grupo" si todavía no existe');
+ await t.page.click('#optPersonal');await t.page.waitForTimeout(500);
+ ok(t.calls.some(c=>c.startsWith('cuentas_personal_group'))&&await t.page.isVisible('#vGroup'),'sin grupo: se crea y se abre');
+ t=await mk(b,{lk:{personal:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ ok(!(await t.page.isVisible('#optPersonal')),'sin grupo: si ya existe no se ofrece de nuevo');
+ await t.page.evaluate(()=>document.getElementById('fab').click());await t.page.waitForTimeout(200);
+ ok(/Gastos sin grupo/.test(await t.page.textContent('#pkL')),'elegir grupo: "Gastos sin grupo" está entre las opciones');
  // avisos de error cortos
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');
