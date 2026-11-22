@@ -748,7 +748,10 @@ function ocrParse(text){
  let date=null;const dm=String(text||'').match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2}|\d{4})\b/);
  if(dm){let d=+dm[1],mo=+dm[2],y=+dm[3];if(y<100)y+=2000;const t=new Date(Date.UTC(y,mo-1,d));
   if(mo>=1&&mo<=12&&d>=1&&t.getUTCMonth()===mo-1&&y>=2000&&t<=new Date(Date.now()+864e5))date=y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0')}
- return {amount,date};
+ let shop=null;
+ for(const l of lines.slice(0,6)){const L=(l.match(/[A-Za-zÁÉÍÓÚÑáéíóúñ]/g)||[]).length;if(L<3||L<l.replace(/\s/g,'').length*0.6)continue;if(/factura|ticket|cuit|iva\b|fecha|comprobante|tel\b|tel\.|www|http|original|duplicado|consumidor|\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/i.test(l))continue;
+  let t=l.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9&' .\-]/g,'').replace(/\s+/g,' ').trim().slice(0,40);if(t.length<3)continue;if(t===t.toUpperCase())t=t.toLowerCase().replace(/(^|\s)\S/g,m=>m.toUpperCase());shop=t;break}
+ return {amount,date,shop};
 }
 window.ocrParse=ocrParse;
 let ocrRes=null,ocrLoad=null;
@@ -760,14 +763,15 @@ $('btnOcr').onclick=busy($('btnOcr'),async()=>{
   const r=await Promise.race([window.Tesseract.recognize(rcptBlob,'eng'),new Promise((_,no)=>setTimeout(()=>no(Error('Tardó demasiado')),60000))]);
   ocrRes=ocrParse(r&&r.data&&r.data.text);
  }catch(e){$('ocrNote').textContent=e.message&&/lector/.test(e.message)?e.message:'No pude leer el ticket. Cargá los datos a mano.';return}
- if(!ocrRes.amount&&!ocrRes.date){$('ocrNote').textContent='No encontré importe ni fecha. Cargalos a mano.';return}
+ if(!ocrRes.amount&&!ocrRes.date&&!ocrRes.shop){$('ocrNote').textContent='No encontré importe, fecha ni comercio. Cargalos a mano.';return}
  const cur=$('eCur').value||group.reference_currency;
- $('ocrNote').textContent='Encontré'+(ocrRes.amount?' un importe de '+money(Math.round(ocrRes.amount*100),cur):'')+(ocrRes.amount&&ocrRes.date?' y':'')+(ocrRes.date?' la fecha '+fmtD(ocrRes.date)+'/'+ocrRes.date.slice(2,4):'')+'. Revisalo: puede equivocarse.';
+ $('ocrNote').textContent='Encontré'+(ocrRes.amount?' un importe de '+money(Math.round(ocrRes.amount*100),cur):'')+(ocrRes.amount&&ocrRes.date?' y':'')+(ocrRes.date?' la fecha '+fmtD(ocrRes.date)+'/'+ocrRes.date.slice(2,4):'')+(ocrRes.shop?((ocrRes.amount||ocrRes.date)?' y el comercio ':' el comercio ')+'«'+ocrRes.shop+'»':'')+'. Revisalo: puede equivocarse.';
  $('btnOcrUse').hidden=false;
 });
 $('btnOcrUse').onclick=()=>{
  if(!ocrRes)return;
  if(ocrRes.amount){$('eAmt').value=String(ocrRes.amount.toFixed(2)).replace('.',',');amtNote()}
+ if(ocrRes.shop&&!$('eDesc').value.trim())$('eDesc').value=ocrRes.shop;
  if(ocrRes.date){$('eDate').value=ocrRes.date;$('ePanDate').hidden=false;$('btnDate').setAttribute('aria-expanded','true');xbUi()}
  $('btnOcrUse').hidden=true;$('ocrNote').textContent='Listo. Revisá los datos y guardá.';
 };
