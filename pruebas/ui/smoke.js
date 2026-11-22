@@ -540,7 +540,8 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   ok(bad.length===0,'360 px: sin desborde horizontal'+(bad.length?' (falla en '+bad.join(', ')+')':''))}
  // OCR del ticket: solo sugiere, se carga al tocar, nunca guarda solo
  {t=await mk(b,{lk:{empty:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
-  const P=await t.page.evaluate(()=>[ocrParse('SUPER X\nCUIT 30-1234\nFecha 15/11/2026\nSUBTOTAL 10.000,00\nIVA 2.100,00\nTOTAL $ 12.100,00'),ocrParse('Cafe 1.500,00\nTorta 3.200,00'),ocrParse('12-3-26 total 350.50'),ocrParse('sin datos'),ocrParse('fecha 31/02/2026 total 10,00')]);
+  const P=await t.page.evaluate(()=>[ocrParse('SUPER X\nCUIT 30-1234\nFecha 15/11/2026\nSUBTOTAL 10.000,00\nIVA 2.100,00\nTOTAL $ 12.100,00'),ocrParse('Cafe 1.500,00\nTorta 3.200,00'),ocrParse('12-3-26 total 350.50'),ocrParse('sin datos'),ocrParse('fecha 31/02/2026 total 10,00'),ocrParse('KIOSCO\nTOTAL $ 12.345\n'),ocrParse('Gracias\nTOTAL 8500\n')]);
+  ok(P[5].amount===12345&&P[6].amount===8500,'ocr: acepta el total sin centavos (12.345 o 8500)');
   ok(P[0].amount===12100&&P[0].date==='2026-11-15','ocr: toma el TOTAL (no subtotal ni IVA) y la fecha');
   ok(P[0].shop==='Super X'&&P[1].shop===null,'ocr: el comercio es la primera línea con nombre (sin CUIT, fecha ni números) y no se inventa');
   ok(P[1].amount===3200,'ocr: sin la palabra total, toma el mayor');
