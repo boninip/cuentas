@@ -36,6 +36,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_group_payouts':return J([{user_id:BR,alias:'bruno.cuentas',cbu:null,holder_name:'Bruno',bank:'MP'}]);
    case 'cuentas_payment_add':debt=false;return J('p1');
    case 'cuentas_expense_add':if(offline)return r.abort('failed');return J('e1');
+   case 'cuentas_group_create':return J(G);
    case 'cuentas_categories_list':return J(fam?[{key:'comida',name:'Comida y bebida',icon:'fork',color:0,archived:false},{key:'ocio',name:'Salidas y ocio',icon:'ticket',color:4,archived:false}]:[]);
    case 'cuentas_recurring_list':return J(fam?[{id:'r1',description:'Alquiler',amount_minor:5000000,currency:'ARS',frequency:'monthly',status:'active',next_on:'2026-12-01',created_by:ME}]:[]);
    case 'cuentas_receipts_list':return J(fam?[{movement:'e1',path:G+'/e1.jpg'}]:[]);
@@ -639,6 +640,23 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   ok(!(await t.page.isVisible('#btnScan'))&&!(await t.page.isVisible('#eRecent')),'ux3: al editar no se ofrece escanear ni chips')}
  {const D=await t.page.evaluate(()=>['Fecha 12/1O/2O26','FECHA 2026-11-05','12 NOV 2026','Fecha 3 de nov. de 26','05 / 11 / 2026','Fecha 32/13/2026'].map(x=>ocrParse(x).date));
   ok(D[0]==='2026-10-12'&&D[1]==='2026-11-05'&&D[2]==='2026-11-12'&&D[3]==='2026-11-03'&&D[4]==='2026-11-05'&&D[5]===null,'ux3: lee fechas con O por 0, con mes en letras, ISO y con espacios; una imposible no se inventa: '+JSON.stringify(D))}
+ // monedas permitidas y nota larga (0058)
+ {t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('#optNew');await t.page.waitForTimeout(300);
+  const opts=await t.page.$$eval('#gCur option',o=>o.map(x=>x.value||x.textContent));
+  ok(await t.page.evaluate(()=>document.getElementById('gCur').tagName)==='SELECT'&&opts.length===8&&opts[0]==='ARS'&&opts.includes('USD'),'monedas: el grupo nuevo ofrece las 8 monedas habilitadas, ARS primero');
+  await t.page.fill('#gName','Viaje');await t.page.selectOption('#gCur','USD');await t.page.click('#btnCreate');await t.page.waitForTimeout(400);
+  ok(t.calls.some(c=>c.startsWith('cuentas_group_create')&&c.includes('"p_currency":"USD"')),'monedas: crear el grupo manda la moneda elegida');
+  ok(t.errs.length===0,'monedas: sin errores de JS')}
+ {t=await mk(b,{fam:true});await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','100');await t.page.click('#btnNotes');
+  await t.page.fill('#eNotes','n'.repeat(1001));await t.page.waitForTimeout(150);
+  ok(/1001 caracteres/.test(await t.page.textContent('#eNotesNote')),'notas: más de 1000 muestra cuántos caracteres tiene y el máximo');
+  await t.page.click('#btnExpense');await t.page.waitForTimeout(300);
+  ok(!t.calls.some(c=>c.startsWith('cuentas_expense_add'))&&/demasiado larga/.test(await t.page.textContent('#msg')),'notas: con más de 1000 no se guarda y avisa');
+  await t.page.fill('#eNotes','n'.repeat(1000));await t.page.waitForTimeout(150);
+  ok(await t.page.inputValue('#eNotes').then(v=>v.length)===1000,'notas: pegar 1000 no se corta');
+  await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
+  const c=t.calls.find(c=>c.startsWith('cuentas_expense_add'));ok(c&&c.includes('"p_notes":"'+'n'.repeat(1000)+'"'),'notas: con 1000 exactos se guarda completa');
+  ok(t.errs.length===0,'notas: sin errores de JS')}
  // avisos de error cortos
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');
