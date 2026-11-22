@@ -520,6 +520,16 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(!(await t.page.isVisible('#optPersonal')),'sin grupo: si ya existe no se ofrece de nuevo');
  await t.page.evaluate(()=>document.getElementById('fab').click());await t.page.waitForTimeout(200);
  ok(/Gastos sin grupo/.test(await t.page.textContent('#pkL')),'elegir grupo: "Gastos sin grupo" está entre las opciones');
+ // importe con punto decimal y formulario liviano
+ const openSolo=async t=>{await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#fab',{state:'visible'});await t.page.click('#fab');await t.page.waitForTimeout(200)};
+ t=await mk(b,{lk:{empty:true}});await openSolo(t);
+ ok(!(await t.page.isVisible('#ePayer'))&&!(await t.page.isVisible('#eAdv'))&&await t.page.isVisible('#btnSoloAdd'),'liviano: solo, no muestra Pagó/Dividir y ofrece dividir con otra persona');
+ await t.page.fill('#eDesc','Vino');await t.page.fill('#eAmt','1500.50');await t.page.waitForTimeout(100);
+ ok(/1\.500,50/.test(await t.page.textContent('#eAmtNote')),'importe: con punto decimal se entiende 1.500,50 y se muestra antes de guardar');
+ await t.page.click('#btnSoloAdd');await t.page.fill('#eSoloName','Lu');await t.page.click('#btnSoloOk');await t.page.waitForTimeout(500);
+ ok(t.calls.some(c=>c.startsWith('cuentas_guest_add')&&c.includes('Lu'))&&await t.page.inputValue('#eDesc')==='Vino'&&await t.page.inputValue('#eAmt')==='1500.50'&&await t.page.isVisible('#eAmt'),'liviano: sumar a alguien por nombre no pierde lo escrito');
+ t=await mk(b,{lk:{empty:true}});await openSolo(t);await t.page.fill('#eDesc','Vino');await t.page.fill('#eAmt','1500.50');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
+ ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')&&c.includes('"p_amount_minor":150050')),'importe: 1500.50 se guarda como 1.500,50 (no 150.050)');
  // avisos de error cortos
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');
