@@ -16,6 +16,7 @@ begin
  v_new:=replace(v_new,'p_category,p_fx,p_notes=>p_notes);','p_category,p_fx);');
  execute v_new;
  drop function public.cuentas_expense_edit(uuid,text,bigint,uuid,uuid[],jsonb,text,date,text,text,numeric,text);
+ revoke all on function public.cuentas_expense_edit(uuid,text,bigint,uuid,uuid[],jsonb,text,date,text,text,numeric) from public, anon;
  grant execute on function public.cuentas_expense_edit(uuid,text,bigint,uuid,uuid[],jsonb,text,date,text,text,numeric) to authenticated;
  v_def:=pg_get_functiondef('public.cuentas_expense_add(uuid,text,bigint,uuid,uuid[],jsonb,text,date,text,text,numeric,text,timestamptz,text)'::regprocedure);
  v_new:=replace(v_def,', p_notes text DEFAULT NULL::text)',')');
