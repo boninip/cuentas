@@ -127,7 +127,8 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 .mv>summary{display:flex;justify-content:space-between;gap:8px;padding:10px 0;font-weight:400}
 .mv .mvbody{padding:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mv .mvbody>*{margin:0}
 .mv .mvbody button{width:auto;padding:8px 14px}
-.mon{font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 0 2px;font-weight:600}
+.mon{display:flex;justify-content:space-between;gap:8px;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 2px;font-weight:600}.mon .dtot{text-transform:none;letter-spacing:0;font-weight:600}
+.mvmore{flex:none;width:44px;height:44px;margin:-6px -8px -6px 0;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:1.5rem;line-height:1;display:grid;place-items:center;box-shadow:none;min-height:0}.mvhid{display:none}
 /* Formulario de gasto: plano, importe protagonista */
 #cExpense{background:transparent;border:0;box-shadow:none;padding:0;margin:6px 0 18px}
 #cExpense>h2{font-size:1.5rem;margin:6px 0 2px;letter-spacing:-.4px}
@@ -669,6 +670,10 @@ function autoCat(){
  if(!catAuto||editId)return;const k=suggestCat($('eDesc').value);
  if(k!==catSel){catSel=k;renderCats()}
 }
+const dayName=dk=>{const d=new Date(dk+'T12:00:00'),t=new Date(),y=new Date();y.setDate(y.getDate()-1);const same=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+ if(same(d,t))return 'Hoy';if(same(d,y))return 'Ayer';
+ const DN=['dom','lun','mar','mié','jue','vie','sáb'],MN=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+ return DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+(d.getFullYear()!==t.getFullYear()?' '+d.getFullYear():'')};
 function renderCats(){
  $('eCatsLbl').hidden=$('eCats').hidden=!cats.length;
  $('eCats').innerHTML=cats.map(c=>`<button type="button" class="chip${catSel===c.key?' on':''}" data-ck="${esc(c.key)}" aria-pressed="${catSel===c.key}" style="--ck:${KCOL(c.color)}"><span class="ci">${ic(c.icon,16)}</span>${esc(c.name)}</button>`).join('');
@@ -942,17 +947,18 @@ async function openGroup(id){
  $('eMode').value='eq';fillCur();$('eFx').value='';renderCats();syncFx();syncMode();resetEdit();renderCatsAdmin();renderActivity(act);renderRecs();obxNote();$('mvSearch').hidden=mv.length<5;$('mvSearch').querySelector('.si').innerHTML=ic('search',18);
  const allRows=mv.filter(m=>m.kind==='expense'||m.kind==='payment'||m.kind==='compensation').slice().reverse();
  const nVoid=allRows.filter(m=>m.voided).length;
- const rows=allRows.filter(m=>showVoided||!m.voided);
+ const rows=allRows.filter(m=>showVoided||!m.voided).map((m,i)=>[m,i]).sort((a,b)=>String(b[0].occurred_on||'').localeCompare(String(a[0].occurred_on||''))||a[1]-b[1]).map(x=>x[0]);
+ const dayTot={};rows.forEach(m=>{if(m.kind==='expense'&&!m.voided){const k=String(m.occurred_on||'').slice(0,10);(dayTot[k]=dayTot[k]||{})[m.currency]=((dayTot[k]||{})[m.currency]||0)+Number(m.amount_minor)}});
  {const vb=$('btnVoided');vb.hidden=!nVoid;vb.textContent=showVoided?'Ocultar anulados':'Ver anulados ('+nVoid+')'}
- let lastYm=null;
+ let lastYm=null,lastDay=null;
  $('moves').innerHTML=rows.length?rows.map(m=>{
   const isE=m.kind==='expense';
   const isC=m.kind==='compensation';
   const st=m.voided?'<span class="tag">anulado</span>':(isC?(m.reversed?'<span class="tag">revertida</span>':'<span class="tag">compensación</span>'):(!isE?(m.reversed?'<span class="tag">revertido</span>':(m.confirmed?'<span class="tag">confirmado</span>':'<span class="tag">pendiente</span>')):''));
   const who=isE?`Pagó ${esc(name(m.from_user))}`:`${esc(name(m.from_user))} → ${esc(name(m.to_user))}`;
-  let act='';
+  let act='',canMore=false;
   if(!m.voided){
-   if(isE&&(m.created_by===myId||(me&&me.role==='admin')))act=`<button class="sec" style="width:auto;margin:0" data-edit="${m.id}">Editar</button> <button class="sec" style="width:auto;margin:0" data-void="${m.id}">Anular</button>`;
+   if(isE&&(m.created_by===myId||(me&&me.role==='admin')))act=`<span class="mvhid"><button class="sec" data-edit="${m.id}">Editar</button> <button class="sec" data-void="${m.id}">Anular</button></span>`;canMore=true;
    if(isC&&!m.reversed&&(m.from_user===myId||m.to_user===myId))act=`<button class="sec" style="width:auto;margin:0" data-crev="${m.id}">Proponer revertir</button>`;
    if(!isE&&!isC&&!m.confirmed&&m.from_user===myId)act=`<button class="sec" style="width:auto;margin:0" data-pcancel="${m.id}">Cancelar pago</button>`;
    if(!isE&&!isC&&m.confirmed&&!m.reversed&&(m.from_user===myId||m.to_user===myId))act=`<button class="sec" style="width:auto;margin:0" data-prev="${m.id}">Proponer anular</button>`;
@@ -960,8 +966,8 @@ async function openGroup(id){
    if(!isE&&!isC&&!m.reversed&&canVoid&&!(m.from_user===myId&&!m.confirmed))act+=` <button class="sec" style="width:auto;margin:0" data-pcancel="${m.id}" data-adm="1">Anular pago</button>`;
   }
   const dt=m.occurred_on?esc(String(m.occurred_on).slice(5).split('-').reverse().join('/')):'';
-  const ym=String(m.occurred_on||'').slice(0,7);let hd='';
-  if(ym!==lastYm){lastYm=ym;const [yy,mm]=ym.split('-');const MN=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];hd=ym?`<div class="mon">${MN[Number(mm)-1]||''} ${esc(yy)}</div>`:''}
+  const dk=String(m.occurred_on||'').slice(0,10);let hd='';
+  if(dk!==lastDay){lastDay=dk;if(dk){const dn=dayName(dk),tt=Object.entries(dayTot[dk]||{}).map(([c,v])=>money(v,c)).join(' · ');hd=`<div class="mon"><span>${esc(dn)}</span>${tt?`<span class="dtot">${esc(tt)}</span>`:''}</div>`}}
   if(!isE&&!isC){
    const who2=`${esc(name(m.from_user))} pagó a ${esc(name(m.to_user))}`;
    let pinfo='';
@@ -971,13 +977,19 @@ async function openGroup(id){
   }
   let mineTxt='';
   if(isE&&!m.voided&&m.shares){const sh=Number(m.shares[myId]||0);
-   if(m.from_user===myId){const d=Number(m.amount_minor)-sh;if(d>0)mineTxt=`<b class="good">${money(d,m.currency)}</b><small>te deben</small>`}
-   else if(sh>0)mineTxt=`<b class="bad">${money(sh,m.currency)}</b><small>debés</small>`}
+   if(m.from_user===myId){const d=Number(m.amount_minor)-sh;mineTxt=d>0?`<b class="good">${money(d,m.currency)}</b><small>te deben</small>`:`<b>${money(m.amount_minor,m.currency)}</b><small>pagaste vos</small>`}
+   else if(sh>0)mineTxt=`<b class="bad">${money(sh,m.currency)}</b><small>te toca</small>`;else mineTxt=`<b>${money(m.amount_minor,m.currency)}</b><small>no participás</small>`}
   const rep=isE&&m.shares&&Object.keys(m.shares).length?`<div class="muted" style="flex-basis:100%">Reparto: ${Object.entries(m.shares).map(([u,v])=>esc(name(u))+' '+money(v,m.currency)).join(', ')}</div>`:'';
   const rcBtn=isE?(rcpts[m.id]?`<div style="flex-basis:100%"><button class="sec" style="width:auto;margin:0" data-rv="${m.id}">${ic('receipt',18)} Ver comprobante</button></div>`:(!m.voided?`<div style="flex-basis:100%"><button class="sec" style="width:auto;margin:0" data-ra="${m.id}">${ic('receipt',18)} Agregar foto del ticket</button></div>`:'')):'';
   const noteT=m.notes?`<div class="muted" style="flex-basis:100%">Nota: ${esc(m.notes)}</div>`:'';
   const cg=isE&&m.category?catBy(m.category):null;const fxT=isE&&m.fx_rate?`<div class="muted" style="flex-basis:100%">Cotización: 1 ${esc(m.currency)} = ${money(Math.round(Number(m.fx_rate)*100),cur)} (≈ ${money(Math.round(Number(m.amount_minor)*Number(m.fx_rate)),cur)})</div>`:'';
-  return hd+`<details class="mv"><summary><span class="av ${cg?'cat-av':isE?hue(m.from_user):''}" ${cg?`style="--ck:${KCOL(cg.color)}"`:''} aria-hidden="true">${cg?ic(cg.icon,20):isE?esc(name(m.from_user).charAt(0).toUpperCase()):ic('swap',20)}</span><span class="mb"><b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b><small>${who}${isE?' '+money(m.amount_minor,m.currency):''} · ${dt}${cg?' · '+esc(cg.name):''}${st?' · ':''}${st}</small></span><span class="mr">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}</span></summary><div class="mvbody">${rep}${noteT}${fxT}${rcBtn}${act}</div></details>`}).join(''):'<div style="text-align:center;padding:18px 0"><div class="tile" style="margin:0 auto 10px;width:56px;height:56px">'+ic('receipt',28)+'</div><b>Todavía no hay gastos</b><p class="muted" style="margin:4px 0 0">Tocá «Agregar gasto» para cargar el primero.</p></div>';
+  return hd+`<details class="mv"><summary><span class="av ${cg?'cat-av':isE?hue(m.from_user):''}" ${cg?`style="--ck:${KCOL(cg.color)}"`:''} aria-hidden="true">${cg?ic(cg.icon,20):isE?esc(name(m.from_user).charAt(0).toUpperCase()):ic('swap',20)}</span><span class="mb"><b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b><small>${who}${isE?' '+money(m.amount_minor,m.currency):''} · ${dt}${cg?' · '+esc(cg.name):''}${st?' · ':''}${st}</small></span><span class="mr">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}</span>${isE&&!m.voided&&(canMore||rcpts[m.id])?`<button type="button" class="mvmore" data-mm="${m.id}" aria-label="Más acciones">⋯</button>`:''}</summary><div class="mvbody">${rep}${noteT}${fxT}${rcBtn}${act}</div></details>`}).join(''):'<div style="text-align:center;padding:18px 0"><div class="tile" style="margin:0 auto 10px;width:56px;height:56px">'+ic('receipt',28)+'</div><b>Todavía no hay gastos</b><p class="muted" style="margin:4px 0 0">Tocá «Agregar gasto» para cargar el primero.</p></div>';
+ $('moves').querySelectorAll('[data-mm]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const id=b.dataset.mm,m=mv.find(x=>x.id===id);if(!m)return;
+  const q=sel=>document.querySelector(sel+'="'+id+'"]'),L=[];
+  if(q('[data-edit'))L.push({icon:'edit',name:'Editar',sub:'Al guardar, el anterior queda anulado',f:()=>q('[data-edit').click()});
+  if(rcpts[id])L.push({icon:'receipt',name:'Ver comprobante',f:()=>q('[data-rv').click()});else if(q('[data-ra'))L.push({icon:'receipt',name:'Agregar foto del ticket',f:()=>q('[data-ra').click()});
+  if(q('[data-void'))L.push({icon:'close',name:'Anular',sub:'Queda en el historial como anulado',f:()=>pickGroup('¿Anular este gasto?',[{icon:'close',name:'Sí, anular',sub:(m.description||'Gasto')+' · '+money(m.amount_minor,m.currency),f:()=>q('[data-void').click()},{icon:'back',name:'No, volver',f:()=>{}}],x=>x.f())});
+  if(L.length)pickGroup(m.description||'Gasto',L,x=>x.f())});
  $('moves').querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>showReceipt(b.dataset.rv));
  $('moves').querySelectorAll('[data-ra]').forEach(b=>b.onclick=()=>{rcptFor=b.dataset.ra;$('rcptAddIn').click()});
  $('moves').querySelectorAll('[data-void]').forEach(b=>b.onclick=busy(b,async()=>{try{await rpc('cuentas_expense_void',{p_expense:b.dataset.void,p_reason:null});await openGroup(gid);say('Gasto anulado.')}catch(e){if(!/propuesta/i.test(e.message))throw e;await rpc('cuentas_proposal_create',{p_kind:'void_expense',p_target:b.dataset.void,p_reason:null});await openGroup(gid);say('Este gasto ya tiene pagos confirmados, así que no se puede anular directo: creé una propuesta de anulación. Aparece en “Propuestas pendientes” y se aplica cuando los afectados la aprueben.')}}));
