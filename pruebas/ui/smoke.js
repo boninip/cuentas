@@ -531,6 +531,13 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(t.calls.some(c=>c.startsWith('cuentas_guest_add')&&c.includes('Lu'))&&await t.page.inputValue('#eDesc')==='Vino'&&await t.page.inputValue('#eAmt')==='1500.50'&&await t.page.isVisible('#eAmt'),'liviano: sumar a alguien por nombre no pierde lo escrito');
  t=await mk(b,{lk:{empty:true}});await openSolo(t);await t.page.fill('#eDesc','Vino');await t.page.fill('#eAmt','1500.50');await t.page.click('#btnExpense');await t.page.waitForTimeout(400);
  ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')&&c.includes('"p_amount_minor":150050')),'importe: 1500.50 se guarda como 1.500,50 (no 150.050)');
+ // sin desborde horizontal a 360 px en las pantallas principales
+ {t=await mk(b,{lk:{notes:true}});await t.page.setViewportSize({width:360,height:800});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+  const ov=()=>t.page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+  const bad=[];if(await ov()>0)bad.push('inicio');
+  await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});if(await ov()>0)bad.push('grupo');
+  await t.page.click('#fab');await t.page.waitForTimeout(200);await t.page.evaluate(()=>{document.getElementById('eAdv').open=true;document.getElementById('btnDate').click();document.getElementById('btnNotes').click()});if(await ov()>0)bad.push('formulario');
+  ok(bad.length===0,'360 px: sin desborde horizontal'+(bad.length?' (falla en '+bad.join(', ')+')':''))}
  // avisos de error cortos
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');
