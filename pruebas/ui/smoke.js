@@ -717,4 +717,15 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  t=await mk(b);await openExp(t);await t.page.click('span.rs');await t.page.waitForTimeout(200);
  const fs=await t.page.evaluate(()=>{const g=e=>{const c=getComputedStyle(document.querySelector(e));return c.fontSize+'/'+c.fontWeight};return {a:g('#eAdvSum .advsum'),s:g('#ePayer'),m:g('#eMode')}});
  ok(fs.a===fs.s&&fs.s===fs.m,'tipografía: «Entre todos» tiene la misma letra que Pagó y Dividir ('+fs.a+' vs '+fs.s+')');
+ // tipografía: los botones del grupo y del inicio comparten tamaño de letra
+ t=await mk(b);await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.waitForTimeout(300);
+ const bs=await t.page.evaluate(()=>['#fab','#btnSettle','#btnSaldos','#btnInvite','#btnBack'].map(e=>getComputedStyle(document.querySelector(e)).fontSize));
+ ok(new Set(bs).size===1,'tipografía: Agregar gasto, Saldar deuda, Saldos, Personas y Grupos tienen el mismo tamaño ('+bs.join(', ')+')');
+ // formulario: reparto en una sola tarjeta, «Entre quiénes» con rótulo y barra de guardar pegada abajo
+ t=await mk(b);await t.page.setViewportSize({width:390,height:900});await openExp(t);await t.page.click('span.rs');await t.page.waitForTimeout(200);
+ const fr=await t.page.evaluate(()=>{const r=e=>document.querySelector(e).getBoundingClientRect();return {lbl:document.getElementById('eAdvLbl').textContent,sum:document.querySelector('#eAdvSum .advsum').textContent,box:getComputedStyle(document.getElementById('eRepBox')).borderTopWidth,sbB:Math.round(r('.savebar').bottom),vh:innerHeight,chipW:getComputedStyle(document.querySelector('#eRecent .chip')||document.body).fontWeight}});
+ ok(fr.lbl==='Entre quiénes'&&/^Todos \(\d+\)$/.test(fr.sum),'formulario: «Entre quiénes» con rótulo y resumen «Todos (n)» ('+fr.sum+')');
+ ok(fr.box==='0px','formulario: el reparto abierto se une a la tarjeta de arriba (sin borde doble)');
+ ok(fr.sbB===fr.vh,'formulario: la barra de guardar queda pegada al borde de abajo ('+fr.sbB+' de '+fr.vh+')');
+ ok(await t.page.evaluate(()=>getComputedStyle(document.querySelector('#eRecent'),'::before').content)==='"Recientes"','formulario: rótulo «Recientes» sobre los atajos');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
