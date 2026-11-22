@@ -617,6 +617,28 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  {t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
   await t.page.click('[data-mm="e2"]');await t.page.waitForTimeout(200);await t.page.click('#pkL >> text=Editar');await t.page.waitForTimeout(400);
   ok(await t.page.isVisible('#eDesc')&&await t.page.inputValue('#eDesc')==='Hotel'&&/Guardar cambios/.test(await t.page.textContent('#btnExpense')),'ux2: Editar desde el menú ⋯ abre el gasto para editar')}
+ // etapa 3 UX: chips recientes, escanear primero, fechas
+ {t=await mk(b,{fam:true});await t.page.setViewportSize({width:390,height:800});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+  await t.page.click('#fab');await t.page.waitForTimeout(300);
+  const chips=await t.page.$$eval('#eRecent [data-rd]',e=>e.map(x=>x.dataset.rd));
+  ok(chips.length>=1&&chips.length<=4&&new Set(chips.map(x=>x.toLowerCase())).size===chips.length&&await t.page.isVisible('#eRecent'),'ux3: el formulario nuevo ofrece descripciones recientes sin repetir');
+  await t.page.click('#eRecent [data-rd]');await t.page.waitForTimeout(150);
+  ok(await t.page.inputValue('#eDesc')===chips[0]&&!(await t.page.isVisible('#eRecent')),'ux3: tocar un chip completa la descripción y los chips se van');
+  await t.page.fill('#eDesc','');await t.page.dispatchEvent('#eDesc','input');await t.page.waitForTimeout(100);
+  ok(await t.page.isVisible('#eRecent'),'ux3: al vaciar la descripción vuelven los chips');
+  ok(await t.page.isVisible('#btnScan'),'ux3: «Escanear ticket» visible en gasto nuevo');
+  let reqs3=0;await t.page.route('**/tesseract.min.js',r=>{reqs3++;r.fulfill({contentType:'application/javascript',body:"window.Tesseract={recognize:async()=>({data:{text:'KIOSCO LUNA\\nFecha: 12/1O/2O26\\nTOTAL $ 2.500,00\\n'}})}"})});
+  const png3=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEUlEQVR4nGM44eCAFTEMLQkALKhSAY1dq8cAAAAASUVORK5CYII=','base64');
+  const [fc]=await Promise.all([t.page.waitForEvent('filechooser'),t.page.click('#btnScan')]);await fc.setFiles({name:'t.png',mimeType:'image/png',buffer:png3});await t.page.waitForTimeout(1500);
+  ok(reqs3===1&&/2\.500,00/.test(await t.page.textContent('#ocrNote'))&&/12\/10/.test(await t.page.textContent('#ocrNote')),'ux3: Escanear lee el ticket solo, sin tocar otro botón');
+  ok(await t.page.inputValue('#eAmt')===''&&!t.calls.some(c=>c.startsWith('cuentas_expense_add')),'ux3: el escaneo solo sugiere, no completa ni guarda solo');
+  await t.page.click('[data-mm]').catch(()=>{});
+  ok(t.errs.length===0,'ux3: sin errores de JS')}
+ {t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+  await t.page.click('[data-mm="e2"]');await t.page.waitForTimeout(200);await t.page.click('#pkL >> text=Editar');await t.page.waitForTimeout(400);
+  ok(!(await t.page.isVisible('#btnScan'))&&!(await t.page.isVisible('#eRecent')),'ux3: al editar no se ofrece escanear ni chips')}
+ {const D=await t.page.evaluate(()=>['Fecha 12/1O/2O26','FECHA 2026-11-05','12 NOV 2026','Fecha 3 de nov. de 26','05 / 11 / 2026','Fecha 32/13/2026'].map(x=>ocrParse(x).date));
+  ok(D[0]==='2026-10-12'&&D[1]==='2026-11-05'&&D[2]==='2026-11-12'&&D[3]==='2026-11-03'&&D[4]==='2026-11-05'&&D[5]===null,'ux3: lee fechas con O por 0, con mes en letras, ISO y con espacios; una imposible no se inventa: '+JSON.stringify(D))}
  // avisos de error cortos
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');

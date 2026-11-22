@@ -330,7 +330,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
   <details class="card" id="cExpense"><summary>+ Agregar gasto</summary>
    <button type="button" class="lnk" id="btnExpBack"><svg class="icn" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Volver</button>
    <h2 id="eTitle">Nuevo gasto</h2><div class="muted" id="eGrp"></div>
-   <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300" placeholder="Ej. Asado, Nafta, Vinos">
+   <button type="button" class="sec" id="btnScan" style="width:100%;margin:0 0 10px"><span id="scanLbl">Escanear ticket</span></button><label for="eDesc">Descripción</label><input id="eDesc" maxlength="300" placeholder="Ej. Asado, Nafta, Vinos"><div class="dchips" id="eRecent" role="group" aria-label="Descripciones recientes" hidden style="flex-wrap:wrap;margin-top:8px"></div>
    <label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00" style="font-size:1.6rem;font-weight:700"><p class="muted fine" id="eAmtNote" aria-live="polite" style="margin:4px 0 0"></p>
    <div class="xbtns"><button type="button" class="sec" id="btnDate" aria-expanded="false" aria-controls="ePanDate"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span id="eDateLbl">Hoy</span></button><button type="button" class="sec" id="btnNotes" aria-expanded="false" aria-controls="ePanNotes"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg><span id="eNotesLbl">Notas</span></button><button type="button" class="sec" id="btnRcpt"></button></div>
    <div id="ePanDate" class="xpan" hidden><div class="dchips" id="eDateChips"><button type="button" class="chip" data-dd="0">Hoy</button><button type="button" class="chip" data-dd="1">Ayer</button></div><label for="eDate">Otra fecha</label><input type="date" id="eDate"><label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select></div>
@@ -769,9 +769,17 @@ function ocrParse(text){
  if(tot==null){for(const l of lines){if(!/total|a pagar|importe/i.test(l)||/subtotal|iva|descuento|ahorro|propina|sugerid/i.test(l))continue;const m=l.match(/(?:\$\s*)?(\d{1,3}(?:[.\s]\d{3})+|\d{3,7})(?![\d,]|\.\d)/g);if(m){const v=num(m[m.length-1]);if(v>0&&isFinite(v))tot=v}}}
  if(tot==null&&!all.length){for(const l of lines){const m=l.match(/\$\s*(\d{1,3}(?:\.\d{3})+|\d{3,7})(?![\d,])/);if(m){const v=num(m[1]);if(v>0)all.push(v)}}}
  const amount=tot!=null?tot:(all.length?Math.max(...all):null);
- let date=null;const dm=String(text||'').match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2}|\d{4})\b/);
- if(dm){let d=+dm[1],mo=+dm[2],y=+dm[3];if(y<100)y+=2000;const t=new Date(Date.UTC(y,mo-1,d));
-  if(mo>=1&&mo<=12&&d>=1&&t.getUTCMonth()===mo-1&&y>=2000&&t<=new Date(Date.now()+864e5))date=y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0')}
+ let date=null;
+ {const MES={ene:1,feb:2,mar:3,abr:4,may:5,jun:6,jul:7,ago:8,sep:9,set:9,oct:10,nov:11,dic:12};
+  const ok=(d,mo,y)=>{if(y<100)y+=2000;const t=new Date(Date.UTC(y,mo-1,d));return mo>=1&&mo<=12&&d>=1&&t.getUTCMonth()===mo-1&&y>=2000&&t<=new Date(Date.now()+864e5)?y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0'):null};
+  // el OCR confunde O/o con 0 y l/I con 1 dentro de las fechas
+  const fix=t=>t.replace(/(?<=\d)[Oo](?=\d|[\/\-.])|(?<=[\/\-.])[Oo](?=\d)/g,'0').replace(/(?<=\d)[lI|](?=\d|[\/\-.])|(?<=[\/\-.])[lI|](?=\d)/g,'1');
+  const T=fix(String(text||''));
+  let m;
+  if((m=T.match(/\b(20\d{2})[\/\-.](\d{1,2})[\/\-.](\d{1,2})\b/)))date=ok(+m[3],+m[2],+m[1]);
+  if(!date){const re2=/\b(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{2}|\d{4})\b/g;while((m=re2.exec(T))){date=ok(+m[1],+m[2],+m[3]);if(date)break}}
+  if(!date){const re3=/\b(\d{1,2})\s*(?:de\s+)?[\/\-. ]?\s*([A-Za-zñÑ]{3})[A-Za-z]*\.?\s*(?:de\s+)?[\/\-. ]?\s*(\d{2}|\d{4})\b/g;while((m=re3.exec(T))){const mo=MES[m[2].toLowerCase()];if(mo){date=ok(+m[1],mo,+m[3]);if(date)break}}}
+ }
  let shop=null;
  for(const l of lines.slice(0,12)){const L=(l.match(/[A-Za-zÁÉÍÓÚÑáéíóúñ]/g)||[]).length;if(L<5||/\d/.test(l)||l!==l.toUpperCase()||L<l.replace(/\s/g,'').length*0.75)continue;
   if(/factura|ticket|cuit|iva|fecha|comprobante|www|http|original|duplicado|consumidor|mesa|salon|mozo|mesera|total|avenida|calle|participa|encuesta|sorteo|gracias|bienvenid/i.test(l))continue;
@@ -818,6 +826,15 @@ $('btnOcrUse').onclick=()=>{
  if(ocrRes.date){$('eDate').value=ocrRes.date;$('ePanDate').hidden=false;$('btnDate').setAttribute('aria-expanded','true');xbUi()}
  $('btnOcrUse').hidden=true;$('btnOcrSum').hidden=true;$('ocrNote').textContent='Listo. Revisá los datos y guardá.';
 };
+function recentUi(){
+ const box=$('eRecent');if(!box)return;const show=!editId&&!$('eDesc').value.trim();const seen=new Set(),L=[];
+ if(show)for(const m of (mvAll||[]).slice().reverse()){if(m.kind!=='expense'||m.voided)continue;const d=String(m.description||'').trim();const k=d.toLowerCase();if(!d||seen.has(k))continue;seen.add(k);L.push(d);if(L.length>=4)break}
+ box.innerHTML=L.map(d=>'<button type="button" class="chip" data-rd="'+esc(d)+'">'+esc(d)+'</button>').join('');box.hidden=!L.length;
+ const sc=$('btnScan');if(sc)sc.hidden=!!editId;
+}
+$('eRecent').onclick=e=>{const b=e.target.closest('[data-rd]');if(!b)return;$('eDesc').value=b.dataset.rd;autoCat();recentUi();$('eAmt').focus()};
+let scanNext=false;
+$('btnScan').onclick=()=>{scanNext=true;$('eRcptIn').click()};
 function rcptUi(){
  $('btnRcpt').innerHTML=ic('receipt',18)+(rcptBlob?' Foto ✓':' Foto');
  $('ocrBox').hidden=!rcptBlob;if(!rcptBlob){$('ocrNote').textContent='';$('btnOcrUse').hidden=true;ocrRes=null;$('ocrRawBox').hidden=true;$('btnOcrSum').hidden=true;rcptFile=null}
@@ -825,7 +842,7 @@ function rcptUi(){
 }
 $('btnRcpt').onclick=()=>$('eRcptIn').click();
 $('btnRcptX').onclick=()=>{rcptBlob=null;$('eRcptIn').value='';rcptUi()};
-$('eRcptIn').onchange=async()=>{const f=$('eRcptIn').files[0];if(!f)return;rcptFile=f;try{rcptBlob=await compressImg(f)}catch(e){rcptBlob=null;say(/[áéíóú]|foto/.test(e.message||'')?e.message:'No pude abrir esa foto. Probá con otra o sacala de nuevo con la cámara.',true)}rcptUi()};
+$('eRcptIn').onchange=async()=>{const sc=scanNext;scanNext=false;const f=$('eRcptIn').files[0];if(!f)return;rcptFile=f;try{rcptBlob=await compressImg(f)}catch(e){rcptBlob=null;say(/[áéíóú]|foto/.test(e.message||'')?e.message:'No pude abrir esa foto. Probá con otra o sacala de nuevo con la cámara.',true)}rcptUi();if(sc&&rcptBlob)$('btnOcr').click()};
 async function uploadReceipt(mid,blob){
  if(!(await fresh()))throw Error('Tu sesión venció.');
  let r;try{r=await fetch(BASE+'/storage/v1/object/cuentas-receipts/'+gid+'/'+mid+'.jpg',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'image/jpeg','x-upsert':'false'},body:blob})}catch(_){const e=Error(NETERR);e.net=true;throw e}
@@ -856,7 +873,7 @@ async function openGroup(id){
  catsAll=Array.isArray(cl)?cl:[];cats=catsAll.filter(c=>!c.archived);
  group=g;show('vGroup');offNote();say(ran>0?'Se cargaron '+ran+(ran===1?' gasto repetido que vencía.':' gastos repetidos que vencían.'):'');setTab(tab);
  const name=u=>{const m=g.members.find(x=>x.user_id===u);return u===myId?'Vos':(m&&m.display_name)||'Miembro '+String(u).slice(0,4)};
- mvAll=mv;
+ mvAll=mv;try{recentUi()}catch(_){}
  const active=g.members.filter(m=>m.status==='active');guestIds=new Set(g.members.filter(m=>m.guest&&m.status==='active').map(m=>m.user_id));
  const me=g.members.find(m=>m.user_id===myId);
  const cur=g.reference_currency;
@@ -996,7 +1013,7 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{
   const m=mv.find(x=>x.id===b.dataset.edit);if(!m)return;
   editId=m.id;editDate=m.occurred_on||null;repVis();
-  $('cExpense').open=true;$('fab').hidden=true;$('eAdv').open=true;$('eRepBox').hidden=false;$('btnRep').setAttribute('aria-expanded','true');$('eDesc').value=m.description||'';$('eDate').value=m.occurred_on?String(m.occurred_on).slice(0,10):'';$('eNotes').value=m.notes||'';if(m.notes)$('ePanNotes').hidden=false;xbUi();$('eAmt').value=fmtAmtLive((Number(m.amount_minor)/100).toFixed(2).replace('.',','));$('ePayer').value=m.from_user;fillCur(m.currency);$('eFx').value=m.fx_rate?String(Number(m.fx_rate)).replace('.',','):'';catSel=m.category&&cats.some(c=>c.key===m.category)?m.category:null;catAuto=false;renderCats();syncFx();
+  $('cExpense').open=true;$('fab').hidden=true;$('eAdv').open=true;$('eRepBox').hidden=false;$('btnRep').setAttribute('aria-expanded','true');$('eDesc').value=m.description||'';try{recentUi()}catch(_){}$('eDate').value=m.occurred_on?String(m.occurred_on).slice(0,10):'';$('eNotes').value=m.notes||'';if(m.notes)$('ePanNotes').hidden=false;xbUi();$('eAmt').value=fmtAmtLive((Number(m.amount_minor)/100).toFixed(2).replace('.',','));$('ePayer').value=m.from_user;fillCur(m.currency);$('eFx').value=m.fx_rate?String(Number(m.fx_rate)).replace('.',','):'';catSel=m.category&&cats.some(c=>c.key===m.category)?m.category:null;catAuto=false;renderCats();syncFx();
   const sh=m.shares||{};const ids=Object.keys(sh);const vals=ids.map(k=>Number(sh[k]));
   const wsh=weightsDiffer(ids)?weightedShares(Number(m.amount_minor),ids):null;
   const equal=(vals.length>0&&Math.max(...vals)-Math.min(...vals)<=1)||!!(wsh&&ids.every(k=>Math.abs((wsh[k]||0)-Number(sh[k]))<=1));
@@ -1063,7 +1080,7 @@ $('btnDate').onclick=()=>{const h=!$('ePanDate').hidden;$('ePanDate').hidden=h;$
 $('btnNotes').onclick=()=>{const h=!$('ePanNotes').hidden;$('ePanNotes').hidden=h;$('btnNotes').setAttribute('aria-expanded',String(!h));if(h===false)$('eNotes').focus()};
 $('eDate').addEventListener('change',xbUi);$('eRep').addEventListener('change',xbUi);$('eNotes').addEventListener('input',xbUi);
 function repVis(){const on=!editId;$('eRep').hidden=$('eRepLbl').hidden=!on;if(!on)$('eRep').value=''}
-function resetEdit(){try{$('eDate').value='';$('eNotes').value='';$('eRep').value='';$('ePanDate').hidden=$('ePanNotes').hidden=true;$('btnDate').setAttribute('aria-expanded','false');$('btnNotes').setAttribute('aria-expanded','false')}catch(e){console.error('RESETERR '+e.message)}rcptBlob=null;try{$('eRcptIn').value='';rcptUi()}catch(_){}editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('eTitle').textContent='Nuevo gasto';$('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true;xbUi();try{$('eRepBox').hidden=true;$('btnRep').setAttribute('aria-expanded','false');soloUi();amtNote()}catch(_){}}
+function resetEdit(){try{$('eDate').value='';$('eNotes').value='';$('eRep').value='';$('ePanDate').hidden=$('ePanNotes').hidden=true;$('btnDate').setAttribute('aria-expanded','false');$('btnNotes').setAttribute('aria-expanded','false')}catch(e){console.error('RESETERR '+e.message)}rcptBlob=null;try{$('eRcptIn').value='';rcptUi()}catch(_){}editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('eTitle').textContent='Nuevo gasto';$('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true;xbUi();try{recentUi()}catch(_){}try{$('eRepBox').hidden=true;$('btnRep').setAttribute('aria-expanded','false');soloUi();amtNote()}catch(_){}}
 function updAdv(){
  const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')];const n=cs.filter(c=>c.checked).length;
  const wd=weightsDiffer(cs.filter(c=>c.checked).map(c=>c.value));
@@ -1687,7 +1704,7 @@ $('btnStatus').onclick=busy($('btnStatus'),async()=>{
 });
 $('eMode').onchange=syncMode;
 $('fab').onclick=()=>{if(!$('vHome').hidden){$('btnHomeAdd').onclick();return}$('fab').hidden=true;resetEdit();$('cExpense').open=true;$('eAdv').open=false;$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});$('eDesc').focus()};
-$('eDesc').addEventListener('input',autoCat);$('eCur').addEventListener('change',()=>{$('eFx').value='';$('eFx').dataset.auto='';fxSug=null;syncFx()});$('eFx').addEventListener('input',()=>{$('eFx').dataset.auto='';fxNote()});$('eAmt').addEventListener('input',fxNote);$('ePayer').addEventListener('change',updAdv);$('eParts').addEventListener('change',updAdv);
+$('eDesc').addEventListener('input',()=>{autoCat();recentUi()});$('eCur').addEventListener('change',()=>{$('eFx').value='';$('eFx').dataset.auto='';fxSug=null;syncFx()});$('eFx').addEventListener('input',()=>{$('eFx').dataset.auto='';fxNote()});$('eAmt').addEventListener('input',fxNote);$('ePayer').addEventListener('change',updAdv);$('eParts').addEventListener('change',updAdv);
 $('cExpense').addEventListener('toggle',()=>{const o=$('cExpense').open;$('vGroup').classList.toggle('ex-open',o);if(o){$('eGrp').textContent=group?group.name:'';window.scrollTo(0,0)}});
 $('eRep').addEventListener('change',updAdv);
 $('btnExpBack').onclick=()=>$('btnExpClose').click();
