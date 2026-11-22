@@ -322,14 +322,15 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
    <button type="button" class="lnk" id="btnExpBack"><svg class="icn" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Volver</button>
    <h2 id="eTitle">Nuevo gasto</h2><div class="muted" id="eGrp"></div>
    <label for="eDesc">Descripción</label><input id="eDesc" maxlength="300" placeholder="Ej. Asado, Nafta, Vinos">
-   <label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00" style="font-size:1.6rem;font-weight:700">
+   <label for="eAmt">Importe</label><input id="eAmt" inputmode="decimal" placeholder="0,00" style="font-size:1.6rem;font-weight:700"><p class="muted fine" id="eAmtNote" aria-live="polite" style="margin:4px 0 0"></p>
    <div class="xbtns"><button type="button" class="sec" id="btnDate" aria-expanded="false" aria-controls="ePanDate"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span id="eDateLbl">Hoy</span></button><button type="button" class="sec" id="btnNotes" aria-expanded="false" aria-controls="ePanNotes"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg><span id="eNotesLbl">Notas</span></button></div>
    <div id="ePanDate" class="xpan" hidden><label for="eDate">Fecha del gasto</label><input type="date" id="eDate"><label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select></div>
    <div id="ePanNotes" class="xpan" hidden><label for="eNotes">Notas</label><textarea id="eNotes" maxlength="1000" rows="3" placeholder="Algo que quieras recordar de este gasto"></textarea></div>
    <div class="rcpt" id="eRcptBox"><input type="file" id="eRcptIn" accept="image/*" hidden><button type="button" class="sec" id="btnRcpt"></button><span class="muted" id="eRcptName"></span><button type="button" class="lnk" id="btnRcptX" hidden>Quitar</button></div>
    <label id="eCatsLbl">Categoría</label><div id="eCats" class="chips" role="group" aria-labelledby="eCatsLbl"></div>
-   <div class="pm"><div><label for="ePayer">Pagó</label><select id="ePayer"></select></div><div><label for="eMode">Dividir</label><select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select></div></div>
-   <details id="eAdv" class="adv"><summary id="eAdvSum">Entre todos</summary>
+   <div id="eSolo" hidden><button type="button" class="lnk" id="btnSoloAdd" style="padding-left:0">+ Dividir con otra persona</button><div id="eSoloBox" hidden><label for="eSoloName">Nombre</label><div class="irow"><input id="eSoloName" maxlength="40" placeholder="Ej. Lu" autocomplete="off"><button type="button" class="sec" id="btnSoloOk" style="width:auto;margin:0">Sumar</button></div><p class="muted fine">Queda en el grupo y ya podés repartir con esa persona.</p></div></div>
+   <div class="pm" id="ePm"><div><label for="ePayer">Pagó</label><select id="ePayer"></select></div><div><label for="eMode">Dividir</label><select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select></div></div>
+   <details id="eAdv" class="adv" data-adv><summary id="eAdvSum">Entre todos</summary>
     <label>Entre quiénes</label><div id="eParts"></div>
     <p id="eSum" class="muted" hidden></p>
     <label for="eCur">Moneda</label><select id="eCur"></select>
@@ -451,7 +452,12 @@ const hue=k=>{let h=0;for(const ch of String(k))h=(h*31+ch.charCodeAt(0))%97;ret
 const fmtD=d=>d?String(d).slice(8,10)+'/'+String(d).slice(5,7):'';
 const money=(m,c)=>{try{return new Intl.NumberFormat('es-AR',{style:'currency',currency:c}).format(Number(m)/100)}catch(_){return (Number(m)/100).toFixed(2)+' '+c}};
 const ZERO_DEC=['CLP','PYG','JPY','KRW','VND','ISK','UGX'],UNIT=c=>ZERO_DEC.includes(c)?100:1,curNow=()=>{const e=document.getElementById('eCur');return (e&&e.value)||(group&&group.reference_currency)||'ARS'};
-const toMinor=(s,c)=>{const n=Number(String(s).trim().replace(/\./g,'').replace(',','.'));if(!isFinite(n)||n<=0)return null;return UNIT(c)>1?Math.round(n)*100:Math.round(n*100)};
+const parseNum=s=>{s=String(s).trim().replace(/[\s$]/g,'');if(!s)return NaN;const d=s.lastIndexOf('.'),k=s.lastIndexOf(',');
+ if(d>=0&&k>=0)return Number(k>d?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,''));
+ if(k>=0)return Number(s.replace(/\./g,'').replace(',','.'));
+ if(d>=0){return /^\d{1,3}(\.\d{3})+$/.test(s)?Number(s.replace(/\./g,'')):Number(s)}
+ return Number(s)};
+const toMinor=(s,c)=>{const n=parseNum(s);if(!isFinite(n)||n<=0)return null;return UNIT(c)>1?Math.round(n)*100:Math.round(n*100)};
 const newKey=()=>crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2);
 function decodeSub(t){try{return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub}catch(_){return null}}
 function save(d){
@@ -550,10 +556,10 @@ function renderStats(rows){
  sv('stSub',(t.pos>0&&t.neg>0)?'A favor '+moneyS(t.pos,cur)+' · Debés '+moneyS(t.neg,cur):(net===0?'No tenés saldos pendientes':''));
 }
 function renderGroups(){
- $('optPersonal').hidden=gsAll.some(g=>g.kind==='personal');
+ $('optPersonal').hidden=false;const gl=gsAll.filter(g=>g.kind!=='personal');
  const lim=showAll?99:4;const isSettled=g=>g.member_status!=='former'&&rowsBal&&!(rowsBal.find(x=>x.g.id===g.id)||{mine:[]}).mine[0];
- const ordered=gsAll.slice();if(rowsBal)ordered.sort((a,b)=>Number(isSettled(a))-Number(isSettled(b)));const list=ordered.slice(0,lim);
- $('btnAllG').hidden=gsAll.length<=4;$('btnAllG').textContent=showAll?'Ver menos ›':'Ver todos ›';
+ const ordered=gl.slice();if(rowsBal)ordered.sort((a,b)=>Number(isSettled(a))-Number(isSettled(b)));const list=ordered.slice(0,lim);
+ $('btnAllG').hidden=gl.length<=4;$('btnAllG').textContent=showAll?'Ver menos ›':'Ver todos ›';
   let sepDone=false;
  const html=list.map(g=>{
   let sep='';if(rowsBal&&!sepDone&&isSettled(g)&&list.some(x=>!isSettled(x))){sepDone=true;sep='<div class="grp-h">Sin saldos pendientes</div>'}
@@ -838,7 +844,7 @@ async function openGroup(id){
  $('btnStatus').textContent=g.status==='open'?'Cerrar grupo':'Reabrir grupo';
  loadTrips().catch(()=>{});
  if(tab==='analisis')renderAnalysis();
- $('cEmpty').hidden=!(active.length<2&&g.status==='open');$('btnInvite').hidden=!$('cEmpty').hidden;
+ $('cEmpty').hidden=!(active.length<2&&g.status==='open'&&!gsAll.some(x=>x.id===g.id&&x.kind==='personal'));$('btnInvite').hidden=!$('cEmpty').hidden;
  $('cExpense').hidden=g.status!=='open';$('cExpense').open=false;
  const mine=bal.filter(b=>b.user_id===myId);
  {const cur=group.reference_currency;let pos=0,neg=0;mine.forEach(b=>{const v=Number(b.balance_minor);if(v>0)pos+=v;else neg+=-v});const net=pos-neg;
@@ -905,7 +911,7 @@ async function openGroup(id){
   const equal=(vals.length>0&&Math.max(...vals)-Math.min(...vals)<=1)||!!(wsh&&ids.every(k=>Math.abs((wsh[k]||0)-Number(sh[k]))<=1));
   $('eMode').value=equal?'eq':'ex';syncMode();
   $('eParts').querySelectorAll('label').forEach(l=>{const cb=l.querySelector('input[type=checkbox]');const a=l.querySelector('.amt');cb.checked=ids.includes(cb.value);if(!equal&&sh[cb.value]!=null)a.value=(Number(sh[cb.value])/100).toFixed(2).replace('.',',')});
-  updSum();updAdv();$('btnExpense').textContent='Guardar cambios';$('eTitle').textContent='Editar gasto';$('btnEditCancel').hidden=false;
+  soloUi();updSum();updAdv();$('btnExpense').textContent='Guardar cambios';$('eTitle').textContent='Editar gasto';$('btnEditCancel').hidden=false;
   say('Editando un gasto: al guardar, el anterior queda anulado y se crea el corregido.');$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});
  });
  $('moves').querySelectorAll('[data-crev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_compensation_reverse_propose',{p_compensation:b.dataset.crev,p_reason:null});await openGroup(gid);say('Propuesta de reversión creada: necesita la aprobación de las dos personas.')}));
@@ -913,6 +919,22 @@ async function openGroup(id){
  $('moves').querySelectorAll('[data-prev]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_proposal_create',{p_kind:'reverse_payment',p_target:b.dataset.prev,p_reason:null});await openGroup(gid);say('Propuesta creada: necesita la aprobación de todos los afectados.')}));
  $('moves').querySelectorAll('[data-conf]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_payment_confirm',{p_payment:b.dataset.conf});await openGroup(gid);say('Pago confirmado.')}));
 }
+function soloUi(){
+ const solo=!!group&&group.members.filter(m=>m.status==='active').length<2&&!editId;
+ $('eSolo').hidden=!solo;$('ePm').hidden=$('eAdv').hidden=solo;if(!solo)$('eSoloBox').hidden=true;
+ if(solo){$('eAdv').open=false}
+}
+function amtNote(){const v=$('eAmt').value.trim();if(!v){$('eAmtNote').textContent='';return}const m=toMinor(v,$('eCur').value||(group&&group.reference_currency)||'ARS');$('eAmtNote').textContent=m?'Son '+money(m,$('eCur').value||group.reference_currency):'Importe inválido'}
+$('eAmt').addEventListener('input',amtNote);
+$('btnSoloAdd').onclick=()=>{const h=!$('eSoloBox').hidden;$('eSoloBox').hidden=h;if(!h)$('eSoloName').focus()};
+$('eSoloName').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('btnSoloOk').click()}};
+$('btnSoloOk').onclick=busy($('btnSoloOk'),async()=>{
+ const n=$('eSoloName').value.trim();if(!n)throw Error('Poné un nombre.');
+ const d=$('eDesc').value,a=$('eAmt').value;
+ await rpc('cuentas_guest_add',{p_group:gid,p_name:n});await openGroup(gid);
+ $('cExpense').open=true;$('fab').hidden=true;$('eDesc').value=d;$('eAmt').value=a;amtNote();
+ $('eAdv').open=true;$('eAmt').focus();say(n+' ya está en el grupo.');
+});
 function xbUi(){
  const d=$('eDate').value,r=$('eRep').value&&!editId,n=$('eNotes').value.trim();
  $('eDateLbl').textContent=(d?fmtD(d)+'/'+d.slice(2,4):'Hoy')+(r?' · se repite':'');
@@ -922,7 +944,7 @@ $('btnDate').onclick=()=>{const h=!$('ePanDate').hidden;$('ePanDate').hidden=h;$
 $('btnNotes').onclick=()=>{const h=!$('ePanNotes').hidden;$('ePanNotes').hidden=h;$('btnNotes').setAttribute('aria-expanded',String(!h));if(h===false)$('eNotes').focus()};
 $('eDate').addEventListener('change',xbUi);$('eRep').addEventListener('change',xbUi);$('eNotes').addEventListener('input',xbUi);
 function repVis(){const on=!editId;$('eRep').hidden=$('eRepLbl').hidden=!on;if(!on)$('eRep').value=''}
-function resetEdit(){try{$('eDate').value='';$('eNotes').value='';$('eRep').value='';$('ePanDate').hidden=$('ePanNotes').hidden=true;$('btnDate').setAttribute('aria-expanded','false');$('btnNotes').setAttribute('aria-expanded','false')}catch(e){console.error('RESETERR '+e.message)}rcptBlob=null;try{$('eRcptIn').value='';rcptUi()}catch(_){}editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('eTitle').textContent='Nuevo gasto';$('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true;xbUi()}
+function resetEdit(){try{$('eDate').value='';$('eNotes').value='';$('eRep').value='';$('ePanDate').hidden=$('ePanNotes').hidden=true;$('btnDate').setAttribute('aria-expanded','false');$('btnNotes').setAttribute('aria-expanded','false')}catch(e){console.error('RESETERR '+e.message)}rcptBlob=null;try{$('eRcptIn').value='';rcptUi()}catch(_){}editId=null;editDate=null;catSel=null;catAuto=true;try{repVis();renderCats();if(group){fillCur();$('eFx').value='';syncFx()}}catch(_){} $('eTitle').textContent='Nuevo gasto';$('btnExpense').textContent='Guardar gasto';$('btnEditCancel').hidden=true;xbUi();try{soloUi();amtNote()}catch(_){}}
 function updAdv(){
  const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')];const n=cs.filter(c=>c.checked).length;
  const wd=weightsDiffer(cs.filter(c=>c.checked).map(c=>c.value));
