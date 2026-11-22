@@ -10,6 +10,8 @@ begin
  if v_new=v_def then raise exception 'Anclas no encontradas'; end if;
  execute v_new;
  drop function public.cuentas_expense_add(uuid,text,bigint,uuid,uuid[],jsonb,text,date,text,text,numeric,text,timestamp with time zone);
+ revoke all on function public.cuentas_expense_add(uuid,text,bigint,uuid,uuid[],jsonb,text,date,text,text,numeric) from public, anon;
+ grant execute on function public.cuentas_expense_add(uuid,text,bigint,uuid,uuid[],jsonb,text,date,text,text,numeric) to authenticated;
  v_def:=pg_get_functiondef('public.cuentas_group_get(uuid)'::regprocedure);
  v_new:=replace(v_def,'''fx_rate_type'',g.fx_rate_type,''fx_auto'',(cuentas.cfg_int(''fx_auto'',1)=1),''fx_warn_pct'',cuentas.cfg_int(''fx_warn_pct'',10),','');
  execute v_new;
