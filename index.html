@@ -147,6 +147,18 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 #cExpense .adv>summary .advsum{min-width:0;font-size:1rem;font-weight:400;color:var(--fg)}
 #cExpense .adv[open]>summary{margin-bottom:0}
 #cExpense .adv select{background:var(--field);border:1px solid var(--line);border-radius:14px;padding:13px 12px}
+#cExpense .dchips .chip,#cExpense .xbtns .sec{font-weight:400}
+#eRecent::before{content:'Recientes';flex:0 0 100%;font-size:.78rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 -2px}
+#btnRep[aria-expanded=true]{border-bottom-left-radius:0;border-bottom-right-radius:0;background:var(--field)}
+#btnRep[aria-expanded=true] .go{transform:rotate(180deg)}
+#eRepBox:not([hidden]){margin-top:0;border:1px solid var(--line);border-top:0;border-radius:0 0 14px 14px;padding:2px 14px 12px}
+#eRepBox .pm label{margin-top:12px}
+#eAdvLbl{margin-top:16px}
+#cExpense .adv{margin:0 0 4px;border-bottom:0}
+#cExpense .adv>summary{padding:13px 6px;min-height:0;border-bottom:1px solid var(--texto-sec)}
+#cExpense .adv[open]>summary .go{transform:rotate(180deg)}
+#cExpense[open]{padding-bottom:140px}
+#cExpense[open] .savebar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(100%,460px);box-sizing:border-box;margin:0}
 #eParts{display:flex;flex-direction:column;margin:0 0 10px}
 #eParts .chk{display:flex;align-items:center;gap:12px;margin:0;padding:10px 0;border-bottom:1px solid var(--line);text-transform:none;letter-spacing:0;font-size:1rem;font-weight:500;color:var(--fg);cursor:pointer}
 #eParts .chk:last-child{border-bottom:0}
@@ -343,8 +355,9 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
    <button type="button" class="sec repbtn" id="btnRep" aria-expanded="false" aria-controls="eRepBox"></button>
    <div id="eRepBox" hidden>
    <div class="pm" id="ePm"><div><label for="ePayer">Pagó</label><select id="ePayer"></select></div><div><label for="eMode">Dividir</label><select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select></div></div>
-   <details id="eAdv" class="adv" data-adv><summary id="eAdvSum">Entre todos</summary>
-    <label>Entre quiénes</label><div id="eParts"></div>
+   <label id="eAdvLbl">Entre quiénes</label>
+   <details id="eAdv" class="adv" data-adv><summary id="eAdvSum">Todos</summary>
+    <div id="eParts"></div>
     <p id="eSum" class="muted" hidden></p>
     <label for="eCur">Moneda</label><select id="eCur"></select>
     <div id="eFxBox" hidden><label for="eFx" id="eFxLbl">Cotización</label><input id="eFx" inputmode="decimal" placeholder="0,00"><p id="eFxNote" class="muted" style="margin:6px 0 0"></p></div>
@@ -409,7 +422,7 @@ const ICONS={
  plus:'<path d="M12 5v14M5 12h14"/>',
  close:'<path d="M6 6l12 12M18 6L6 18"/>',
  back:'<path d="M15 5l-7 7 7 7"/>',
- right:'<path d="M9 5l7 7-7 7"/>',
+ right:'<path d="M9 5l7 7-7 7"/>',down:'<path d="M5 9l7 7 7-7"/>',
  fork:'<path d="M7 3v6a2 2 0 0 0 4 0V3M9 11v10M17 3c-2 1.500-3 4-3 7 0 1.500 1 2.500 3 2.500V21"/>',
  car:'<path d="M5 17v-5l1.600-4.200A2 2 0 0 1 8.500 6.500h7a2 2 0 0 1 1.900 1.300L19 12v5zM5 17v2M19 17v2M5 12h14"/><circle cx="8.500" cy="14.500" r=".7"/><circle cx="15.500" cy="14.500" r=".7"/>',
  bed:'<path d="M3 19V6M3 15h18v4M21 15v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.700"/>',
@@ -1070,7 +1083,7 @@ function repSum(){
  t+=' · '+(mode==='pc'?'por porcentajes':mode==='ex'?'importes exactos':(ps.length===cs.length?'entre todos ('+cs.length+')':'entre '+ps.length+' de '+cs.length));
  if(mode==='eq'&&amt&&ps.length&&!weightsDiffer(ps.map(c=>c.value)))t+=' · '+money(Math.round(amt/ps.length),cur)+' c/u';
  if(cur!==group.reference_currency)t=cur+' · '+t;
- $('btnRep').innerHTML='<span class="rs">'+esc(t)+'</span><span class="go">'+ic('right',20)+'</span>';
+ $('btnRep').innerHTML='<span class="rs">'+esc(t)+'</span><span class="go">'+ic('down',20)+'</span>';
 }
 $('btnRep').onclick=()=>{const h=!$('eRepBox').hidden;$('eRepBox').hidden=h;$('btnRep').setAttribute('aria-expanded',String(!h))};
 $('eAmt').addEventListener('input',()=>{const el=$('eAmt'),f=fmtAmtLive(el.value);if(f!==el.value){el.value=f;try{el.setSelectionRange(f.length,f.length)}catch(_){}}amtNote()});
@@ -1102,9 +1115,9 @@ function resetEdit(){try{$('eDate').value='';$('eNotes').value='';$('eNotesNote'
 function updAdv(){
  const cs=[...$('eParts').querySelectorAll('input[type=checkbox]')];const n=cs.filter(c=>c.checked).length;
  const wd=weightsDiffer(cs.filter(c=>c.checked).map(c=>c.value));
- const ent=cs.length&&n<cs.length?'Entre '+n+' de '+cs.length:'Entre todos';
+ const ent=cs.length&&n<cs.length?n+' de '+cs.length:'Todos'+(cs.length?' ('+cs.length+')':'');
  const ex=[wd&&$('eMode').value==='eq'?'según el peso de cada uno':'',group&&$('eCur').value!==group.reference_currency?$('eCur').value:'',$('eRep').value?'se repite':''].filter(Boolean);
- $('eAdvSum').innerHTML='<span class="advsum">'+ent+(ex.length?' · '+ex.join(' · '):'')+'</span><span class="go">'+ic('right',20)+'</span>';
+ $('eAdvSum').innerHTML='<span class="advsum">'+ent+(ex.length?' · '+ex.join(' · '):'')+'</span><span class="go">'+ic('down',20)+'</span>';
 }
 function syncMode(){
  const ex=$('eMode').value!=='eq';
