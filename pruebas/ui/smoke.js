@@ -733,4 +733,5 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  const icn=await t.page.evaluate(()=>({foto:document.querySelector('#btnRcpt svg').innerHTML.includes('cy="13"'),ajustes:document.querySelector('#btnGear svg').innerHTML.includes('1.724')}));
  ok(icn.foto,'íconos: «Foto» usa una cámara');
  ok(icn.ajustes,'íconos: «Ajustes» usa una tuerca');
+ ok(await t.page.evaluate(()=>document.querySelector('#btnScan svg')!==null),'íconos: «Escanear ticket» tiene ícono');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
