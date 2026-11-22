@@ -560,6 +560,11 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   t=await mk(b,{lk:{empty:true}});await t.page.route('**/tesseract.min.js',r=>r.abort());await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#fab',{state:'visible'});await t.page.click('#fab');
   await t.page.setInputFiles('#eRcptIn',{name:'t.png',mimeType:'image/png',buffer:png2});await t.page.waitForTimeout(500);await t.page.click('#btnOcr');await t.page.waitForTimeout(800);
   ok(/a mano/.test(await t.page.textContent('#ocrNote'))&&!(await t.page.isVisible('#btnOcrUse')),'ocr: si no carga el lector, avisa y se sigue a mano')}
+ // foto que el navegador no puede abrir: aviso en castellano y sigue andando
+ {t=await mk(b,{lk:{empty:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#fab',{state:'visible'});await t.page.click('#fab');
+  await t.page.setInputFiles('#eRcptIn',{name:'raro.heic',mimeType:'image/heic',buffer:Buffer.from('no es una imagen')});await t.page.waitForTimeout(600);
+  const mt=await t.page.textContent('#msg');
+  ok(/No pude abrir esa foto/.test(mt)&&!/decoded/i.test(mt)&&!(await t.page.isVisible('#btnOcr')),'foto: si no se puede abrir, avisa en castellano y no ofrece leerla');}
  // avisos de error cortos
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');
