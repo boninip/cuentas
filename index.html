@@ -247,6 +247,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 </div>
 <div data-hp="cuenta" hidden>
  <h2>Cuenta</h2><p id="who2" class="muted"></p>
+ <details class="card" id="cPrefs"><summary>Avisos</summary><p class="muted">Elegí qué avisos querés recibir. Los esenciales no se pueden apagar.</p><div id="prefList"></div></details>
  <details class="card" id="cTheme" open><summary>Apariencia</summary><p class="muted">Elegí cómo se ve Cuentas. «Automático» sigue la configuración de tu celular.</p><div class="chips" role="radiogroup" aria-label="Apariencia"><button type="button" class="chip" role="radio" data-theme-opt="auto">Automático</button><button type="button" class="chip" role="radio" data-theme-opt="light">Claro</button><button type="button" class="chip" role="radio" data-theme-opt="dark">Oscuro</button></div></details>
  <details class="card" id="cProfile"><summary id="profSum">Mi nombre</summary><p class="muted">Así te ven las otras personas en los grupos.</p><label for="pName">Tu nombre</label><input id="pName" maxlength="40" placeholder="Ej. Pau" autocomplete="given-name"><button id="btnProfile">Guardar nombre</button></details>
  <details class="card" id="cPayout">
@@ -630,7 +631,24 @@ async function loadProfile(){
  $('pName').value=n;if(n){$('avatar').dataset.n='1';$('avatar').textContent=n.charAt(0).toUpperCase()}$('profSum').textContent=n?'Mi nombre: '+n:'Poné tu nombre (así te ven en los grupos)';$('cProfile').open=!n;
 }
 $('btnProfile').onclick=busy($('btnProfile'),async()=>{const n=$('pName').value.trim();if(!n)throw Error('Escribí tu nombre');await rpc('core_profile_set',{p_name:n});await loadProfile();say('Nombre guardado.')});
-const NOTICE_TXT={proposal_consent:()=>'Hay una propuesta que necesita tu consentimiento.',proposal_invalidated:()=>'Una propuesta quedó sin efecto (alguien se desvinculó o algo cambió). Para seguir hay que crear una nueva.',proposal_cancelled:()=>'Se canceló una propuesta.',delegation_granted:n=>'Te nombraron coadministrador/a'+(n.data&&Array.isArray(n.data.scopes)?' con permiso para: '+n.data.scopes.map(x=>({invite:'invitar y editar',close:'cerrar',void:'anular',link:'vincular'}[x]||x)).join(', '):'')+'.',delegation_revoked:()=>'Te quitaron la coadministración.',pair_request:()=>'Te pidieron vincular una cuenta compartida.'};
+const NOTICE_TXT={proposal_consent:()=>'Hay una propuesta que necesita tu consentimiento.',proposal_invalidated:()=>'Una propuesta quedó sin efecto (alguien se desvinculó o algo cambió). Para seguir hay que crear una nueva.',proposal_cancelled:()=>'Se canceló una propuesta.',delegation_granted:n=>'Te nombraron coadministrador/a'+(n.data&&Array.isArray(n.data.scopes)?' con permiso para: '+n.data.scopes.map(x=>({invite:'invitar y editar',close:'cerrar',void:'anular',link:'vincular'}[x]||x)).join(', '):'')+'.',delegation_revoked:()=>'Te quitaron la coadministración.',pair_request:()=>'Te pidieron vincular una cuenta compartida.',
+ payment_to_confirm:n=>'Hay un pago de '+nmoney(n)+' esperando tu confirmación.',
+ payment_confirmed:n=>'Confirmaron tu pago de '+nmoney(n)+'.',
+ payment_cancelled:n=>'Se anuló un pago de '+nmoney(n)+'.',
+ expense_new:n=>{const c=Number(n.data&&n.data.count)||1;return c>1?'Hay '+c+' gastos nuevos donde participás.':'Hay un gasto nuevo donde participás'+(n.data&&n.data.description?': '+n.data.description:'')+'.'},
+ recurring_added:n=>{const c=Number(n.data&&n.data.count)||1;return c>1?'Se cargaron solos '+c+' gastos repetidos donde participás.':'Se cargó solo un gasto repetido'+(n.data&&n.data.description?': '+n.data.description:'')+'.'},
+ expense_voided:n=>'Se anuló un gasto donde participabas'+(n.data&&n.data.description?': '+n.data.description:'')+'.',
+ expense_edited:n=>'Se editó un gasto donde participás'+(n.data&&n.data.description?': '+n.data.description:'')+'.',
+ group_status:n=>({closed:'El grupo se cerró: ya no admite gastos nuevos.',open:'El grupo se reabrió.',archived:'El grupo se archivó.'}[n.data&&n.data.status]||'Cambió el estado del grupo.')};
+function nmoney(n){return n.data&&n.data.amount_minor!=null?money(n.data.amount_minor,n.data.currency||'ARS'):''}
+const PREF_TXT={payment_to_confirm:'Pago a confirmar',payment_confirmed:'Pago confirmado',payment_cancelled:'Pago anulado',expense_new:'Gastos nuevos donde participás (un resumen por grupo)',recurring_added:'Gastos repetidos cargados solos',expense_voided:'Gasto anulado',expense_edited:'Gasto editado',group_status:'Grupo cerrado, reabierto o archivado'};
+async function loadPrefs(){
+ const box=$('prefList');if(!box)return;let l=[];try{l=await rpc('cuentas_notif_prefs_get')}catch(_){box.innerHTML='<p class="muted">No se pudieron cargar tus preferencias.</p>';return}
+ if(!Array.isArray(l))l=[];
+ box.innerHTML=l.map(p=>`<label class="item" style="cursor:${p.essential?'default':'pointer'}"><span>${esc(PREF_TXT[p.kind]||p.kind)}${p.essential?' <span class="muted">· esencial, siempre activo</span>':''}</span><input type="checkbox" data-pk="${esc(p.kind)}" ${p.enabled?'checked':''} ${p.essential?'disabled':''} style="width:auto;margin:0" aria-label="${esc(PREF_TXT[p.kind]||p.kind)}"></label>`).join('');
+ box.querySelectorAll('[data-pk]').forEach(i=>i.onchange=async()=>{i.disabled=true;try{await rpc('cuentas_notif_pref_set',{p_kind:i.dataset.pk,p_enabled:i.checked});say(i.checked?'Aviso activado.':'Aviso apagado.')}catch(e){i.checked=!i.checked;say(e.message,true)}i.disabled=false});
+}
+document.addEventListener('toggle',e=>{if(e.target&&e.target.id==='cPrefs'&&e.target.open)loadPrefs()},true);
 async function loadNotices(){
  let l=[];try{l=await rpc('core_notifications_list',{p_limit:30})}catch(_){}
  if(!Array.isArray(l))l=[];const un=l.filter(n=>!n.read_at);
