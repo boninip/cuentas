@@ -327,6 +327,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
    <div id="ePanDate" class="xpan" hidden><label for="eDate">Fecha del gasto</label><input type="date" id="eDate"><label for="eRep" id="eRepLbl">Repetir</label><select id="eRep"><option value="">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select></div>
    <div id="ePanNotes" class="xpan" hidden><label for="eNotes">Notas</label><textarea id="eNotes" maxlength="1000" rows="3" placeholder="Algo que quieras recordar de este gasto"></textarea></div>
    <div class="rcpt" id="eRcptBox"><input type="file" id="eRcptIn" accept="image/*" hidden><span class="muted" id="eRcptName"></span><button type="button" class="lnk" id="btnRcptX" hidden>Quitar</button></div>
+   <div id="ocrBox" hidden><button type="button" class="sec" id="btnOcr" style="width:auto;margin:6px 0">Leer importe y fecha del ticket</button><p class="muted fine" id="ocrNote" aria-live="polite" style="margin:4px 0"></p><button type="button" id="btnOcrUse" hidden style="width:auto;margin:4px 0">Usar estos datos</button></div>
    <label id="eCatsLbl">Categoría</label><div id="eCats" class="chips" role="group" aria-labelledby="eCatsLbl"></div>
    <div id="eSolo" hidden><button type="button" class="lnk" id="btnSoloAdd" style="padding-left:0">+ Dividir con otra persona</button><div id="eSoloBox" hidden><label for="eSoloName">Nombre</label><div class="irow"><input id="eSoloName" maxlength="40" placeholder="Ej. Lu" autocomplete="off"><button type="button" class="sec" id="btnSoloOk" style="width:auto;margin:0">Sumar</button></div><p class="muted fine">Queda en el grupo y ya podés repartir con esa persona.</p></div></div>
    <div class="pm" id="ePm"><div><label for="ePayer">Pagó</label><select id="ePayer"></select></div><div><label for="eMode">Dividir</label><select id="eMode"><option value="eq">En partes iguales</option><option value="ex">Importes exactos</option><option value="pc">Porcentajes</option></select></div></div>
@@ -735,8 +736,44 @@ async function compressImg(file){
  }
  throw Error('No pude achicar la foto. Probá con otra.');
 }
+// ---- OCR del ticket (en el celular, se carga recién al tocar el botón; solo sugiere, nunca guarda solo) ----
+function ocrParse(text){
+ const lines=String(text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+ const num=t=>{const x=t.replace(/[^\d.,]/g,'');return parseNum(x)};
+ const re=/\d{1,3}(?:[.\s]\d{3})*[,.]\d{2}(?!\d)|\d+[,.]\d{2}(?!\d)/g;
+ let tot=null,all=[];
+ for(const l of lines){const m=l.match(re);if(!m)continue;const vals=m.map(num).filter(v=>v>0&&isFinite(v));if(!vals.length)continue;
+  all.push(...vals);if(/total|a pagar|importe/i.test(l)&&!/subtotal|iva|descuento|ahorro/i.test(l))tot=vals[vals.length-1]}
+ const amount=tot!=null?tot:(all.length?Math.max(...all):null);
+ let date=null;const dm=String(text||'').match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2}|\d{4})\b/);
+ if(dm){let d=+dm[1],mo=+dm[2],y=+dm[3];if(y<100)y+=2000;const t=new Date(Date.UTC(y,mo-1,d));
+  if(mo>=1&&mo<=12&&d>=1&&t.getUTCMonth()===mo-1&&y>=2000&&t<=new Date(Date.now()+864e5))date=y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0')}
+ return {amount,date};
+}
+window.ocrParse=ocrParse;
+let ocrRes=null,ocrLoad=null;
+function loadOcr(){if(window.Tesseract)return Promise.resolve();return ocrLoad||(ocrLoad=new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';sc.onload=ok;sc.onerror=()=>{ocrLoad=null;no(Error('No pude cargar el lector de tickets. Cargá los datos a mano.'))};document.head.appendChild(sc)}))}
+$('btnOcr').onclick=busy($('btnOcr'),async()=>{
+ if(!rcptBlob)return;ocrRes=null;$('btnOcrUse').hidden=true;$('ocrNote').textContent='Leyendo el ticket… la primera vez tarda un poco.';
+ try{
+  await loadOcr();
+  const r=await Promise.race([window.Tesseract.recognize(rcptBlob,'eng'),new Promise((_,no)=>setTimeout(()=>no(Error('Tardó demasiado')),60000))]);
+  ocrRes=ocrParse(r&&r.data&&r.data.text);
+ }catch(e){$('ocrNote').textContent=e.message&&/lector/.test(e.message)?e.message:'No pude leer el ticket. Cargá los datos a mano.';return}
+ if(!ocrRes.amount&&!ocrRes.date){$('ocrNote').textContent='No encontré importe ni fecha. Cargalos a mano.';return}
+ const cur=$('eCur').value||group.reference_currency;
+ $('ocrNote').textContent='Encontré'+(ocrRes.amount?' un importe de '+money(Math.round(ocrRes.amount*100),cur):'')+(ocrRes.amount&&ocrRes.date?' y':'')+(ocrRes.date?' la fecha '+fmtD(ocrRes.date)+'/'+ocrRes.date.slice(2,4):'')+'. Revisalo: puede equivocarse.';
+ $('btnOcrUse').hidden=false;
+});
+$('btnOcrUse').onclick=()=>{
+ if(!ocrRes)return;
+ if(ocrRes.amount){$('eAmt').value=String(ocrRes.amount.toFixed(2)).replace('.',',');amtNote()}
+ if(ocrRes.date){$('eDate').value=ocrRes.date;$('ePanDate').hidden=false;$('btnDate').setAttribute('aria-expanded','true');xbUi()}
+ $('btnOcrUse').hidden=true;$('ocrNote').textContent='Listo. Revisá los datos y guardá.';
+};
 function rcptUi(){
  $('btnRcpt').innerHTML=ic('receipt',18)+(rcptBlob?' Foto ✓':' Foto');
+ $('ocrBox').hidden=!rcptBlob;if(!rcptBlob){$('ocrNote').textContent='';$('btnOcrUse').hidden=true;ocrRes=null}
  $('eRcptName').textContent=rcptBlob?'Lista ('+Math.round(rcptBlob.size/1000)+' KB)':'';$('btnRcptX').hidden=!rcptBlob;
 }
 $('btnRcpt').onclick=()=>$('eRcptIn').click();

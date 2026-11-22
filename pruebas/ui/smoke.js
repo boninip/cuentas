@@ -538,6 +538,27 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});if(await ov()>0)bad.push('grupo');
   await t.page.click('#fab');await t.page.waitForTimeout(200);await t.page.evaluate(()=>{document.getElementById('eAdv').open=true;document.getElementById('btnDate').click();document.getElementById('btnNotes').click()});if(await ov()>0)bad.push('formulario');
   ok(bad.length===0,'360 px: sin desborde horizontal'+(bad.length?' (falla en '+bad.join(', ')+')':''))}
+ // OCR del ticket: solo sugiere, se carga al tocar, nunca guarda solo
+ {t=await mk(b,{lk:{empty:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+  const P=await t.page.evaluate(()=>[ocrParse('SUPER X\nFecha 15/11/2026\nSUBTOTAL 10.000,00\nIVA 2.100,00\nTOTAL $ 12.100,00'),ocrParse('Cafe 1.500,00\nTorta 3.200,00'),ocrParse('12-3-26 total 350.50'),ocrParse('sin datos'),ocrParse('fecha 31/02/2026 total 10,00')]);
+  ok(P[0].amount===12100&&P[0].date==='2026-11-15','ocr: toma el TOTAL (no subtotal ni IVA) y la fecha');
+  ok(P[1].amount===3200,'ocr: sin la palabra total, toma el mayor');
+  ok(P[2].amount===350.5&&P[2].date==='2026-03-12','ocr: acepta punto decimal y fecha corta');
+  ok(P[3].amount===null&&P[3].date===null&&P[4].date===null,'ocr: sin datos o con fecha imposible no inventa nada');
+  let reqs=0;await t.page.route('**/tesseract.min.js',r=>{reqs++;r.fulfill({contentType:'application/javascript',body:"window.Tesseract={recognize:async()=>({data:{text:'COMERCIO\\nFecha: 15/11/2026\\nSUBTOTAL 10.000,00\\nTOTAL $ 12.345,50\\n'}})}"})});
+  await t.page.click('[data-g]');await t.page.waitForSelector('#fab',{state:'visible'});await t.page.click('#fab');
+  const png2=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEUlEQVR4nGM44eCAFTEMLQkALKhSAY1dq8cAAAAASUVORK5CYII=','base64');
+  ok(!(await t.page.isVisible('#btnOcr')),'ocr: sin foto no se ofrece');
+  await t.page.setInputFiles('#eRcptIn',{name:'t.png',mimeType:'image/png',buffer:png2});await t.page.waitForTimeout(500);
+  ok(await t.page.isVisible('#btnOcr')&&reqs===0,'ocr: con foto se ofrece y todavía no se descargó nada');
+  await t.page.click('#btnOcr');await t.page.waitForTimeout(600);
+  ok(reqs===1&&/12\.345,50/.test(await t.page.textContent('#ocrNote'))&&/15\/11/.test(await t.page.textContent('#ocrNote')),'ocr: al tocar, lee y muestra lo que encontró');
+  ok(await t.page.inputValue('#eAmt')===''&&!t.calls.some(c=>c.startsWith('cuentas_expense_add')),'ocr: solo sugiere, no completa ni guarda solo');
+  await t.page.click('#btnOcrUse');
+  ok(await t.page.inputValue('#eAmt')==='12345,50'&&await t.page.inputValue('#eDate')==='2026-11-15'&&!t.calls.some(c=>c.startsWith('cuentas_expense_add')),'ocr: al confirmar completa importe y fecha, sin guardar');
+  t=await mk(b,{lk:{empty:true}});await t.page.route('**/tesseract.min.js',r=>r.abort());await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#fab',{state:'visible'});await t.page.click('#fab');
+  await t.page.setInputFiles('#eRcptIn',{name:'t.png',mimeType:'image/png',buffer:png2});await t.page.waitForTimeout(500);await t.page.click('#btnOcr');await t.page.waitForTimeout(800);
+  ok(/a mano/.test(await t.page.textContent('#ocrNote'))&&!(await t.page.isVisible('#btnOcrUse')),'ocr: si no carga el lector, avisa y se sigue a mano')}
  // avisos de error cortos
  t=await mk(b);await openExp(t);await t.page.fill('#eDesc','Cena');await t.page.fill('#eAmt','0');await t.page.click('#btnExpense');await t.page.waitForTimeout(250);
  ok(await t.page.isVisible('#msg.bad'),'avisos: el error aparece');
