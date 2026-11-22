@@ -713,4 +713,8 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(await t.page.isVisible('#cFx'),'cotización: la administración ve el tipo de cotización');
  await t.page.evaluate(()=>{document.getElementById('cFx').open=true});await t.page.selectOption('#fxType','blue');await t.page.waitForTimeout(400);
  ok(t.calls.some(c=>c.startsWith('cuentas_group_set_fx_type')&&c.includes('"p_type":"blue"')),'cotización: cambiar el tipo lo guarda');
+ // tipografía: «Entre todos» usa la misma letra que los campos de al lado
+ t=await mk(b);await openExp(t);await t.page.click('span.rs');await t.page.waitForTimeout(200);
+ const fs=await t.page.evaluate(()=>{const g=e=>{const c=getComputedStyle(document.querySelector(e));return c.fontSize+'/'+c.fontWeight};return {a:g('#eAdvSum .advsum'),s:g('#ePayer'),m:g('#eMode')}});
+ ok(fs.a===fs.s&&fs.s===fs.m,'tipografía: «Entre todos» tiene la misma letra que Pagó y Dividir ('+fs.a+' vs '+fs.s+')');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
