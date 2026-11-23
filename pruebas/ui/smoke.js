@@ -824,4 +824,15 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(t.errs.length===0,'campanilla: sin errores de JS');
  t=await mk(b,{});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.waitForTimeout(600);
  ok(await t.page.evaluate(()=>document.getElementById('bellN').hidden===(document.getElementById('bellN').textContent==='')),'campanilla: sin avisos no marca un número en vano');
+ // logo: desde cualquier pantalla lleva al inicio, pestaña «Mis grupos»
+ {const sv=async p=>p.evaluate(()=>({v:['vHome','vGroup','vSettle'].find(x=>!document.getElementById(x).hidden),hp:[...document.querySelectorAll('[data-hp]')].find(e=>!e.hidden)?.dataset.hp,dr:!document.getElementById('drawer').hidden}));
+  const go=async(nm,pre)=>{const r=await mk(b,{lk:{newNotices:true}});await r.page.setViewportSize({width:390,height:844});await r.page.goto(URL);await r.page.waitForSelector('[data-g]');await pre(r.page);await r.page.waitForTimeout(400);await r.page.click('header h1');await r.page.waitForTimeout(500);const s=await sv(r.page);ok(s.v==='vHome'&&s.hp==='grupos'&&!s.dr&&r.errs.length===0,'logo: desde '+nm+' lleva a Inicio > Mis grupos ('+JSON.stringify(s)+')');await r.page.context().close().catch(()=>{})};
+  await go('Actividad',p=>p.click('#bell'));
+  await go('Cuenta',p=>p.click('#avatar'));
+  await go('Análisis general',async p=>{await p.click('#burger');await p.click('[data-d=balance]')});
+  await go('un grupo (Saldos)',async p=>{await p.click('[data-g]');await p.waitForSelector('#btnSettle',{state:'visible'});await p.click('#btnSaldos')});
+  await go('un grupo (Análisis)',async p=>{await p.click('[data-g]');await p.waitForSelector('#btnSettle',{state:'visible'});await p.click('#btnAna')});
+  await go('liquidar',async p=>{await p.click('[data-g]');await p.waitForSelector('#btnSettle',{state:'visible'});await p.click('#btnSettle');await p.waitForSelector('#vSettle',{state:'visible'})});
+  await go('un gasto abierto',async p=>{await p.click('[data-g]');await p.waitForSelector('#btnSettle',{state:'visible'});await p.click('#fab')});
+ }
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
