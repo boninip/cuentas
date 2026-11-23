@@ -902,7 +902,7 @@ async function fetchMovs(id,want){
  let rows=[],before=null;
  for(;;){
   const need=want===Infinity?1000:Math.min(1000,want-rows.length+1);
-  const pg=await rpcC('cuentas_movements_page',{p_group:id,p_limit:need,p_before:before});
+  const pg=await (before==null?rpcC:rpc)('cuentas_movements_page',{p_group:id,p_limit:need,p_before:before});
   const a=Array.isArray(pg)?pg:[];
   rows=a.concat(rows);
   if(a.length<need){mvMore=false;break}
@@ -911,11 +911,30 @@ async function fetchMovs(id,want){
  }
  return rows}
 async function loadAllMovs(){if(!mvMore)return;mvWant=Infinity;await openGroup(gid)}
+const cget=(fn,a)=>{try{const c=JSON.parse(localStorage.getItem(cKey(fn,a))||'null');return c?c.d:undefined}catch(_){return undefined}};
 async function openGroup(id){
  if(gid!==id){toTop();mvWant=MV_PAGE}
  gid=id;offAt=0;if(tab==='analisis')mvWant=Infinity;
- let ran=0;try{ran=Number(await rpc('cuentas_recurring_run',{p_group:id}))||0}catch(_){}
- const [g,bal,mv,pay,props,dels,links,pairs,cl,act,rl,rcl,lreq]=await Promise.all([rpcC('cuentas_group_get',{p_group:id}),rpcC('cuentas_balances',{p_group:id}),fetchMovs(id,mvWant),rpcC('cuentas_group_payouts',{p_group:id}),rpcC('cuentas_proposals_list',{p_group:id}),rpcC('cuentas_delegations_list',{p_group:id}),rpcC('core_links_list',{p_group:id}),rpcC('cuentas_pairs_list',{p_group:id}),rpcC('cuentas_categories_list',{p_group:id}).catch(()=>[]),rpcC('cuentas_activity_list',{p_group:id,p_limit:30}).catch(()=>[]),rpcC('cuentas_recurring_list',{p_group:id}).catch(()=>[]),rpcC('cuentas_receipts_list',{p_group:id}).catch(()=>[]),rpcC('core_link_requests_list',{p_group:id}).catch(()=>[])]);
+ const A={p_group:id},F=[['cuentas_group_get',A],['cuentas_balances',A],null,['cuentas_group_payouts',A],['cuentas_proposals_list',A],['cuentas_delegations_list',A],['core_links_list',A],['cuentas_pairs_list',A],['cuentas_categories_list',A],['cuentas_activity_list',{p_group:id,p_limit:30}],['cuentas_recurring_list',A],['cuentas_receipts_list',A],['core_link_requests_list',A]];
+ const pull=()=>Promise.all(F.map((f,k)=>f?rpcC(f[0],f[1]).catch(e=>{if(k>=8)return [];throw e}):fetchMovs(id,mvWant)));
+ // al entrar desde otra pantalla: se pinta ya lo último guardado y se actualiza por detrás
+ if(curView!=='vGroup'&&mvWant===MV_PAGE){
+  const c=F.map((f,k)=>f?cget(f[0],f[1]):cget('cuentas_movements_page',{p_group:id}));
+  if([0,1,2,3,4,5,6,7].every(k=>Array.isArray(c[k])||(k===0&&c[0]&&typeof c[0]==='object')||(k===1&&Array.isArray(c[1])))){
+   const mvc=c[2];mvMore=mvc.length>MV_PAGE;c[2]=mvMore?mvc.slice(mvc.length-MV_PAGE):mvc;
+   for(let k=8;k<c.length;k++)if(!Array.isArray(c[k]))c[k]=[];
+   try{paintGroup(id,0,c)}catch(_){}
+  }
+ }
+ const runP=rpc('cuentas_recurring_run',A).then(n=>Number(n)||0).catch(()=>0);
+ let data=await pull();
+ const ran=await runP;
+ if(ran>0)data=await pull();
+ if(gid!==id)return;
+ paintGroup(id,ran,data);
+}
+function paintGroup(id,ran,arr){
+ const [g,bal,mv,pay,props,dels,links,pairs,cl,act,rl,rcl,lreq]=arr;
  recs=Array.isArray(rl)?rl:[];rcpts={};(Array.isArray(rcl)?rcl:[]).forEach(x=>{rcpts[x.movement]=x.path});
  catsAll=Array.isArray(cl)?cl:[];cats=catsAll.filter(c=>!c.archived);
  group=g;show('vGroup');offNote();say(ran>0?'Se cargaron '+ran+(ran===1?' gasto repetido que vencía.':' gastos repetidos que vencían.'):'');setTab(tab);
