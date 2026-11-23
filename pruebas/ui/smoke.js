@@ -810,4 +810,18 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.waitForTimeout(2500);
  ok(t.calls.slice(n0).some(c=>c.startsWith('cuentas_balances')),'abrir grupo: igual se actualiza por detrás con datos nuevos');
  ok(t.calls.slice(n0).filter(c=>c.startsWith('cuentas_recurring_run')).length===1,'abrir grupo: los gastos repetidos se revisan en paralelo, una sola vez');
+ // campanilla: número con pendientes + avisos, visible en todas las pantallas, abre Actividad
+ t=await mk(b,{lk:{newNotices:true}});await t.page.setViewportSize({width:390,height:844});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ await t.page.waitForFunction(()=>!document.getElementById('bellN').hidden,null,{timeout:4000});
+ ok(await t.page.evaluate(()=>document.getElementById('bellN').textContent)==='5','campanilla: muestra 5 (1 pendiente + 4 avisos)');
+ ok(await t.page.evaluate(()=>/5/.test(document.getElementById('bell').getAttribute('aria-label'))),'campanilla: el lector de pantalla oye la cantidad');
+ const bb=await t.page.evaluate(()=>{const a=document.getElementById('bell').getBoundingClientRect(),v=document.getElementById('avatar').getBoundingClientRect();return {w:a.width,h:a.height,left:a.right<=v.left,inside:a.right<=innerWidth}});
+ ok(bb.w>=44&&bb.h>=44&&bb.left&&bb.inside,'campanilla: tamaño táctil 44 px, a la izquierda del avatar y dentro de la pantalla');
+ await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ ok(await t.page.evaluate(()=>getComputedStyle(document.getElementById('bell')).display!=='none'&&!document.getElementById('bellN').hidden),'campanilla: también se ve dentro de un grupo');
+ await t.page.click('#bell');await t.page.waitForSelector('#notices .notice',{state:'visible'});
+ ok(await t.page.evaluate(()=>!document.getElementById('vHome').hidden&&!document.querySelector('[data-hp="actividad"]').hidden),'campanilla: desde un grupo lleva a Actividad');
+ ok(t.errs.length===0,'campanilla: sin errores de JS');
+ t=await mk(b,{});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.waitForTimeout(600);
+ ok(await t.page.evaluate(()=>document.getElementById('bellN').hidden===(document.getElementById('bellN').textContent==='')),'campanilla: sin avisos no marca un número en vano');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
