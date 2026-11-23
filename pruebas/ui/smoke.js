@@ -835,4 +835,27 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   await go('liquidar',async p=>{await p.click('[data-g]');await p.waitForSelector('#btnSettle',{state:'visible'});await p.click('#btnSettle');await p.waitForSelector('#vSettle',{state:'visible'})});
   await go('un gasto abierto',async p=>{await p.click('[data-g]');await p.waitForSelector('#btnSettle',{state:'visible'});await p.click('#fab')});
  }
+ // accesibilidad: logo con semántica, menú, foco, tamaño de texto y objetivos táctiles
+ {const r=await mk(b,{lk:{newNotices:true}});await r.page.setViewportSize({width:390,height:844});await r.page.goto(URL);await r.page.waitForSelector('[data-g]');
+  ok(await r.page.evaluate(()=>{const a=document.querySelector('h1 a#logo');return !!a&&a.getAttribute('aria-label')==='Cuentas, ir al inicio'&&document.querySelector('h1').getAttribute('role')===null}),'a11y: el logo es un enlace dentro del título principal (el título no pierde su rol)');
+  await r.page.focus('#burger');await r.page.keyboard.press('Enter');await r.page.waitForTimeout(150);
+  ok(await r.page.evaluate(()=>document.activeElement.classList.contains('di')&&document.querySelector('header').inert&&document.getElementById('vHome').inert&&document.querySelector('[data-d=grupos]').getAttribute('aria-current')==='page'),'a11y: menú abierto: foco adentro, fondo inerte y sección actual marcada');
+  await r.page.keyboard.press('Escape');await r.page.waitForTimeout(150);
+  ok(await r.page.evaluate(()=>document.activeElement.id==='burger'&&!document.querySelector('header').inert&&!document.getElementById('vHome').inert),'a11y: Esc cierra el menú, devuelve el foco al botón y reactiva el fondo');
+  await r.page.click('#burger');await r.page.click('[data-d=actividad]');await r.page.waitForTimeout(500);
+  ok(await r.page.evaluate(()=>document.activeElement.tagName==='H2'&&/Actividad/.test(document.activeElement.textContent)),'a11y: al elegir una opción del menú el foco pasa al título de la nueva pantalla');
+  await r.page.click('header h1 a');await r.page.waitForTimeout(500);
+  ok(await r.page.evaluate(()=>document.activeElement.tagName==='H2'&&/Mis grupos/.test(document.activeElement.textContent)),'a11y: al tocar el logo el foco pasa a «Mis grupos»');
+  await r.page.click('#avatar');await r.page.waitForTimeout(400);
+  const sm=await r.page.evaluate(()=>[...document.querySelectorAll('button,summary,a[href]')].filter(e=>e.offsetParent!==null&&Math.min(e.getBoundingClientRect().width,e.getBoundingClientRect().height)<43.5).map(e=>(e.id||e.className||e.tagName)+':'+Math.round(e.getBoundingClientRect().height)));
+  ok(sm.length===0,'a11y: en Cuenta todo lo tocable mide al menos 44 px ('+sm.join(', ')+')');
+  await r.page.click('#cTheme [data-ts-opt=l]');
+  ok(await r.page.evaluate(()=>document.documentElement.getAttribute('data-ts')==='l'&&getComputedStyle(document.documentElement).fontSize==='18.4px'&&localStorage.getItem('cuentas_ts')==='l'&&document.querySelector('[data-ts-opt=l]').getAttribute('aria-checked')==='true'),'a11y: tamaño de texto «Grande» agranda todo y queda guardado');
+  await r.page.reload();await r.page.waitForSelector('[data-g]');
+  ok(await r.page.evaluate(()=>getComputedStyle(document.documentElement).fontSize==='18.4px'&&document.documentElement.scrollWidth<=innerWidth),'a11y: al reabrir sigue «Grande» y no se desborda');
+  await r.page.click('#avatar');await r.page.click('#cTheme [data-ts-opt=m]');
+  ok(await r.page.evaluate(()=>!document.documentElement.hasAttribute('data-ts')&&localStorage.getItem('cuentas_ts')===null),'a11y: «Normal» vuelve al tamaño original');
+  await r.page.click('#btnBack').catch(()=>{});
+  ok(r.errs.length===0,'a11y: sin errores de JS');
+ }
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
