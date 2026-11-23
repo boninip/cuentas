@@ -620,9 +620,9 @@ async function home(){
  $('noGroups').hidden=gsAll.length>0;renderGroups();
  fetchBalances(gsAll).then(r=>{rowsBal=r;renderStats(r);renderGroups()}).catch(()=>{}).finally(()=>syncing(false));
 }
-function pickGroup(title,list,cb){
+function pickGroup(title,list,cb,keep){
  if(!list.length)return false;
- if(list.length===1){cb(list[0]);return true}
+ if(list.length===1&&!keep){cb(list[0]);return true}
  $('pkT').textContent=title;
  $('pkL').innerHTML=list.map((g,k)=>`<button class="opt" data-k="${k}"><span class="tile">${ICONS[g.icon]?ic(g.icon,22):esc(g.icon||(g.name||'?').charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(g.name)}</b>${g.sub?`<small>${esc(g.sub)}</small>`:''}</span><span class="chev">›</span></button>`).join('');
  $('pkL').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{$('pick').hidden=true;cb(list[Number(b.dataset.k)])});
@@ -914,11 +914,9 @@ async function openGroup(id){
  $('gMembers').textContent='Miembros: '+active.map(m=>name(m.user_id)+(m.role!=='member'?' ('+roleEs[m.role]+')':'')).join(', ');
  $('btnStatus').hidden=!(me&&me.role==='admin');
  const isAdmin=!!(me&&me.role==='admin');const canFam=!!(me&&(me.role==='admin'||me.role==='coadmin'));
- $('mList').innerHTML=active.map(m=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><span style="min-width:0">${esc(name(m.user_id))}<div class="tags"><span class="tag">${m.guest?'pendiente':roleEs[m.role]}</span>${m.weight!=null&&isFinite(Number(m.weight))&&Number(m.weight)!==1?`<span class="tag fam">cuenta ${fmtW(Number(m.weight))}</span>`:''}${m.guardian?`<span class="tag fam">lo paga ${esc(name(m.guardian))}</span>`:''}</div></span></span>${canFam?`<button class="sec" style="width:auto;margin:0" data-fam="${m.user_id}">Familia</button>`:''}${m.guest?`<button class="sec" style="width:auto;margin:0" data-gl="${m.user_id}">Link</button>`:''}${pastFor(m.user_id).length?`<button class="sec" style="width:auto;margin:0" data-past="${m.user_id}">Gastos previos</button>`:''}${isAdmin&&m.user_id!==myId?`<button class="sec" style="width:auto;margin:0" data-rm="${m.user_id}">Quitar</button>`:''}</div>`).join('');
+ $('mList').innerHTML=active.map(m=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><span style="min-width:0">${esc(name(m.user_id))}<div class="tags"><span class="tag">${m.guest?'pendiente':roleEs[m.role]}</span>${m.weight!=null&&isFinite(Number(m.weight))&&Number(m.weight)!==1?`<span class="tag fam">cuenta ${fmtW(Number(m.weight))}</span>`:''}${m.guardian?`<span class="tag fam">unidad de ${esc(name(m.guardian))}</span>`:''}</div></span></span>${canFam?`<button class="sec" style="width:auto;margin:0" data-fam="${m.user_id}">Unidad</button>`:''}${(m.guest||pastFor(m.user_id).length||(isAdmin&&m.user_id!==myId))?`<button class="sec" style="width:auto;margin:0" data-more="${m.user_id}" aria-label="Más opciones de ${esc(name(m.user_id))}">${ic('dots',20)}</button>`:''}</div>`).join('');
  $('mList').querySelectorAll('[data-fam]').forEach(b=>b.onclick=()=>famMenu(b.dataset.fam));
- $('mList').querySelectorAll('[data-past]').forEach(b=>b.onclick=()=>includeInPast(b.dataset.past));
- $('mList').querySelectorAll('[data-gl]').forEach(b=>b.onclick=busy(b,()=>guestLink(b.dataset.gl)));
- $('mList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=busy(b,async()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: quitar';say(guestIds.has(b.dataset.rm)?'Si todavía no tiene gastos, se quita del grupo. Tocá de nuevo para confirmar.':'Quitar a alguien no borra sus deudas ni el historial. Tocá de nuevo para confirmar.');return}if(guestIds.has(b.dataset.rm))await rpc('cuentas_guest_remove',{p_group:gid,p_guest:b.dataset.rm});else await rpc('cuentas_member_remove',{p_group:gid,p_user:b.dataset.rm});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')}));
+ $('mList').querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>moreMenu(b.dataset.more,b,isAdmin));
  $('btnArchive').hidden=!(isAdmin&&g.status==='closed');
  const canDel=!!(isAdmin&&g.status!=='archived'&&!gsAll.some(x=>x.id===g.id&&x.kind==='personal')&&!(mv||[]).length&&!(props||[]).length&&!(rl||[]).length&&!(links||[]).some(l=>l.status==='active')&&active.every(m=>m.user_id===myId));
  $('btnDelGroup').hidden=!canDel;$('delNote').hidden=!canDel;$('btnDelGroup').dataset.armed='';$('btnDelGroup').textContent='Eliminar grupo vacío';
@@ -1353,13 +1351,28 @@ async function includeInPast(uid){
   }catch(e){await openGroup(gid).catch(()=>{});say((n?'Incluí a '+who+' en '+n+' de '+eq.length+'. ':'')+(/confirmad|propuesta/i.test(e.message)?'No se puede seguir: hay pagos confirmados en el grupo.':e.message),true)}
  });
 }
-/* ===== Familia: peso y responsable ===== */
+/* ===== Menú ⋯ de cada miembro ===== */
+function moreMenu(uid,btn,isAdmin){
+ const who=nm(uid),m=group.members.find(x=>x.user_id===uid),L=[];
+ if(guestIds.has(uid))L.push({name:'Copiar link de invitación',sub:'Un link personal para '+who,icon:'link',k:'gl'});
+ if(pastFor(uid).length)L.push({name:'Gastos previos',sub:'Incluir a '+who+' en gastos anteriores',icon:'receipt',k:'past'});
+ if(isAdmin&&uid!==myId)L.push({name:'Quitar del grupo',sub:'No borra sus deudas ni el historial',icon:'close',k:'rm'});
+ pickGroup(who,L,o=>{
+  if(o.k==='gl')busy(btn,()=>guestLink(uid))();
+  else if(o.k==='past')includeInPast(uid);
+  else pickGroup('¿Quitar a '+who+' del grupo?',[{name:'Sí, quitar',sub:guestIds.has(uid)?'Si todavía no tiene gastos, se quita del grupo.':'Quitar a alguien no borra sus deudas ni el historial.',icon:'close',k:'y'},{name:'No, dejarlo',icon:'back',k:'n'}],async x=>{
+   if(x.k!=='y')return;
+   busy(btn,async()=>{if(guestIds.has(uid))await rpc('cuentas_guest_remove',{p_group:gid,p_guest:uid});else await rpc('cuentas_member_remove',{p_group:gid,p_user:uid});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')})();
+  },true);
+ },true);
+}
+/* ===== Unidad: cuánto paga y quién paga por la persona ===== */
 async function famSet(fn,args,msg){try{await rpc(fn,args);await openGroup(gid);say(msg)}catch(e){say(e.message,true)}}
 function famMenu(uid){
  const who=nm(uid),m=group.members.find(x=>x.user_id===uid);
- const L=[{name:'Adulto',sub:'Paga una parte entera',icon:'person',k:'w',v:1},{name:'Niño/a',sub:'Paga media parte',icon:'family',k:'w',v:0.5},{name:'Bebé',sub:'No paga ninguna parte',icon:'heart',k:'w',v:0},{name:'Otro peso…',sub:'Elegir cuánto cuenta (0,25 · 0,75 · 1,5 · 2)',icon:'edit',k:'wx'},{name:m&&m.guardian?'Cambiar responsable…':'Elegir responsable…',sub:'Quién paga lo que le toca a '+who+' (por ejemplo, su mamá o papá)',icon:'person',k:'g'}];
- if(m&&m.guardian)L.push({name:'Sacar responsable',sub:'Vuelve a tener su propio saldo',icon:'close',k:'g0'});
- pickGroup('Familia · '+who,L,o=>{
+ const L=[{name:'Adulto',sub:'Paga una parte entera',icon:'person',k:'w',v:1},{name:'Niño/a',sub:'Paga media parte',icon:'family',k:'w',v:0.5},{name:'Bebé',sub:'No paga ninguna parte',icon:'heart',k:'w',v:0},{name:'Otro peso…',sub:'Elegir cuánto cuenta (0,25 · 0,75 · 1,5 · 2)',icon:'edit',k:'wx'},{name:m&&m.guardian?'Cambiar quién paga…':'Quién paga por '+who+'…',sub:'Su saldo se suma al de esa persona (por ejemplo, su mamá o papá)',icon:'person',k:'g'}];
+ if(m&&m.guardian)L.push({name:'Sacar de la unidad',sub:'Vuelve a tener su propio saldo',icon:'close',k:'g0'});
+ pickGroup('Unidad de '+who,L,o=>{
   if(o.k==='w')famSet('cuentas_member_set_weight',{p_group:gid,p_user:uid,p_weight:o.v},who+' ahora cuenta '+fmtW(o.v)+' en las partes iguales.');
   else if(o.k==='wx')pickGroup('Peso de '+who,[0.25,0.75,1.5,2].map(v=>({name:fmtW(v),sub:'Cuenta '+fmtW(v)+' en las partes iguales',icon:'edit',k:'w',v})),x=>famSet('cuentas_member_set_weight',{p_group:gid,p_user:uid,p_weight:x.v},who+' ahora cuenta '+fmtW(x.v)+'.'));
   else if(o.k==='g0')famSet('cuentas_member_set_guardian',{p_group:gid,p_user:uid,p_guardian:null},who+' vuelve a tener su propio saldo.');

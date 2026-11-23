@@ -110,7 +110,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(t.calls.some(c=>c.startsWith('cuentas_guest_add')&&c.includes('Lucía')),'invitado: se agrega por nombre');
  await t.page.click('#btnGear');await t.page.waitForTimeout(150);
  ok(/pendiente/.test(await t.page.textContent('#mList')),'invitado: aparece como pendiente');
- await t.page.click('[data-gl]');await t.page.waitForTimeout(300);
+ await t.page.click('#mList .item:has-text("Lucía") [data-more]');await t.page.waitForTimeout(150);if(await t.page.isVisible('#pick:not([hidden])'))await t.page.click('#pkL >> text=Copiar link');await t.page.waitForTimeout(300);
  ok(t.calls.some(c=>c.startsWith('cuentas_guest_invite_create')),'invitado: genera su link personal');
  await t.page.evaluate(()=>document.querySelector('[data-goto]').click());await t.page.waitForTimeout(150);
  await t.page.click('#btnSettle');await t.page.waitForTimeout(250);
@@ -235,12 +235,22 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(/categoría elegida/.test(await t.page.textContent('#anBody')),'análisis: usa la categoría elegida');
  await t.page.click('#btnGear');await t.page.evaluate(()=>document.querySelectorAll('[data-pane=mas] details.card').forEach(d=>d.open=true));ok((await t.page.locator('#catList .item').count())===2,'ajustes: lista de categorías');
  ok(/incluye a Bruno/.test(await t.page.textContent('#balances')),'responsable: su saldo muestra a quién incluye');
- ok(/lo paga (Pau|Vos)/.test(await t.page.textContent('#mList')),'responsable: etiqueta en el miembro');
+ ok(/unidad de (Pau|Vos)/.test(await t.page.textContent('#mList')),'unidad: etiqueta «unidad de …» en el miembro');
  ok(/cambió cuánto cuenta Bruno \(½\)/.test(await t.page.textContent('#actList')),'actividad: muestra el cambio de peso');
  ok(/Vos cargó un gasto/.test(await t.page.textContent('#actList')),'actividad: muestra qué pasó en el grupo');
  ok(/cuenta ½/.test(await t.page.textContent('#mList')),'ajustes: etiqueta de peso en el miembro');
+ // miembros: Unidad + ⋯ (sin botones que se salgan de la tarjeta)
+ ok((await t.page.locator('#mList [data-fam]').first().textContent()).trim()==='Unidad','miembros: el botón se llama «Unidad»');
+ const ov=await t.page.evaluate(()=>{const c=document.querySelector('#mList').getBoundingClientRect().right;return [...document.querySelectorAll('#mList button')].filter(b=>b.getBoundingClientRect().right>c+1).length});
+ ok(ov===0,'miembros: ningún botón se sale de la tarjeta ('+ov+')');
+ await t.page.click('#mList .item:not(:has-text("Lucía")) [data-more]');await t.page.waitForTimeout(150);
+ ok(/Quitar del grupo/.test(await t.page.textContent('#pkL')),'miembros: el ⋯ ofrece quitar del grupo');
+ await t.page.click('#pkL >> text=Quitar del grupo');await t.page.waitForTimeout(150);
+ ok(/Sí, quitar/.test(await t.page.textContent('#pkL'))&&!t.calls.some(c=>c.startsWith('cuentas_member_remove')||c.startsWith('cuentas_guest_remove')),'miembros: quitar pide confirmar antes de hacerlo');
+ await t.page.click('#pkL >> text=No, dejarlo');await t.page.waitForTimeout(150);
+ ok(!t.calls.some(c=>c.startsWith('cuentas_member_remove')),'miembros: «No, dejarlo» no quita a nadie');
  await t.page.click('[data-fam]');await t.page.click('#pick >> text=Niño/a');await t.page.waitForTimeout(250);
- ok(t.calls.some(c=>c.startsWith('cuentas_member_set_weight')&&c.includes('0.5')),'familia: marca niño/a con peso 0,5');
+ ok(t.calls.some(c=>c.startsWith('cuentas_member_set_weight')&&c.includes('0.5')),'unidad: marca niño/a con peso 0,5');
  await t.page.click('#btnCatAdd');await t.page.fill('#catName','Mascotas');await t.page.click('#catIcons [data-ci=paw]');await t.page.click('#btnCatSave');await t.page.waitForTimeout(250);
  ok(t.calls.some(c=>c.startsWith('cuentas_category_save')&&c.includes('Mascotas')&&c.includes('paw')),'ajustes: crea categoría');
  const dl=t.page.waitForEvent('download');await t.page.click('#btnCsv');const d=await dl;ok(/\.csv$/.test(d.suggestedFilename()),'exportar: baja un CSV');
