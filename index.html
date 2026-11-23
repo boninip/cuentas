@@ -72,7 +72,7 @@ details.card[open]>summary{margin-bottom:10px}
 .hero .muted{color:#fff}.hero .good,.hero .bad{color:#fff}.hero #gSum{font-size:1.2rem}
 .hero button.sec{background:#ffffff22;color:#fff;border:1px solid #ffffff44}.hero button.warm{background:var(--warm);color:var(--warm-fg)}
 .actions{gap:8px}.topbar{flex-wrap:nowrap;justify-content:space-between;gap:8px;margin-bottom:2px}.topbar>*{margin:0;min-width:0;flex:0 0 auto!important;padding:6px 2px}.actions>*{min-width:0;margin:6px 0 0}
-.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:20;display:flex;align-items:center;gap:8px;width:auto;min-height:0;margin:0;padding:14px 22px;border-radius:999px;box-shadow:0 8px 22px #0000004d;font-size:1rem;font-weight:700}.fab[hidden]{display:none!important}body::after{content:'';display:block;height:96px}
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:20;display:flex;align-items:center;gap:8px;width:auto;min-height:0;margin:0;padding:14px 22px;border-radius:999px;box-shadow:0 8px 22px #0000004d;font-size:1rem;font-weight:700}.fab[hidden]{display:none!important}
 main{padding-bottom:96px}header{justify-content:flex-start}
 #cExpense:not([open]){display:none}
 .savebar{position:sticky;bottom:0;z-index:5;margin:18px calc(-1*max(16px,env(safe-area-inset-left,0px))) 0;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--bg);border-top:1px solid var(--line)}
@@ -125,7 +125,7 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 .who{display:flex;align-items:center;gap:12px}.who .tile{width:38px;height:38px;min-width:38px;border-radius:50%;font-size:1rem}
 .mv{border-top:1px solid var(--line)}.mv:first-child{border-top:0}
 .mv>summary{display:flex;justify-content:space-between;gap:8px;padding:10px 0;font-weight:400}
-.mv .mvbody{padding:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mv .mvbody>*{margin:0}.gov{display:flex;flex-direction:column;gap:2px;font-size:.875rem;color:var(--muted)}.gov>small{font-size:.75rem;letter-spacing:.04em;text-transform:uppercase}.gov>div{display:flex;align-items:center;gap:6px}.gov svg{flex:none}
+.mv .mvbody{padding:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mv .mvbody>*{margin:0}.vin{animation:vin .16s ease-out}@keyframes vin{from{opacity:0}to{opacity:1}}.opening{opacity:.55;pointer-events:none;transition:opacity .1s}.gov{display:flex;flex-direction:column;gap:2px;font-size:.875rem;color:var(--muted)}.gov>small{font-size:.75rem;letter-spacing:.04em;text-transform:uppercase}.gov>div{display:flex;align-items:center;gap:6px}.gov svg{flex:none}
 .mv .mvbody button{width:auto;padding:8px 14px}
 .mon{display:flex;justify-content:space-between;gap:8px;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 2px;font-weight:600}.mon .dtot{text-transform:none;letter-spacing:0;font-weight:600}
 .mvmore{flex:none;width:44px;height:44px;margin:-6px -8px -6px 0;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:1.5rem;line-height:1;display:grid;place-items:center;box-shadow:none;min-height:0}.mvhid{display:none}
@@ -530,7 +530,7 @@ async function rpc(fn,args,retried){
 }
 const toTop=()=>{try{window.scrollTo(0,0)}catch(_){}};
 let curView=null;
-function setTab(t){if(t!==tab)toTop();tab=t;const f=$('fab');if(f)f.hidden=!(t==='gastos'&&group&&group.status==='open'&&!$('vGroup').hidden);document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);if($('gTop'))$('gTop').hidden=t!=='gastos';document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'))}
+function setTab(t){const chT=t!==tab;if(chT)toTop();tab=t;const f=$('fab');if(f)f.hidden=!(t==='gastos'&&group&&group.status==='open'&&!$('vGroup').hidden);document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==t);if($('gTop'))$('gTop').hidden=t!=='gastos';document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'));if(chT)fadeIn(document.querySelector('[data-pane="'+t+'"]'))}
 document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{setTab(b.dataset.goto);window.scrollTo(0,0)});
 
 $('btnSaldos').onclick=()=>{setTab('saldos');window.scrollTo(0,0)};$('btnGear').onclick=()=>{setTab('mas');window.scrollTo(0,0)};
@@ -565,7 +565,8 @@ $('btnHomeAna').onclick=()=>$('optBal').click();
 $('optBal').onclick=()=>{setHp('balance');window.scrollTo(0,0);loadBalance().catch(e=>say(e.message,true))};
 let hp='grupos';
 function setHp(t){if(t!==hp)toTop();hp=t;document.querySelectorAll('[data-hp]').forEach(p=>p.hidden=p.dataset.hp!==t)}
-function show(v){if(v!==curView){curView=v;toTop()}if(v==='vHome')setHp(hp);$('burger').hidden=v==='vLogin'||(v==='vInvite'&&!session);['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v)}
+function fadeIn(e){if(!e)return;e.classList.remove('vin');void e.offsetWidth;e.classList.add('vin')}
+function show(v){const ch=v!==curView;if(ch){curView=v;toTop()}if(v==='vHome')setHp(hp);$('burger').hidden=v==='vLogin'||(v==='vInvite'&&!session);['vLogin','vHome','vInvite','vGroup','vSettle','vFormer'].forEach(x=>$(x).hidden=x!==v);if(ch)fadeIn($(v))}
 function busy(btn,fn){return async()=>{btn.disabled=true;say('Guardando…');try{await fn()}catch(e){say(e.message,true)}finally{btn.disabled=false}}}
 
 let gsAll=[],rowsBal=null,showAll=false,lastGH='';
@@ -596,7 +597,7 @@ function renderGroups(){
    pill=!b?'<span class="mr"><small>Al día</small></span>':(Number(b.balance_minor)>0?`<span class="mr"><b class="good">${esc(moneyS(b.balance_minor,b.currency))}</b><small>te deben</small></span>`:`<span class="mr"><b class="bad">${esc(moneyS(-Number(b.balance_minor),b.currency))}</b><small>debés</small></span>`)}
   return sep+`<button class="opt${isSettled(g)?' settled':''}" data-g="${g.id}"><span class="tile ${hue(g.id)}">${esc((g.name||'?').trim().charAt(0).toUpperCase())}</span><span class="ot"><b>${esc(g.name)}</b></span>${pill}<span class="chev">›</span></button>`}).join('');
  if(html===lastGH&&$('groups').querySelector('[data-g]'))return;lastGH=html;$('groups').innerHTML=html;
- $('groups').querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const g=gsAll.find(x=>x.id===b.dataset.g);(g.member_status==='former'?openFormer(g):openGroup(g.id)).catch(e=>say(e.message,true))});
+ $('groups').querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const g=gsAll.find(x=>x.id===b.dataset.g);b.classList.add('opening');(g.member_status==='former'?openFormer(g):openGroup(g.id)).catch(e=>say(e.message,true)).finally(()=>b.classList.remove('opening'))});
 }
 const cacheGet=(fn,a)=>{try{const c=JSON.parse(localStorage.getItem(cKey(fn,a))||'null');return c&&c.d}catch(_){return null}};
 const SK='<div class="opt sk" aria-hidden="true"></div>'.repeat(3);
@@ -1871,7 +1872,7 @@ function startPay(x){
 function renderSug(){
  const L=sug.filter(x=>Number(x.amount)>0);
  $('sugList').innerHTML=L.length?L.map((x,k)=>{const mineP=x.from===myId&&!guestIds.has(x.to),wait=x.from===myId&&guestIds.has(x.to);
-  return `<div class="item" style="align-items:center"><span><b>${esc(x.from===myId?'Vos':nm(x.from))} → ${esc(x.to===myId?'Vos':nm(x.to))}</b><div class="muted">${wait?'todavía no aceptó la invitación':'sugerido para dejar todo en cero'}</div></span><span style="display:flex;gap:8px;align-items:center"><b class="${x.from===myId?'bad':''}">${money(x.amount,x.currency)}</b>${mineP?`<button style="width:auto;margin:0" data-sp="${k}">Pagar</button>`:''}${x.to===myId&&!guestIds.has(x.from)?`<button class="sec" style="width:auto;margin:0" data-rm="${k}">${ic('chat',18)} Recordar</button>`:''}</span></div>`}).join(''):'<p class="muted">No hay nada para saldar: están todos al día.</p>';
+  return `<div class="item" style="align-items:center"><span><b>${esc(x.from===myId?'Vos':nm(x.from))} → ${esc(x.to===myId?'Vos':nm(x.to))}</b><div class="muted">${wait?'todavía no aceptó la invitación':'sugerido para dejar todo en cero'}</div></span><span style="display:flex;gap:8px;align-items:center"><b class="${x.from===myId?'bad':''}">${money(x.amount,x.currency)}</b>${mineP?`<button style="width:auto;margin:0" data-sp="${k}">Pagar</button>`:''}${x.to===myId&&!guestIds.has(x.from)?`<button class="sec" style="width:auto;margin:0;display:inline-flex;align-items:center;gap:6px;white-space:nowrap" data-rm="${k}">${ic('chat',18)} Recordar</button>`:''}</span></div>`}).join(''):'<p class="muted">No hay nada para saldar: están todos al día.</p>';
  $('sugList').querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{startPay(L[Number(b.dataset.sp)]);show('vSettle');window.scrollTo(0,0)});
  $('sugList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>remindDebt(L[Number(b.dataset.rm)]));
 }

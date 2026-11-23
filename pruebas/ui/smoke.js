@@ -784,4 +784,20 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.evaluate(()=>document.getElementById('btnSum').click());await t.page.waitForFunction(()=>window.__a.some(x=>/wa\.me/.test(x)),null,{timeout:5000}).catch(()=>{});
  const sm=decodeURIComponent(await t.page.evaluate(()=>window.__a.find(x=>/wa\.me/.test(x))||''));
  ok(/Resumen de «Viaje 1»/.test(sm)&&/Gastos: /.test(sm)&&/Para saldar:/.test(sm)&&/Yo le paga a Bruno/.test(sm),'resumen: lleva grupo, gastos y quién le paga a quién ('+sm.replace(/\n/g,' | ').slice(0,200)+')');
+
+ // fluidez: tocar un grupo da respuesta al instante y las pantallas entran con un fundido corto
+ t=await mk(b,{delay:500});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ await t.page.evaluate(()=>document.querySelector('[data-g]').click());await t.page.waitForTimeout(30);
+ ok(await t.page.evaluate(()=>document.querySelector('[data-g]').classList.contains('opening')),'fluidez: al tocar un grupo la fila se atenúa mientras carga');
+ await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ ok(await t.page.evaluate(()=>document.getElementById('vGroup').classList.contains('vin')&&!document.querySelector('[data-g]')?.classList.contains('opening')),'fluidez: el grupo entra con fundido y la fila vuelve a la normalidad');
+ ok(await t.page.evaluate(()=>getComputedStyle(document.getElementById('vGroup')).animationName==='vin'||getComputedStyle(document.getElementById('vGroup')).animationName==='none'),'fluidez: la animación existe (o está desactivada por movimiento reducido)');
+
+ // color y largo: sin franja de otro color abajo ni scroll de sobra en pantallas cortas
+ t=await mk(b,{lk:{cred:true}});await t.page.setViewportSize({width:390,height:844});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ const ext=await t.page.evaluate(()=>({sh:document.documentElement.scrollHeight,vh:innerHeight}));
+ ok(ext.sh<=ext.vh+1,'pantallas: el inicio no tiene scroll de sobra ni franja de otro color abajo ('+ext.sh+' de '+ext.vh+')');
+ await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.locator('#vGroup button:visible',{hasText:'Saldos'}).first().click();await t.page.waitForTimeout(300);
+ const rb=await t.page.evaluate(()=>{const b=document.querySelector('[data-rm]').getBoundingClientRect(),i=document.querySelector('[data-rm] svg').getBoundingClientRect();return {sameRow:Math.abs((i.top+i.height/2)-(b.top+b.height/2))<6}});
+ ok(rb.sameRow,'cobro: el ícono de «Recordar» queda al lado del texto, no arriba');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
