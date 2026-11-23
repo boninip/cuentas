@@ -800,4 +800,14 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.locator('#vGroup button:visible',{hasText:'Saldos'}).first().click();await t.page.waitForTimeout(300);
  const rb=await t.page.evaluate(()=>{const b=document.querySelector('[data-rm]').getBoundingClientRect(),i=document.querySelector('[data-rm] svg').getBoundingClientRect();return {sameRow:Math.abs((i.top+i.height/2)-(b.top+b.height/2))<6}});
  ok(rb.sameRow,'cobro: el ícono de «Recordar» queda al lado del texto, no arriba');
+
+ // abrir grupo rápido: la segunda vez se ve al instante (copia guardada) y se actualiza por detrás
+ t=await mk(b,{delay:700});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');
+ const t0=Date.now();await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});const firstMs=Date.now()-t0;
+ await t.page.click('#btnBack');await t.page.waitForSelector('[data-g]');
+ const n0=t.calls.length;await t.page.click('[data-g]');
+ await t.page.waitForSelector('#btnSettle',{state:'visible',timeout:400}).then(()=>ok(true,'abrir grupo: la segunda vez aparece antes de que llegue la red (la primera tardó '+firstMs+' ms)')).catch(()=>ok(false,'abrir grupo: la segunda vez no apareció al instante'));
+ await t.page.waitForTimeout(2500);
+ ok(t.calls.slice(n0).some(c=>c.startsWith('cuentas_balances')),'abrir grupo: igual se actualiza por detrás con datos nuevos');
+ ok(t.calls.slice(n0).filter(c=>c.startsWith('cuentas_recurring_run')).length===1,'abrir grupo: los gastos repetidos se revisan en paralelo, una sola vez');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
