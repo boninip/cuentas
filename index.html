@@ -125,7 +125,7 @@ details[open]>.srow{margin-bottom:12px}details[open]>.srow .chev{transform:rotat
 .who{display:flex;align-items:center;gap:12px}.who .tile{width:38px;height:38px;min-width:38px;border-radius:50%;font-size:1rem}
 .mv{border-top:1px solid var(--line)}.mv:first-child{border-top:0}
 .mv>summary{display:flex;justify-content:space-between;gap:8px;padding:10px 0;font-weight:400}
-.mv .mvbody{padding:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mv .mvbody>*{margin:0}
+.mv .mvbody{padding:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mv .mvbody>*{margin:0}.gov{display:flex;flex-direction:column;gap:2px;font-size:.875rem;color:var(--muted)}.gov>small{font-size:.75rem;letter-spacing:.04em;text-transform:uppercase}.gov>div{display:flex;align-items:center;gap:6px}.gov svg{flex:none}
 .mv .mvbody button{width:auto;padding:8px 14px}
 .mon{display:flex;justify-content:space-between;gap:8px;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 2px;font-weight:600}.mon .dtot{text-transform:none;letter-spacing:0;font-weight:600}
 .mvmore{flex:none;width:44px;height:44px;margin:-6px -8px -6px 0;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:1.5rem;line-height:1;display:grid;place-items:center;box-shadow:none;min-height:0}.mvhid{display:none}
@@ -376,7 +376,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  </div>
  <div data-pane="saldos" hidden>
   <button class="lnk" data-goto="gastos">‹ Volver a gastos</button>
-  <div class="card" id="cSug"><h2>Para saldar</h2><div id="sugList"></div></div>
+  <div class="card" id="cSug"><h2>Para saldar</h2><div id="sugList"></div><button class="sec" id="btnSum" style="margin-top:10px">Compartir resumen</button></div>
   <div class="card"><h2>Saldos</h2><div id="balances"></div>
   </div>
    <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
@@ -420,6 +420,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 /* Íconos propios: trazo 2, puntas redondas, 24x24, color = currentColor (mismo lenguaje que el resto de la app) */
 const ICONS={
  plus:'<path d="M12 5v14M5 12h14"/>',
+ chat:'<path d="M21 12a8 8 0 0 1-11.600 7.100L4 20.500l1.400-4.800A8 8 0 1 1 21 12z"/>',
  close:'<path d="M6 6l12 12M18 6L6 18"/>',
  back:'<path d="M15 5l-7 7 7 7"/>',
  right:'<path d="M9 5l7 7-7 7"/>',scan:'<path d="M4 7V6a2 2 0 0 1 2-2h2M4 17v1a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v1M16 20h2a2 2 0 0 0 2-2v-1M5 12h14"/>',camera:'<path d="M5 7h1a2 2 0 0 0 2-2a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2"/><circle cx="12" cy="13" r="3"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',down:'<path d="M5 9l7 7 7-7"/>',
@@ -1005,6 +1006,18 @@ async function openGroup(id){
  $('ePayer').innerHTML=opts;$('ePayer').value=myId;
  $('eParts').innerHTML=active.map(m=>`<label class="chk"><span class="pa" aria-hidden="true">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><input type="checkbox" value="${m.user_id}" checked><span class="nm">${esc(name(m.user_id))}</span><input class="amt" inputmode="decimal" placeholder="0,00" data-u="${m.user_id}"></label>`).join('');
  $('eMode').value='eq';fillCur();$('eFx').value='';renderCats();syncFx();syncMode();resetEdit();renderCatsAdmin();renderActivity(act);renderRecs();obxNote();$('mvSearch').hidden=mv.length<5;$('mvSearch').querySelector('.si').innerHTML=ic('search',18);
+ const govBy={};mv.forEach(x=>{if(x.ref_id&&['void','payment_confirmation','payment_reversal','compensation_reversal'].includes(x.kind))(govBy[x.ref_id]=govBy[x.ref_id]||[]).push(x)});
+ const gdt=t=>{const d=new Date(t);return isNaN(d)?'':d.toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})};
+ const govHtml=m=>{
+  const L=[];const at=x=>x.created_at?' · '+esc(gdt(x.created_at)):'';
+  const k=m.kind==='expense'?'Cargado':m.kind==='payment'?'Registrado':'Propuesta aprobada';
+  if(m.kind==='compensation')L.push('Acordada por todos los afectados'+at(m));else if(m.created_by)L.push(k+' por '+esc(name(m.created_by))+at(m));
+  (govBy[m.id]||[]).forEach(x=>{
+   if(x.kind==='void'){const ed=/^editado$/i.test(String(x.description||'').trim());L.push((ed?'Editado':'Anulado')+' por '+esc(name(x.created_by))+at(x)+(!ed&&x.description?' · «'+esc(x.description)+'»':'')+(ed?' (lo reemplaza el gasto corregido)':''))}
+   else if(x.kind==='payment_confirmation')L.push('Confirmado por '+esc(name(x.created_by))+at(x));
+   else if(x.kind==='payment_reversal')L.push('Anulado por acuerdo, a cargo de '+esc(name(x.created_by))+at(x));
+   else if(x.kind==='compensation_reversal')L.push('Revertida por acuerdo, a cargo de '+esc(name(x.created_by))+at(x))});
+  return L.length?`<div class="gov" style="flex-basis:100%"><small>Historial</small>${L.map(t=>'<div>'+ic('clock',14)+'<span>'+t+'</span></div>').join('')}</div>`:''};
  const allRows=mv.filter(m=>m.kind==='expense'||m.kind==='payment'||m.kind==='compensation').slice().reverse();
  const nVoid=allRows.filter(m=>m.voided).length;
  const rows=allRows.filter(m=>showVoided||!m.voided).map((m,i)=>[m,i]).sort((a,b)=>String(b[0].occurred_on||'').localeCompare(String(a[0].occurred_on||''))||a[1]-b[1]).map(x=>x[0]);
@@ -1034,7 +1047,7 @@ async function openGroup(id){
    let pinfo='';
    if(m.paid_currency){const d=payDir(m.paid_currency,m.currency),r=Number(m.fx_rate),shown=d.inv?1/r:r;
     pinfo=`<div class="muted" style="flex-basis:100%">Pagó ${money(m.paid_amount_minor,m.paid_currency)} · cotización 1 ${esc(d.strong)} = ${fxStr(shown)} ${esc(d.weak)}${m.fx_source?' ('+esc(m.fx_source)+')':''}. Baja la deuda ${money(m.amount_minor,m.currency)}.${!m.confirmed&&!m.reversed&&m.to_user===myId?' Al confirmar aceptás el pago y esta cotización.':''}</div>`}
-   return hd+`<details class="mv"><summary><span class="av" aria-hidden="true">${ic('swap',20)}</span><span class="mb"><b>${who2}</b><small>${dt}${st?' · ':''}${st}${m.paid_currency?' · pagó '+money(m.paid_amount_minor,m.paid_currency):''}</small></span><span class="mr"><b>${money(m.amount_minor,m.currency)}</b></span></summary>${(act||pinfo)?`<div class="mvbody">${pinfo}${act}</div>`:''}</details>`;
+   return hd+`<details class="mv"><summary><span class="av" aria-hidden="true">${ic('swap',20)}</span><span class="mb"><b>${who2}</b><small>${dt}${st?' · ':''}${st}${m.paid_currency?' · pagó '+money(m.paid_amount_minor,m.paid_currency):''}</small></span><span class="mr"><b>${money(m.amount_minor,m.currency)}</b></span></summary><div class="mvbody">${pinfo}${govHtml(m)}${act}</div></details>`;
   }
   let mineTxt='';
   if(isE&&!m.voided&&m.shares){const sh=Number(m.shares[myId]||0);
@@ -1044,7 +1057,7 @@ async function openGroup(id){
   const rcBtn=isE?(rcpts[m.id]?`<div style="flex-basis:100%"><button class="sec" style="width:auto;margin:0" data-rv="${m.id}">${ic('receipt',18)} Ver comprobante</button></div>`:(!m.voided?`<div style="flex-basis:100%"><button class="sec" style="width:auto;margin:0" data-ra="${m.id}">${ic('camera',18)} Agregar foto del ticket</button></div>`:'')):'';
   const noteT=m.notes?`<div class="muted" style="flex-basis:100%">Nota: ${esc(m.notes)}</div>`:'';
   const cg=isE&&m.category?catBy(m.category):null;const fxT=isE&&m.fx_rate?`<div class="muted" style="flex-basis:100%">Cotización: 1 ${esc(m.currency)} = ${money(Math.round(Number(m.fx_rate)*100),cur)} (≈ ${money(Math.round(Number(m.amount_minor)*Number(m.fx_rate)),cur)})</div>`:'';
-  return hd+`<details class="mv"><summary><span class="av ${cg?'cat-av':isE?hue(m.from_user):''}" ${cg?`style="--ck:${KCOL(cg.color)}"`:''} aria-hidden="true">${cg?ic(cg.icon,20):isE?esc(name(m.from_user).charAt(0).toUpperCase()):ic('swap',20)}</span><span class="mb"><b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b><small>${who}${isE?' '+money(m.amount_minor,m.currency):''} · ${dt}${cg?' · '+esc(cg.name):''}${st?' · ':''}${st}</small></span><span class="mr">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}</span>${isE&&!m.voided&&(canMore||rcpts[m.id])?`<button type="button" class="mvmore" data-mm="${m.id}" aria-label="Más acciones">⋯</button>`:''}</summary><div class="mvbody">${rep}${noteT}${fxT}${rcBtn}${act}</div></details>`}).join(''):'<div style="text-align:center;padding:18px 0"><div class="tile" style="margin:0 auto 10px;width:56px;height:56px">'+ic('receipt',28)+'</div><b>Todavía no hay gastos</b><p class="muted" style="margin:4px 0 0">Tocá «Agregar gasto» para cargar el primero.</p></div>';
+  return hd+`<details class="mv"><summary><span class="av ${cg?'cat-av':isE?hue(m.from_user):''}" ${cg?`style="--ck:${KCOL(cg.color)}"`:''} aria-hidden="true">${cg?ic(cg.icon,20):isE?esc(name(m.from_user).charAt(0).toUpperCase()):ic('swap',20)}</span><span class="mb"><b>${esc(m.description||(isE?'Gasto':'Compensación'))}</b><small>${who}${isE?' '+money(m.amount_minor,m.currency):''} · ${dt}${cg?' · '+esc(cg.name):''}${st?' · ':''}${st}</small></span><span class="mr">${mineTxt||`<b>${money(m.amount_minor,m.currency)}</b>`}</span>${isE&&!m.voided&&(canMore||rcpts[m.id])?`<button type="button" class="mvmore" data-mm="${m.id}" aria-label="Más acciones">⋯</button>`:''}</summary><div class="mvbody">${rep}${noteT}${fxT}${govHtml(m)}${rcBtn}${act}</div></details>`}).join(''):'<div style="text-align:center;padding:18px 0"><div class="tile" style="margin:0 auto 10px;width:56px;height:56px">'+ic('receipt',28)+'</div><b>Todavía no hay gastos</b><p class="muted" style="margin:4px 0 0">Tocá «Agregar gasto» para cargar el primero.</p></div>';
  $('moves').querySelectorAll('[data-mm]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const id=b.dataset.mm,m=mv.find(x=>x.id===id);if(!m)return;
   const q=sel=>document.querySelector(sel+'="'+id+'"]'),L=[];
   if(q('[data-edit'))L.push({icon:'edit',name:'Editar',sub:'Al guardar, el anterior queda anulado',f:()=>q('[data-edit').click()});
@@ -1858,8 +1871,31 @@ function startPay(x){
 function renderSug(){
  const L=sug.filter(x=>Number(x.amount)>0);
  $('sugList').innerHTML=L.length?L.map((x,k)=>{const mineP=x.from===myId&&!guestIds.has(x.to),wait=x.from===myId&&guestIds.has(x.to);
-  return `<div class="item" style="align-items:center"><span><b>${esc(x.from===myId?'Vos':nm(x.from))} → ${esc(x.to===myId?'Vos':nm(x.to))}</b><div class="muted">${wait?'todavía no aceptó la invitación':'sugerido para dejar todo en cero'}</div></span><span style="display:flex;gap:8px;align-items:center"><b class="${x.from===myId?'bad':''}">${money(x.amount,x.currency)}</b>${mineP?`<button style="width:auto;margin:0" data-sp="${k}">Pagar</button>`:''}</span></div>`}).join(''):'<p class="muted">No hay nada para saldar: están todos al día.</p>';
+  return `<div class="item" style="align-items:center"><span><b>${esc(x.from===myId?'Vos':nm(x.from))} → ${esc(x.to===myId?'Vos':nm(x.to))}</b><div class="muted">${wait?'todavía no aceptó la invitación':'sugerido para dejar todo en cero'}</div></span><span style="display:flex;gap:8px;align-items:center"><b class="${x.from===myId?'bad':''}">${money(x.amount,x.currency)}</b>${mineP?`<button style="width:auto;margin:0" data-sp="${k}">Pagar</button>`:''}${x.to===myId&&!guestIds.has(x.from)?`<button class="sec" style="width:auto;margin:0" data-rm="${k}">${ic('chat',18)} Recordar</button>`:''}</span></div>`}).join(''):'<p class="muted">No hay nada para saldar: están todos al día.</p>';
  $('sugList').querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{startPay(L[Number(b.dataset.sp)]);show('vSettle');window.scrollTo(0,0)});
+ $('sugList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>remindDebt(L[Number(b.dataset.rm)]));
+}
+function openWa(msg){
+ try{navigator.clipboard&&navigator.clipboard.writeText(msg).catch(()=>{})}catch(_){}
+ const a=document.createElement('a');a.href='https://wa.me/?text='+encodeURIComponent(msg);a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
+async function shareSummary(){
+ await loadAllMovs();
+ const tot={};let n=0;mvAll.forEach(m=>{if(m.kind==='expense'&&!m.voided){n++;tot[m.currency]=(tot[m.currency]||0)+Number(m.amount_minor)}});
+ const L=sug.filter(x=>Number(x.amount)>0);
+ const d=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+ const lines=['Resumen de «'+group.name+'» al '+d,'',n?('Gastos: '+Object.entries(tot).map(([c,v])=>money(v,c)).join(' + ')+' ('+n+(n===1?' gasto':' gastos')+')'):'Todavía no hay gastos cargados.','',L.length?'Para saldar:':'Están todos al día.'];
+ L.forEach(x=>lines.push('• '+(x.from===myId?'Yo':nm(x.from))+' le paga a '+(x.to===myId?'mí':nm(x.to))+': '+money(x.amount,x.currency)));
+ lines.push('','Cuentas claras con Cuentas.');
+ openWa(lines.join('\n'));
+ say('Se abrió WhatsApp con el resumen. También lo copié.');
+}
+$('btnSum').onclick=busy($('btnSum'),shareSummary);
+function remindDebt(x){
+ const mine=payBy[myId],dest=mine&&(mine.alias||mine.cbu);
+ const first=String(nm(x.from)||'').split(' ')[0];
+ const msg='Hola '+first+'! Para cerrar las cuentas de «'+group.name+'» me quedás debiendo '+money(x.amount,x.currency)+'.'+(dest?' Podés transferirme a '+(mine.alias?'mi alias':'mi CBU/CVU')+': '+dest+'.':'')+' ¡Gracias!';
+ openWa(msg);
+ say('Se abrió WhatsApp con el mensaje armado. También lo copié por si lo querés pegar en otro lado.');
 }
 function openSettle(){
  const pend=sug.filter(x=>x.from===myId&&guestIds.has(x.to));
