@@ -376,7 +376,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  </div>
  <div data-pane="saldos" hidden>
   <button class="lnk" data-goto="gastos">‹ Volver a gastos</button>
-  <div class="card" id="cSug"><h2>Para saldar</h2><div id="sugList"></div></div>
+  <div class="card" id="cSug"><h2>Para saldar</h2><div id="sugList"></div><button class="sec" id="btnSum" style="margin-top:10px">Compartir resumen</button></div>
   <div class="card"><h2>Saldos</h2><div id="balances"></div>
   </div>
    <div class="card"><h2>Datos para transferir</h2><div id="payouts"></div></div>
@@ -1875,12 +1875,26 @@ function renderSug(){
  $('sugList').querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{startPay(L[Number(b.dataset.sp)]);show('vSettle');window.scrollTo(0,0)});
  $('sugList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>remindDebt(L[Number(b.dataset.rm)]));
 }
+function openWa(msg){
+ try{navigator.clipboard&&navigator.clipboard.writeText(msg).catch(()=>{})}catch(_){}
+ const a=document.createElement('a');a.href='https://wa.me/?text='+encodeURIComponent(msg);a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove()}
+async function shareSummary(){
+ await loadAllMovs();
+ const tot={};let n=0;mvAll.forEach(m=>{if(m.kind==='expense'&&!m.voided){n++;tot[m.currency]=(tot[m.currency]||0)+Number(m.amount_minor)}});
+ const L=sug.filter(x=>Number(x.amount)>0);
+ const d=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+ const lines=['Resumen de «'+group.name+'» al '+d,'',n?('Gastos: '+Object.entries(tot).map(([c,v])=>money(v,c)).join(' + ')+' ('+n+(n===1?' gasto':' gastos')+')'):'Todavía no hay gastos cargados.','',L.length?'Para saldar:':'Están todos al día.'];
+ L.forEach(x=>lines.push('• '+(x.from===myId?'Yo':nm(x.from))+' le paga a '+(x.to===myId?'mí':nm(x.to))+': '+money(x.amount,x.currency)));
+ lines.push('','Cuentas claras con Cuentas.');
+ openWa(lines.join('\n'));
+ say('Se abrió WhatsApp con el resumen. También lo copié.');
+}
+$('btnSum').onclick=busy($('btnSum'),shareSummary);
 function remindDebt(x){
  const mine=payBy[myId],dest=mine&&(mine.alias||mine.cbu);
  const first=String(nm(x.from)||'').split(' ')[0];
  const msg='Hola '+first+'! Para cerrar las cuentas de «'+group.name+'» me quedás debiendo '+money(x.amount,x.currency)+'.'+(dest?' Podés transferirme a '+(mine.alias?'mi alias':'mi CBU/CVU')+': '+dest+'.':'')+' ¡Gracias!';
- try{navigator.clipboard&&navigator.clipboard.writeText(msg).catch(()=>{})}catch(_){}
- const a=document.createElement('a');a.href='https://wa.me/?text='+encodeURIComponent(msg);a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
+ openWa(msg);
  say('Se abrió WhatsApp con el mensaje armado. También lo copié por si lo querés pegar en otro lado.');
 }
 function openSettle(){

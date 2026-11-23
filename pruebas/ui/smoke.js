@@ -777,4 +777,11 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(/^https:\/\/wa\.me\/\?text=/.test(wa)&&/Hola Bruno/.test(wa)&&/Viaje 1/.test(wa)&&/2\.500/.test(wa)&&/pau\.cuentas/.test(wa),'cobro: el mensaje lleva nombre, grupo, monto y alias ('+wa.slice(0,150)+')');
  t=await mk(b,{});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  ok(await t.page.evaluate(()=>!document.querySelector('[data-rm]')),'cobro: si debés vos, no aparece «Recordar»');
+
+ // resumen compartible: texto con gastos y quién le paga a quién
+ t=await mk(b,{});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ await t.page.evaluate(()=>{window.__a=[];const o=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){window.__a.push(this.href);if(!/wa\.me/.test(this.href))o.call(this)}});
+ await t.page.evaluate(()=>document.getElementById('btnSum').click());await t.page.waitForFunction(()=>window.__a.some(x=>/wa\.me/.test(x)),null,{timeout:5000}).catch(()=>{});
+ const sm=decodeURIComponent(await t.page.evaluate(()=>window.__a.find(x=>/wa\.me/.test(x))||''));
+ ok(/Resumen de «Viaje 1»/.test(sm)&&/Gastos: /.test(sm)&&/Para saldar:/.test(sm)&&/Yo le paga a Bruno/.test(sm),'resumen: lleva grupo, gastos y quién le paga a quién ('+sm.replace(/\n/g,' | ').slice(0,200)+')');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
