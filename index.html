@@ -118,6 +118,7 @@ body:has(#vGroup.ex-open) #msg{bottom:calc(150px + env(safe-area-inset-bottom,0p
 #drawer{position:fixed;inset:0;z-index:20;display:flex}#drawer[hidden]{display:none}
 #drawer .scrim{position:absolute;inset:0;background:#0007}
 #drawer nav{position:relative;width:min(300px,82vw);background:var(--card);height:100%;overflow-y:auto;box-shadow:0 0 30px #0005}
+#drawer .dl{margin:10px 22px 2px;font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--texto-sec)}#drawer a.di{text-decoration:none;box-sizing:border-box}
 #drawer .dh{display:flex;justify-content:space-between;align-items:center;padding:16px;background:var(--tile);font-size:1.3rem;font-weight:850;color:var(--accent-text);letter-spacing:-.5px}
 #drawer .dh button{width:auto;margin:0;padding:6px 10px;min-height:0;background:transparent;color:var(--accent-text);box-shadow:none;font-size:1.2rem}
 #drawer .di{display:flex;gap:14px;align-items:center;width:calc(100% - 20px);margin:2px 10px;padding:12px 12px;border-radius:12px;background:transparent;color:var(--fg);box-shadow:none;text-align:left;font-weight:700;min-height:0}
@@ -291,6 +292,10 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  <hr>
  <button class="di" data-d="actividad"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg>Actividad</button>
  <button class="di" data-d="cuenta"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Mi perfil y datos de cobro</button>
+ <hr>
+ <p class="dl" id="dMoreT">Más de Pintó</p>
+ <a class="di" href="https://boninip.github.io/juntada/" aria-describedby="dMoreT"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.2c2.6.2 4.5 2.4 4.5 5.8"/></svg>Juntada</a>
+ <a class="di" href="https://boninip.github.io/escapada/" aria-describedby="dMoreT"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3 10.5l7 2.5 2.5 7z"/><path d="M10 13l11-10"/></svg>Escapada</a>
  <hr>
  <button class="di" id="dInstall" hidden></button>
  <button class="di" data-d="salir"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5V3h4M16 17l5-5-5-5M21 12H9"/></svg>Cerrar sesión</button>

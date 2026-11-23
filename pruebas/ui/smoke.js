@@ -858,4 +858,13 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   await r.page.click('#btnBack').catch(()=>{});
   ok(r.errs.length===0,'a11y: sin errores de JS');
  }
+ // menú: «Más de Pintó» con Juntada y Escapada
+ {const r=await mk(b,{});await r.page.setViewportSize({width:390,height:844});await r.page.goto(URL);await r.page.waitForSelector('[data-g]');await r.page.click('#burger');await r.page.waitForTimeout(150);
+  const L=await r.page.evaluate(()=>[...document.querySelectorAll('#drawer a.di')].map(a=>({t:a.textContent.trim(),h:a.href,vis:a.offsetParent!==null,hh:Math.round(a.getBoundingClientRect().height)})));
+  ok(L.length===2&&L[0].t==='Juntada'&&L[0].h==='https://boninip.github.io/juntada/'&&L[1].t==='Escapada'&&L[1].h==='https://boninip.github.io/escapada/'&&L.every(x=>x.vis&&x.hh>=44),'menú: «Más de Pintó» lleva a Juntada y Escapada, visibles y de 44 px o más');
+  ok(await r.page.evaluate(()=>/Más de Pintó/.test(document.getElementById('dMoreT').textContent)),'menú: el bloque se titula «Más de Pintó» (con acento en pantalla)');
+  await r.page.focus('#drawer [data-d=salir]');await r.page.keyboard.press('Tab');
+  ok(await r.page.evaluate(()=>document.activeElement.id!=='burger'&&!document.getElementById('drawer').hidden),'menú: el teclado sigue dentro del menú con los enlaces nuevos');
+  ok(r.errs.length===0,'menú: sin errores de JS');
+ }
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
