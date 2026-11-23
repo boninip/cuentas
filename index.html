@@ -2031,7 +2031,7 @@ new MutationObserver(()=>{fabSync();if(!navQueued){navQueued=true;queueMicrotask
 // tocar el logo vuelve al inicio
 const lg=document.querySelector('header h1');
 lg.setAttribute('role','link');lg.tabIndex=0;lg.style.cursor='pointer';lg.setAttribute('aria-label','Cuentas, ir al inicio');
-const goHome=()=>{if(!session)return;if(!$('drawer').hidden)closeDrawer();home().catch(e=>say(e.message,true))};
+const goHome=()=>{if(!session)return;if(!$('drawer').hidden)closeDrawer();if(!$('pick').hidden)$('pick').hidden=true;say('');home().then(()=>{setHp('grupos');window.scrollTo(0,0)}).catch(e=>say(e.message,true))};
 lg.onclick=goHome;lg.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();goHome()}};
 
 start();
