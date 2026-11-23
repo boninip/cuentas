@@ -32,8 +32,8 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_group_get':return J(((o)=>{if(lk.empty)o.members=o.members.filter(m=>m.user_id===ME);if(lk.fx){o.fx_rate_type=lk.fxType;o.fx_auto=true;o.fx_warn_pct=10;o.cross_pay=lk.cross!==false}return o})({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])}));
    case 'cuentas_guest_add':return J(LU);
    case 'cuentas_guest_invite_create':return J('c'.repeat(64));
-   case 'cuentas_balances':return J(guest?[{user_id:ME,balance_minor:'-250000',currency:'ARS'},{user_id:BR,balance_minor:'100000',currency:'ARS'},{user_id:LU,balance_minor:'150000',currency:'ARS'}]:[{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
-   case 'cuentas_group_payouts':return J([{user_id:BR,alias:'bruno.cuentas',cbu:null,holder_name:'Bruno',bank:'MP'}]);
+   case 'cuentas_balances':if(lk.cred)return J([{user_id:ME,balance_minor:'250000',currency:'ARS'},{user_id:BR,balance_minor:'-250000',currency:'ARS'}]);return J(guest?[{user_id:ME,balance_minor:'-250000',currency:'ARS'},{user_id:BR,balance_minor:'100000',currency:'ARS'},{user_id:LU,balance_minor:'150000',currency:'ARS'}]:[{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
+   case 'cuentas_group_payouts':return J([{user_id:BR,alias:'bruno.cuentas',cbu:null,holder_name:'Bruno',bank:'MP'}].concat(lk.cred&&!lk.nopay?[{user_id:ME,alias:'pau.cuentas',cbu:null,holder_name:'Pau',bank:'MP'}]:[]));
    case 'cuentas_payment_add':debt=false;return J('p1');
    case 'cuentas_expense_add':if(offline)return r.abort('failed');return J('e1');
    case 'cuentas_group_create':return J(G);
@@ -383,7 +383,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  // grupo sin conexión
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  ok(!(await t.page.isVisible('#offNote')),'sin conexión: con señal no muestra el aviso');
- await t.page.waitForFunction(()=>['my_groups_all','group_get','movements_list'].every(f=>Object.keys(localStorage).some(k=>k.includes(f))),null,{timeout:15000}).catch(()=>{});await t.page.waitForTimeout(1500);t.state.down=true;await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:20000});
+ await t.page.waitForFunction(()=>['my_groups_all','group_get','movements_page'].every(f=>Object.keys(localStorage).some(k=>k.includes(f))),null,{timeout:15000}).catch(()=>{});await t.page.waitForTimeout(1500);t.state.down=true;await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:20000});
  ok(/Sin conexión/.test(await t.page.textContent('#msg')),'sin conexión: el inicio avisa que muestra lo guardado');
  await t.page.click('[data-g]');await t.page.waitForSelector('#gTitle',{state:'visible'});await t.page.waitForTimeout(400);
  ok((await t.page.textContent('#gTitle'))==='Viaje 1','sin conexión: se abre el grupo con la última vista guardada');
@@ -766,4 +766,15 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(gv.some(x=>/Cargado por Bruno/.test(x)&&/Editado por Vos/.test(x)&&/lo reemplaza/.test(x)),'gobierno: «Cargado por Bruno» y «Editado por Vos» con el aviso de reemplazo ('+gv.length+' bloques)');
  ok(gv.some(x=>/Anulado por Bruno/.test(x)&&/«Duplicado»/.test(x)),'gobierno: «Anulado por Bruno» con el motivo');
  ok(gv.some(x=>/Registrado por Bruno/.test(x)&&/Confirmado por Vos/.test(x)),'gobierno: el pago muestra quién lo registró y quién lo confirmó');
+
+ // cobro: «Recordar» arma el mensaje de WhatsApp con el monto y el alias de quien cobra
+ t=await mk(b,{lk:{cred:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ await t.page.evaluate(()=>{window.__a=[];const o=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){window.__a.push(this.href);if(!/wa\.me/.test(this.href))o.call(this)}});
+ await t.page.waitForSelector('[data-rm]',{state:'attached'});
+ ok(await t.page.evaluate(()=>/Recordar/.test(document.querySelector('[data-rm]').textContent)),'cobro: aparece «Recordar» cuando te deben');
+ await t.page.evaluate(()=>document.querySelector('[data-rm]').click());
+ const wa=decodeURIComponent((await t.page.evaluate(()=>window.__a.find(x=>/wa\.me/.test(x))||'')));
+ ok(/^https:\/\/wa\.me\/\?text=/.test(wa)&&/Hola Bruno/.test(wa)&&/Viaje 1/.test(wa)&&/2\.500/.test(wa)&&/pau\.cuentas/.test(wa),'cobro: el mensaje lleva nombre, grupo, monto y alias ('+wa.slice(0,150)+')');
+ t=await mk(b,{});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
+ ok(await t.page.evaluate(()=>!document.querySelector('[data-rm]')),'cobro: si debés vos, no aparece «Recordar»');
  await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();

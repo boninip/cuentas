@@ -420,6 +420,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 /* Íconos propios: trazo 2, puntas redondas, 24x24, color = currentColor (mismo lenguaje que el resto de la app) */
 const ICONS={
  plus:'<path d="M12 5v14M5 12h14"/>',
+ chat:'<path d="M21 12a8 8 0 0 1-11.600 7.100L4 20.500l1.400-4.800A8 8 0 1 1 21 12z"/>',
  close:'<path d="M6 6l12 12M18 6L6 18"/>',
  back:'<path d="M15 5l-7 7 7 7"/>',
  right:'<path d="M9 5l7 7-7 7"/>',scan:'<path d="M4 7V6a2 2 0 0 1 2-2h2M4 17v1a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v1M16 20h2a2 2 0 0 0 2-2v-1M5 12h14"/>',camera:'<path d="M5 7h1a2 2 0 0 0 2-2a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2"/><circle cx="12" cy="13" r="3"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',down:'<path d="M5 9l7 7 7-7"/>',
@@ -1870,8 +1871,17 @@ function startPay(x){
 function renderSug(){
  const L=sug.filter(x=>Number(x.amount)>0);
  $('sugList').innerHTML=L.length?L.map((x,k)=>{const mineP=x.from===myId&&!guestIds.has(x.to),wait=x.from===myId&&guestIds.has(x.to);
-  return `<div class="item" style="align-items:center"><span><b>${esc(x.from===myId?'Vos':nm(x.from))} → ${esc(x.to===myId?'Vos':nm(x.to))}</b><div class="muted">${wait?'todavía no aceptó la invitación':'sugerido para dejar todo en cero'}</div></span><span style="display:flex;gap:8px;align-items:center"><b class="${x.from===myId?'bad':''}">${money(x.amount,x.currency)}</b>${mineP?`<button style="width:auto;margin:0" data-sp="${k}">Pagar</button>`:''}</span></div>`}).join(''):'<p class="muted">No hay nada para saldar: están todos al día.</p>';
+  return `<div class="item" style="align-items:center"><span><b>${esc(x.from===myId?'Vos':nm(x.from))} → ${esc(x.to===myId?'Vos':nm(x.to))}</b><div class="muted">${wait?'todavía no aceptó la invitación':'sugerido para dejar todo en cero'}</div></span><span style="display:flex;gap:8px;align-items:center"><b class="${x.from===myId?'bad':''}">${money(x.amount,x.currency)}</b>${mineP?`<button style="width:auto;margin:0" data-sp="${k}">Pagar</button>`:''}${x.to===myId&&!guestIds.has(x.from)?`<button class="sec" style="width:auto;margin:0" data-rm="${k}">${ic('chat',18)} Recordar</button>`:''}</span></div>`}).join(''):'<p class="muted">No hay nada para saldar: están todos al día.</p>';
  $('sugList').querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{startPay(L[Number(b.dataset.sp)]);show('vSettle');window.scrollTo(0,0)});
+ $('sugList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>remindDebt(L[Number(b.dataset.rm)]));
+}
+function remindDebt(x){
+ const mine=payBy[myId],dest=mine&&(mine.alias||mine.cbu);
+ const first=String(nm(x.from)||'').split(' ')[0];
+ const msg='Hola '+first+'! Para cerrar las cuentas de «'+group.name+'» me quedás debiendo '+money(x.amount,x.currency)+'.'+(dest?' Podés transferirme a '+(mine.alias?'mi alias':'mi CBU/CVU')+': '+dest+'.':'')+' ¡Gracias!';
+ try{navigator.clipboard&&navigator.clipboard.writeText(msg).catch(()=>{})}catch(_){}
+ const a=document.createElement('a');a.href='https://wa.me/?text='+encodeURIComponent(msg);a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
+ say('Se abrió WhatsApp con el mensaje armado. También lo copié por si lo querés pegar en otro lado.');
 }
 function openSettle(){
  const pend=sug.filter(x=>x.from===myId&&guestIds.has(x.to));
