@@ -317,6 +317,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
  <div class="card" id="fPay" hidden><h2>Saldar mi deuda</h2><p class="muted">Podés registrar pagos a quienes les debés. El pago queda pendiente hasta que lo confirme quien cobra.</p>
   <label for="fTo">Le pagaste a</label><select id="fTo"></select><div id="fAlias" class="muted"></div>
   <label for="fAmt">Importe</label><input id="fAmt" inputmode="decimal" placeholder="0,00"><button id="btnFPay">Registrar pago</button></div>
+ <div class="card" id="fIn" hidden><h2>Pagos para confirmar</h2><p class="muted">Te registraron estos pagos. Confirmá los que ya recibiste.</p><div id="fInList"></div></div>
 </section>
 
 <section id="vSettle" hidden>
@@ -686,8 +687,11 @@ async function loadPending(){
  const [p,nn]=await Promise.all([rpc('cuentas_my_pending'),loadNotices()]);
  $('noPending').hidden=p.length>0||nn>0;$('optAct').hidden=!p.length&&!nn;$('optActSub').textContent=(p.length?p.length+(p.length===1?' grupo te espera':' grupos te esperan'):'')+(p.length&&nn?' · ':'')+(nn?nn+(nn===1?' aviso':' avisos'):'');$('actDot').hidden=!p.length&&!nn;{const t=p.length+nn;$('bellN').hidden=!t;$('bellN').textContent=t>9?'9+':t;$('bell').setAttribute('aria-label',t?'Avisos y pendientes: '+t:'Avisos y pendientes');try{localStorage.setItem('cuentas_bell_'+myId,String(t))}catch(_){}}
  $('pending').innerHTML=p.map(x=>{const t=[];const n=(c,s,pl)=>{if(Number(c))t.push(c+' '+(Number(c)===1?s:pl))};n(x.payments,'pago por confirmar','pagos por confirmar');n(x.proposals,'propuesta por decidir','propuestas por decidir');n(x.pairs,'solicitud de cuenta compartida','solicitudes de cuenta compartida');
-  return `<div class="item"><div><b>${esc(x.name)}</b><div class="muted">${t.join(' · ')}</div></div><button style="width:auto;margin:0" data-pg="${x.group_id}">Ver</button></div>`}).join('');
- $('pending').querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>openGroup(b.dataset.pg).catch(e=>say(e.message,true)));
+  return `<div class="item"><div><b>${esc(x.name)}</b>${x.former?' <small class="muted">(ex miembro)</small>':''}<div class="muted">${t.join(' · ')}</div></div><button style="width:auto;margin:0" data-pg="${x.group_id}"${x.former?' data-fm="1"':''}>Ver</button></div>`}).join('');
+ $('pending').querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{
+  if(b.dataset.fm!=='1')return openGroup(b.dataset.pg).catch(e=>say(e.message,true));
+  (async()=>{let g=(gsAll||[]).find(x=>x.id===b.dataset.pg);if(!g)g=(await rpcC('cuentas_my_groups_all')).find(x=>x.id===b.dataset.pg);if(!g)throw Error('No encontramos el grupo.');await openFormer(g)})().catch(e=>say(e.message,true));
+ });
 }
 let cats=[],catsAll=[],catSel=null,catEdit=null,catAuto=true;
 const catBy=k=>catsAll.find(c=>c.key===k);
@@ -1241,8 +1245,8 @@ $('btnPayoutSave').onclick=busy($('btnPayoutSave'),async()=>{
 });
 $('btnPayoutClear').onclick=busy($('btnPayoutClear'),async()=>{await rpc('cuentas_payout_clear');await loadPayout();say('Borraste tus datos de cobro.')});
 $('btnLeave').onclick=busy($('btnLeave'),async()=>{
- const b=$('btnLeave');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: salir';say('Salir no borra tus deudas ni el historial; seguís viendo tu saldo. Tocá de nuevo para confirmar.');return}
- b.dataset.armed='';b.textContent='Salir del grupo';await rpc('cuentas_member_leave',{p_group:gid});await home();say('Saliste del grupo.');
+ const b=$('btnLeave');if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Confirmar: salir';say('Para salir, tu saldo tiene que estar saldado. Salir no borra el historial: seguís viendo tu saldo. Tocá de nuevo para confirmar.');return}
+ b.dataset.armed='';b.textContent='Salir del grupo';try{await rpc('cuentas_member_leave',{p_group:gid})}catch(e){if(e.code==='CUE_SALDO_PENDIENTE')throw Error('Todavía tenés saldo o pagos sin confirmar. Saldalo desde «Saldos» y probá de nuevo.');throw e}await home();say('Saliste del grupo.');
 });
 $('fxType').onchange=async()=>{try{await rpc('cuentas_group_set_fx_type',{p_group:gid,p_type:$('fxType').value});await openGroup(gid);say('Listo: la cotización de referencia es '+FX_ES[$('fxType').value]+'.')}catch(e){say(e.message,true)}};
 $('btnDelGroup').onclick=busy($('btnDelGroup'),async()=>{
@@ -1345,6 +1349,11 @@ async function openFormer(g){
  fPayees=owes?await rpc('cuentas_exmember_payees',{p_group:g.id}):[];
  $('fPay').hidden=!fPayees.length;
  $('fTo').innerHTML=fPayees.map(p=>`<option value="${p.user_id}">${esc(p.display_name||'Miembro '+String(p.user_id).slice(0,4))}</option>`).join('');$('fTo').onchange();
+ let inc=[];try{inc=(await rpc('cuentas_exmember_incoming',{p_group:g.id}))||[]}catch(_){}
+ $('fIn').hidden=!inc.length;
+ $('fInList').innerHTML=inc.map(m=>`<div class="item"><span>${esc(m.display_name||'Un miembro')} te pagó<small style="display:block" class="muted">${esc(m.occurred_on||'')}${m.description?' · '+esc(m.description):''}</small></span><b>${money(m.amount_minor,m.currency)}</b><span style="display:flex;gap:6px;flex-wrap:wrap"><button style="width:auto;margin:0" data-fconf="${m.id}">Confirmar</button><button class="sec" style="width:auto;margin:0" data-frej="${m.id}">Rechazar</button></span></div>`).join('');
+ $('fInList').querySelectorAll('[data-fconf]').forEach(x=>x.onclick=busy(x,async()=>{await rpc('cuentas_payment_confirm',{p_payment:x.dataset.fconf});await openFormer(fGroup);say('Pago confirmado.')}));
+ $('fInList').querySelectorAll('[data-frej]').forEach(x=>x.onclick=busy(x,async()=>{if(x.dataset.armed!=='1'){x.dataset.armed='1';x.textContent='Confirmar: rechazar';say('Rechazar anula el pago: usalo si no recibiste el dinero. Tocá de nuevo para confirmar.');return}await rpc('cuentas_payment_cancel',{p_payment:x.dataset.frej});await openFormer(fGroup);say('Pago rechazado.')}));
  $('fTitle').textContent=g.name;
  $('fBal').innerHTML=bal.length?bal.map(b=>`<div class="item"><span>Tu saldo</span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(b.balance_minor,b.currency)}</b></div>`).join(''):'<p class="muted">No tenés saldo pendiente.</p>';
 }
@@ -1422,8 +1431,14 @@ function moreMenu(uid,btn,isAdmin){
   else if(o.k==='past')includeInPast(uid);
   else pickGroup('¿Quitar a '+who+' del grupo?',[{name:'Sí, quitar',sub:guestIds.has(uid)?'Si todavía no tiene gastos, se quita del grupo.':'Quitar a alguien no borra sus deudas ni el historial.',icon:'close',k:'y'},{name:'No, dejarlo',icon:'back',k:'n'}],async x=>{
    if(x.k!=='y')return;
-   busy(btn,async()=>{if(guestIds.has(uid))await rpc('cuentas_guest_remove',{p_group:gid,p_guest:uid});else await rpc('cuentas_member_remove',{p_group:gid,p_user:uid});await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')})();
+   busy(btn,async()=>{try{if(guestIds.has(uid))await rpc('cuentas_guest_remove',{p_group:gid,p_guest:uid});else await rpc('cuentas_member_remove',{p_group:gid,p_user:uid})}catch(e){if(e.code==='CUE_SALDO_PENDIENTE'){removeWithBalance(uid,who,btn);return}throw e}await openGroup(gid);say('Miembro quitado. Sus obligaciones e historial se mantienen.')})();
   },true);
+ },true);
+}
+function removeWithBalance(uid,who,btn){
+ pickGroup(who+' tiene saldo pendiente',[{name:'Sí, quitar con su saldo',sub:'Queda como ex miembro con su saldo: puede seguir pagando y cobrar lo que le deben. Queda registrado.',icon:'close',k:'y'},{name:'No, dejarlo',sub:'Primero conviene saldar sus cuentas.',icon:'back',k:'n'}],x=>{
+  if(x.k!=='y')return;
+  busy(btn,async()=>{await rpc('cuentas_member_remove_with_balance',{p_group:gid,p_user:uid,p_confirmed:true});await openGroup(gid);say('Quitaste a '+who+'. Su saldo y el historial se mantienen.')})();
  },true);
 }
 /* ===== Unidad: cuánto paga y quién paga por la persona ===== */
