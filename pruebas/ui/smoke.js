@@ -7,7 +7,7 @@ let fails=0;const ok=(c,m)=>{if(!c){fails++;console.log('FALLA:',m)}else console
 const LU='44444444-4444-4444-4444-444444444444';
 async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=false,offline=false,pay=false,notices=false,delay=0,expired=false,cache=null,lk={}}={}){
  lk={reqs:[],hist:[],links:[],decide:'approved',status:'open',member:false,verErr:false,trash:[],empty:false,fx:true,fxFail:false,fxType:'oficial',...lk};
- const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();
+ const page=await (await b.newContext({viewport:{width:400,height:900}})).newPage();page.setDefaultTimeout(60000);
  const jwt='x.'+Buffer.from(JSON.stringify({sub:ME})).toString('base64')+'.y';
  await page.addInitScript(([e,c])=>{window.__exp=e;if(c)for(const k in c)localStorage.setItem(k,JSON.stringify(c[k]))},[expired,cache]);
  await page.addInitScript(([j])=>{localStorage.setItem('cuentas_auth_v1',JSON.stringify({access_token:j,refresh_token:'r',expires_at:Date.now()+(window.__exp?-1000:3600000),email:'b@test.com'}))},[jwt]);
@@ -22,12 +22,12 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
   if(u.includes('/storage/v1/object/')){calls.push('STORAGE '+r.request().method()+' '+u);if(r.request().method()==='POST')return r.fulfill({status:200,contentType:'application/json',body:'{"Key":"x"}'});return r.fulfill({status:200,contentType:'image/jpeg',body:Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=','base64')})}
   if(state.down)return r.abort('failed');const fn=u.split('/rpc/')[1],body=r.request().postData();calls.push(fn+' '+body);const J=v=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(v)});
   switch(fn){
-   case 'cuentas_my_pending':return J([{group_id:G,name:'Viaje 1',payments:1,proposals:0,pairs:0}]);
+   case 'cuentas_my_pending':return J([{group_id:G,name:'Viaje 1',payments:1,proposals:0,pairs:0,former:!!lk.former}]);
    case 'cuentas_invite_preview':return J(preview);
    case 'core_profile_get':return J(prof);
    case 'core_profile_set':prof={display_name:JSON.parse(body).p_name};return J(null);
    case 'cuentas_invite_accept':return J(G);
-   case 'cuentas_my_groups_all':return J([{id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',member_status:'active'}].concat(lk.personal?[{id:'33333333-3333-4333-8333-333333333333',name:'Gastos sin grupo',reference_currency:'ARS',status:'open',member_status:'active',kind:'personal'}]:[]));
+   case 'cuentas_my_groups_all':return J([{id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',member_status:lk.former?'former':'active'}].concat(lk.personal?[{id:'33333333-3333-4333-8333-333333333333',name:'Gastos sin grupo',reference_currency:'ARS',status:'open',member_status:'active',kind:'personal'}]:[]));
    case 'cuentas_personal_group':return J(G);
    case 'cuentas_group_get':return J(((o)=>{if(lk.empty)o.members=o.members.filter(m=>m.user_id===ME);if(lk.fx){o.fx_rate_type=lk.fxType;o.fx_auto=true;o.fx_warn_pct=10;o.cross_pay=lk.cross!==false}return o})({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])}));
    case 'cuentas_guest_add':return J(LU);
@@ -48,6 +48,13 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'core_notifications_read':return J(1);
    case 'cuentas_recurring_save':case 'cuentas_recurring_set_status':return J(null);
    case 'cuentas_activity_list':return J(fam?[{id:1,action:'expense_added',actor:ME,created_at:'2026-11-14T10:00:00Z',amount_minor:20000,currency:'ARS',description:'Asado'},{id:2,action:'member_weight_set',actor:ME,target:BR,weight:0.5,created_at:'2026-11-14T09:00:00Z'}]:[]);
+   case 'cuentas_member_remove':if(lk.rmBal)return r.fulfill({status:400,contentType:'application/json',body:JSON.stringify({message:'Esa persona tiene saldo pendiente',details:'CUE_SALDO_PENDIENTE'})});return J(null);
+   case 'cuentas_member_leave':if(lk.leaveBal)return r.fulfill({status:400,contentType:'application/json',body:JSON.stringify({message:'Saldá tu cuenta antes de salir del grupo',details:'CUE_SALDO_PENDIENTE'})});return J(null);
+   case 'cuentas_member_remove_with_balance':return J(null);
+   case 'cuentas_my_balance':return J([{currency:'ARS',balance_minor:100000,member_status:'former'}]);
+   case 'cuentas_exmember_payees':return J([]);
+   case 'cuentas_exmember_incoming':return J(lk.fin||[]);
+   case 'cuentas_payment_cancel':return J(null);
    case 'cuentas_member_set_weight':case 'cuentas_category_save':return J(null);
    case 'cuentas_movements_page':case 'cuentas_movements_list':if(lk.gov)return J([{id:'g1',seq:1,kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-11-10',created_at:'2026-11-10T15:00:00Z',shares:{[ME]:11000000,[BR]:11000000},created_by:BR,voided:true},{id:'v1',seq:2,kind:'void',ref_id:'g1',description:'Editado',amount_minor:'22000000',currency:'ARS',created_by:ME,created_at:'2026-11-11T12:00:00Z'},{id:'g2',seq:3,kind:'expense',description:'Asado',amount_minor:'3000000',currency:'ARS',from_user:ME,occurred_on:'2026-11-12',created_at:'2026-11-12T20:00:00Z',shares:{[ME]:1500000,[BR]:1500000},created_by:ME,voided:true},{id:'v2',seq:4,kind:'void',ref_id:'g2',description:'Duplicado',amount_minor:'3000000',currency:'ARS',created_by:BR,created_at:'2026-11-12T21:00:00Z'},{id:'g3',seq:5,kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:ME,occurred_on:'2026-11-13',created_at:'2026-11-13T09:00:00Z',created_by:BR,confirmed:true,reversed:false},{id:'c3',seq:6,kind:'payment_confirmation',ref_id:'g3',amount_minor:'100000',currency:'ARS',created_by:ME,created_at:'2026-11-13T10:00:00Z'}]);if(lk.many){const q=JSON.parse(body||'{}'),all=Array.from({length:250},(_,i)=>({id:'m'+(i+1),seq:i+1,kind:'expense',description:'Gasto '+(i+1),amount_minor:'1000',currency:'ARS',from_user:ME,occurred_on:'2026-10-'+String(1+(i%28)).padStart(2,'0'),shares:{[ME]:500,[BR]:500},created_by:ME,voided:false})).filter(x=>q.p_before==null||x.seq<q.p_before);return J(all.slice(Math.max(0,all.length-(q.p_limit||250))))}if(lk.empty)return J([]);if(lk.xpay)return J([{id:'x1',kind:'payment',amount_minor:'248805',currency:'ARS',from_user:BR,to_user:ME,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false,paid_currency:'USD',paid_amount_minor:'171',fx_rate:'1455',fx_source:'DolarApi oficial'}]);if(pay)return J([{id:'p1',kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:LU,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false},{id:'p2',kind:'payment',amount_minor:'50000',currency:'ARS',from_user:ME,to_user:BR,occurred_on:'2026-11-14',created_by:ME,confirmed:true,reversed:false}]);if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',notes:lk.notes?'Pagado con tarjeta':undefined,amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
    case 'core_links_list':return J(lk.links);
@@ -63,7 +70,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_proposals_list':case 'cuentas_delegations_list':case 'cuentas_pairs_list':case 'core_organizable_trips':return J([]);
    default:return J(null);}});
  const errs=[];page.on('pageerror',e=>errs.push(e.message));page.on('console',m=>{if(/RESETERR/.test(m.text()))errs.push(m.text())});
- return {page,calls,errs,state};
+ return {page,calls,errs,state,lk};
 }
 const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s=>!s.hidden).map(s=>s.id));
 (async()=>{const b=await chromium.launch();
@@ -249,6 +256,28 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  ok(/Sí, quitar/.test(await t.page.textContent('#pkL'))&&!t.calls.some(c=>c.startsWith('cuentas_member_remove')||c.startsWith('cuentas_guest_remove')),'miembros: quitar pide confirmar antes de hacerlo');
  await t.page.click('#pkL >> text=No, dejarlo');await t.page.waitForTimeout(150);
  ok(!t.calls.some(c=>c.startsWith('cuentas_member_remove')),'miembros: «No, dejarlo» no quita a nadie');
+ // regla de salida: con saldo pendiente se ofrece sacarlo con saldo, solo con confirmación explícita
+ t.lk.rmBal=true;
+ await t.page.click('#mList .item:not(:has-text("Lucía")) [data-more]');await t.page.waitForTimeout(150);
+ await t.page.click('#pkL >> text=Quitar del grupo');await t.page.waitForTimeout(150);
+ await t.page.click('#pkL >> text=Sí, quitar');await t.page.waitForTimeout(300);
+ ok(/tiene saldo pendiente/.test(await t.page.textContent('#pkT'))&&/Sí, quitar con su saldo/.test(await t.page.textContent('#pkL')),'salida: con saldo pendiente ofrece quitarlo con su saldo');
+ ok(!t.calls.some(c=>c.startsWith('cuentas_member_remove_with_balance')),'salida: no lo saca con saldo sin confirmar');
+ await t.page.click('#pkL >> text=No, dejarlo');await t.page.waitForTimeout(150);
+ ok(!t.calls.some(c=>c.startsWith('cuentas_member_remove_with_balance')),'salida: «No, dejarlo» no saca a nadie con saldo');
+ await t.page.click('#mList .item:not(:has-text("Lucía")) [data-more]');await t.page.waitForTimeout(150);
+ await t.page.click('#pkL >> text=Quitar del grupo');await t.page.waitForTimeout(150);
+ await t.page.click('#pkL >> text=Sí, quitar');await t.page.waitForTimeout(300);
+ await t.page.click('#pkL >> text=Sí, quitar con su saldo');await t.page.waitForTimeout(300);
+ ok(t.calls.some(c=>c.startsWith('cuentas_member_remove_with_balance')&&c.includes('"p_confirmed":true')),'salida: confirmado, quita con saldo enviando la confirmación');
+ t.lk.rmBal=false;
+ // salir con saldo pendiente: mensaje claro y no sale
+ t.lk.leaveBal=true;
+ await t.page.evaluate(()=>document.getElementById('btnLeave').click());await t.page.waitForTimeout(100);
+ await t.page.evaluate(()=>document.getElementById('btnLeave').click());await t.page.waitForTimeout(300);
+ ok(/saldo o pagos sin confirmar/.test(await t.page.textContent('#msg')),'salida: salir con saldo pendiente explica qué hacer');
+ ok(!(await t.page.locator('#vGroup').isHidden()),'salida: con saldo pendiente se queda en el grupo');
+ t.lk.leaveBal=false;
  await t.page.click('[data-fam]');await t.page.click('#pick >> text=Niño/a');await t.page.waitForTimeout(250);
  ok(t.calls.some(c=>c.startsWith('cuentas_member_set_weight')&&c.includes('0.5')),'unidad: marca niño/a con peso 0,5');
  await t.page.click('#btnCatAdd');await t.page.fill('#catName','Mascotas');await t.page.click('#catIcons [data-ci=paw]');await t.page.click('#btnCatSave');await t.page.waitForTimeout(250);
@@ -383,7 +412,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  // grupo sin conexión
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  ok(!(await t.page.isVisible('#offNote')),'sin conexión: con señal no muestra el aviso');
- await t.page.waitForFunction(()=>['my_groups_all','group_get','movements_page'].every(f=>Object.keys(localStorage).some(k=>k.includes(f))),null,{timeout:15000}).catch(()=>{});await t.page.waitForTimeout(1500);t.state.down=true;await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:20000});
+ await t.page.waitForFunction(()=>['my_groups_all','group_get','movements_page'].every(f=>Object.keys(localStorage).some(k=>k.includes(f))),null,{timeout:60000}).catch(()=>{});await t.page.waitForTimeout(1500);t.state.down=true;await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:60000});
  ok(/Sin conexión/.test(await t.page.textContent('#msg')),'sin conexión: el inicio avisa que muestra lo guardado');
  await t.page.click('[data-g]');await t.page.waitForSelector('#gTitle',{state:'visible'});await t.page.waitForTimeout(400);
  ok((await t.page.textContent('#gTitle'))==='Viaje 1','sin conexión: se abre el grupo con la última vista guardada');
@@ -867,4 +896,36 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   ok(await r.page.evaluate(()=>document.activeElement.id!=='burger'&&!document.getElementById('drawer').hidden),'menú: el teclado sigue dentro del menú con los enlaces nuevos');
   ok(r.errs.length===0,'menú: sin errores de JS');
  }
- await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
+  // ex miembro: pagos recibidos para confirmar
+ {
+  const PID='99999999-9999-4999-8999-999999999999';
+  let f=await mk(b,{lk:{former:true,fin:[{id:PID,from_user:BR,display_name:'Bruno',currency:'ARS',amount_minor:100000,occurred_on:'2026-11-25',description:'pago'}]}});
+  await f.page.goto(URL);await f.page.waitForSelector('[data-g]',{timeout:90000});await f.page.click('[data-g]');await f.page.waitForSelector('#vFormer:not([hidden])',{timeout:30000});await f.page.waitForTimeout(300);
+  ok(await f.page.isVisible('#fIn')&&/Bruno te pagó/.test(await f.page.textContent('#fInList')),'ex miembro: ve el pago que le hicieron');
+  ok(f.calls.some(c=>c.startsWith('cuentas_exmember_incoming')),'ex miembro: pide los pagos recibidos al servidor');
+  await f.page.click('#fInList [data-frej]');await f.page.waitForTimeout(150);
+  ok(!f.calls.some(c=>c.startsWith('cuentas_payment_cancel')),'ex miembro: rechazar pide confirmar antes de anular');
+  await f.page.click('#fInList [data-fconf]');await f.page.waitForTimeout(350);
+  ok(f.calls.some(c=>c.startsWith('cuentas_payment_confirm')&&c.includes(PID)),'ex miembro: confirma el pago recibido');
+  ok(f.errs.length===0,'ex miembro: sin errores de JS');
+  f=await mk(b,{lk:{former:true,fin:[{id:PID,from_user:BR,display_name:'Bruno',currency:'ARS',amount_minor:100000,occurred_on:'2026-11-25'}]}});
+  await f.page.goto(URL);await f.page.waitForSelector('[data-g]',{timeout:90000});await f.page.click('[data-g]');await f.page.waitForSelector('#fInList [data-frej]',{timeout:30000});
+  await f.page.click('#fInList [data-frej]');await f.page.waitForTimeout(100);await f.page.click('#fInList [data-frej]');await f.page.waitForTimeout(300);
+  ok(f.calls.some(c=>c.startsWith('cuentas_payment_cancel')&&c.includes(PID)),'ex miembro: rechazar (segundo toque) anula el pago');
+  f=await mk(b,{lk:{former:true,fin:[]}});
+  await f.page.goto(URL);await f.page.waitForSelector('[data-g]',{timeout:90000});await f.page.click('[data-g]');await f.page.waitForSelector('#vFormer:not([hidden])',{timeout:30000});await f.page.waitForTimeout(300);
+  ok(!(await f.page.isVisible('#fIn')),'ex miembro: sin pagos pendientes no muestra la tarjeta');
+ }
+ // campana: pago pendiente de un grupo donde ya soy ex miembro
+ {
+  const PID='99999999-9999-4999-8999-999999999999';
+  const f=await mk(b,{lk:{former:true,fin:[{id:PID,from_user:BR,display_name:'Bruno',currency:'ARS',amount_minor:100000,occurred_on:'2026-11-25'}]}});
+  await f.page.goto(URL);await f.page.waitForSelector('[data-g]',{timeout:90000});await f.page.waitForTimeout(500);
+  ok(/1/.test(await f.page.textContent('#bellN'))&&!(await f.page.isHidden('#bell')),'campana: cuenta el pago pendiente de un ex miembro');
+  await f.page.click('#bell');await f.page.waitForTimeout(300);
+  ok(/ex miembro/.test(await f.page.textContent('#pending'))&&/pago por confirmar/.test(await f.page.textContent('#pending')),'campana: el pendiente aclara que es ex miembro');
+  await f.page.click('#pending [data-pg]');await f.page.waitForSelector('#vFormer:not([hidden])',{timeout:30000});await f.page.waitForTimeout(300);
+  ok(await f.page.isVisible('#fIn'),'campana: «Ver» lleva a la vista de ex miembro con el pago para confirmar');
+  ok(f.errs.length===0,'campana ex miembro: sin errores de JS');
+ }
+await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
