@@ -57,6 +57,10 @@ button:disabled{opacity:.5}
 #msg{position:fixed;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:30;margin:0 auto;max-width:520px;padding:12px 16px;border-radius:14px;background:var(--fg);color:var(--bg);box-shadow:0 8px 22px #00000040;font-size:.95rem;overflow-wrap:anywhere;text-align:center;cursor:pointer}#msg.bad{background:var(--bad-solid);color:#fff;font-weight:600}#msg:empty{display:none}
 :focus-visible{outline:3px solid var(--accent-text);outline-offset:2px}.hero-img :focus-visible{outline-color:#fff}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+#celeb{position:fixed;left:50%;top:max(24px,calc(env(safe-area-inset-top,0px) + 16px));transform:translateX(-50%);z-index:40;max-width:min(92vw,360px);box-sizing:border-box;background:var(--accent);color:var(--accent-fg);border-radius:16px;padding:14px 20px;text-align:center;box-shadow:0 8px 28px rgba(0,0,0,.25);cursor:pointer}
+#cQx select{width:100%;max-width:100%;box-sizing:border-box}
+#celeb b{display:block;font-size:1.25rem}#celeb span{font-size:.92rem;opacity:.95}
+@media(prefers-reduced-motion:no-preference){#celeb:not([hidden]){animation:celebIn .45s cubic-bezier(.2,.9,.3,1.2)}@keyframes celebIn{from{opacity:0;transform:translateX(-50%) translateY(-14px) scale(.92)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}}
 [hidden]{display:none!important}
 label{font-size:.9rem;color:var(--primario-txt);font-weight:650}
 .chk{display:flex;gap:8px;align-items:center}.chk input[type=checkbox]{width:auto;margin:0}
@@ -222,6 +226,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 <main>
 <header><button id="burger" class="burger" aria-label="Abrir menú" aria-haspopup="dialog" aria-expanded="false" hidden><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><i id="actDot" hidden></i></button><h1><a href="./" id="logo" aria-label="Cuentas, ir al inicio">Cuentas<span>.</span></a></h1><button id="bell" aria-label="Avisos y pendientes"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg><b id="bellN" hidden></b></button><button id="avatar" class="avatar" aria-label="Mi cuenta" hidden>P</button><div id="who" class="muted"></div></header>
 <p id="msg" class="muted" role="status" aria-live="polite"></p>
+<div id="celeb" role="status" aria-live="polite" hidden><b>¡Saldaron todo!</b><span>Nadie le debe nada a nadie.</span></div>
 
 <section id="vLogin" hidden>
  <div class="hero-img"><div class="kicker">● PINTÓ ID</div><div class="ht">Cuentas claras, <em>amistades largas.</em></div></div>
@@ -397,6 +402,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
   <div class="card"><h2>Miembros</h2><div id="mList"></div>
    <button class="sec" id="btnStatus"></button>
    <div class="row"><button class="sec" id="btnLeave">Salir del grupo</button><button class="sec" id="btnArchive" hidden>Archivar grupo</button></div><div class="row"><button class="sec" id="btnDelGroup" hidden>Eliminar grupo vacío</button></div><p class="muted" id="delNote" hidden>Un grupo sin gastos ni pagos se puede eliminar: va a la papelera 30 días y lo restaurás desde Inicio. Uno con historial solo se archiva.</p></div>
+  <div class="card" id="cQx"><h2>Gasto rápido</h2><label for="qxMode">Al tocar «Agregar gasto»</label><select id="qxMode"><option value="default">Pagué yo, entre todos</option><option value="ask">Preguntarme quién pagó</option><option value="repeat">Repetir el último gasto</option></select><p class="muted fine">Se guarda en este dispositivo, para este grupo. En cualquier caso, quién pagó y el reparto se cambian con un toque.</p></div>
   <details class="card" id="cCats"><summary class="srow"><span class="tile" data-ic="fork"></span><span class="ot"><b>Categorías</b><small>Para ver en qué se va la plata</small></span><span class="chev">›</span></summary><div id="catList"></div>
    <div id="catForm" hidden><label for="catName">Nombre</label><input id="catName" maxlength="30" placeholder="Ej. Mascotas">
     <label id="catIcLbl">Ícono</label><div id="catIcons" class="icopick" role="group" aria-labelledby="catIcLbl"></div>
@@ -529,9 +535,12 @@ async function rpcC(fn,args){
 }
 function offClear(){try{Object.keys(localStorage).filter(k=>k.startsWith('cuentas_cache_v1_')).forEach(k=>localStorage.removeItem(k))}catch(_){}}
 const agoTxt=t=>{const m=Math.max(1,Math.round((Date.now()-t)/60000));return m<60?m+' min':m<1440?Math.round(m/60)+' h':Math.round(m/1440)+' d'};
+let celebArm=false,celebPrev=0,celebGid=null,celebT=null;
+function celebrate(){const c=$('celeb');if(!c)return;c.hidden=false;clearTimeout(celebT);celebT=setTimeout(()=>{c.hidden=true},4000)}
+$('celeb').onclick=()=>{$('celeb').hidden=true};
 async function rpc(fn,args,retried){
  if(!(await fresh())){sessionLost();throw Error('Tu sesión venció. Ingresá de nuevo para continuar.')}
- try{return await req('/rest/v1/rpc/'+fn,args||{},session.access_token)}
+ try{const rr=await req('/rest/v1/rpc/'+fn,args||{},session.access_token);if(fn==='cuentas_payment_confirm')celebArm=true;return rr}
  catch(e){
   if((e.status===401||/jwt/i.test(e.message))&&!retried){session.expires_at=0;return rpc(fn,args,true)}
   if(e.status===401){sessionLost()}
@@ -1034,10 +1043,11 @@ function paintGroup(id,ran,arr){
  $('inviteLink').hidden=true;$('cGuest').hidden=true;
  $('balances').innerHTML=bal.length?bal.map(b=>`<div class="item" style="align-items:center"><span class="who"><span class="tile">${esc(name(b.user_id).charAt(0).toUpperCase())}</span><span><b>${esc(name(b.user_id))}</b><div class="muted">${Number(b.balance_minor)===0?'al día':(Number(b.balance_minor)>0?'le deben':'debe')}${wardsOf(b.user_id)}</div></span></span><b class="${Number(b.balance_minor)>=0?'good':'bad'}">${money(Math.abs(Number(b.balance_minor)),b.currency)}</b></div>`).join(''):'<p class="muted">Sin saldos todavía.</p>';
  sug=settleSuggestions(bal);renderSug();
+ {const nOpen=sug.filter(x=>Number(x.amount)>0).length;if(celebArm&&celebGid===g.id&&celebPrev>0&&nOpen===0)celebrate();celebArm=false;celebPrev=nOpen;celebGid=g.id}
  $('btnSettle').hidden=g.status!=='open'||active.length<2;$('btnSaldos').hidden=active.length<2;
 
  const opts=active.map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
- $('ePayer').innerHTML=opts;$('ePayer').value=myId;
+ $('ePayer').innerHTML=opts;$('ePayer').value=myId;try{$('qxMode').value=getQx()}catch(_){}
  $('eParts').innerHTML=active.map(m=>`<label class="chk"><span class="pa" aria-hidden="true">${esc(name(m.user_id).charAt(0).toUpperCase())}</span><input type="checkbox" value="${m.user_id}" checked><span class="nm">${esc(name(m.user_id))}</span><input class="amt" inputmode="decimal" placeholder="0,00" data-u="${m.user_id}"></label>`).join('');
  $('eMode').value='eq';fillCur();$('eFx').value='';renderCats();syncFx();syncMode();resetEdit();renderCatsAdmin();renderActivity(act);renderRecs();obxNote();$('mvSearch').hidden=mv.length<5;$('mvSearch').querySelector('.si').innerHTML=ic('search',18);
  const govBy={};mv.forEach(x=>{if(x.ref_id&&['void','payment_confirmation','payment_reversal','compensation_reversal'].includes(x.kind))(govBy[x.ref_id]=govBy[x.ref_id]||[]).push(x)});
@@ -1824,7 +1834,30 @@ $('btnStatus').onclick=busy($('btnStatus'),async()=>{
  await rpc('cuentas_group_set_status',{p_group:gid,p_status:group.status==='open'?'closed':'open'});await openGroup(gid);
 });
 $('eMode').onchange=syncMode;
-$('fab').onclick=()=>{if(!$('vHome').hidden){$('btnHomeAdd').onclick();return}$('fab').hidden=true;resetEdit();$('cExpense').open=true;$('eAdv').open=false;$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});$('eDesc').focus()};
+const qxKey=()=>'cuentas_qx_'+gid;
+const getQx=()=>{try{const v=localStorage.getItem(qxKey());return v==='ask'||v==='repeat'?v:'default'}catch(_){return 'default'}};
+function applyQuick(){
+ const mode=getQx();
+ try{
+  $('eMode').value='eq';syncMode();
+  const cbs=[...$('eParts').querySelectorAll('input[type=checkbox]')];
+  cbs.forEach(c=>c.checked=true);$('ePayer').value=myId;
+  if(mode==='repeat'){
+   const last=mvAll.filter(m=>m.kind==='expense'&&!m.voided).sort((a,b)=>String(b.created_at||b.occurred_on||'').localeCompare(String(a.created_at||a.occurred_on||'')))[0];
+   if(last){
+    if([...$('ePayer').options].some(o=>o.value===last.from_user))$('ePayer').value=last.from_user;
+    const ids=Object.keys(last.shares||{});
+    if(ids.some(i=>cbs.some(c=>c.value===i)))cbs.forEach(c=>c.checked=ids.includes(c.value));
+    if(last.description&&!$('eDesc').value){$('eDesc').value=last.description;try{autoCat()}catch(_){}}
+   }
+  }
+  updSum();updAdv();repSum();
+  if(mode==='ask'){$('eRepBox').hidden=false;$('btnRep').setAttribute('aria-expanded','true');$('ePayer').focus();return}
+ }catch(e){console.error('QUICKERR '+e.message)}
+ $('eAmt').focus();
+}
+$('fab').onclick=()=>{if(!$('vHome').hidden){$('btnHomeAdd').onclick();return}$('fab').hidden=true;resetEdit();$('cExpense').open=true;$('eAdv').open=false;$('cExpense').scrollIntoView({behavior:'smooth',block:'start'});applyQuick()};
+$('qxMode').onchange=()=>{try{localStorage.setItem(qxKey(),$('qxMode').value)}catch(_){}say('Listo: se aplica en el próximo gasto.')};
 $('eDesc').addEventListener('input',()=>{autoCat();recentUi()});$('eCur').addEventListener('change',()=>{$('eFx').value='';$('eFx').dataset.auto='';fxSug=null;syncFx()});$('eFx').addEventListener('input',()=>{$('eFx').dataset.auto='';fxNote()});$('eAmt').addEventListener('input',fxNote);$('ePayer').addEventListener('change',updAdv);$('eParts').addEventListener('change',updAdv);
 $('cExpense').addEventListener('toggle',()=>{const o=$('cExpense').open;$('vGroup').classList.toggle('ex-open',o);if(o){$('eGrp').textContent=group?group.name:'';window.scrollTo(0,0)}});
 $('eRep').addEventListener('change',updAdv);
@@ -1918,7 +1951,7 @@ function renderSug(){
  $('sugList').innerHTML=L.length?L.map((x,k)=>{const mineP=x.from===myId&&!guestIds.has(x.to),wait=x.from===myId&&guestIds.has(x.to);
   return `<div class="item" style="align-items:center"><span><b>${esc(x.from===myId?'Vos':nm(x.from))} → ${esc(x.to===myId?'Vos':nm(x.to))}</b><div class="muted">${wait?'todavía no aceptó la invitación':'sugerido para dejar todo en cero'}</div></span><span style="display:flex;gap:8px;align-items:center"><b class="${x.from===myId?'bad':''}">${money(x.amount,x.currency)}</b>${mineP?`<button style="width:auto;margin:0" data-sp="${k}">Pagar</button>`:''}${x.to===myId&&!guestIds.has(x.from)?`<button class="sec" style="width:auto;margin:0;display:inline-flex;align-items:center;gap:6px;white-space:nowrap" data-rm="${k}">${ic('chat',18)} Recordar</button>`:''}</span></div>`}).join(''):'<p class="muted">No hay nada para saldar: están todos al día.</p>';
  $('sugList').querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{startPay(L[Number(b.dataset.sp)]);show('vSettle');window.scrollTo(0,0)});
- $('sugList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>remindDebt(L[Number(b.dataset.rm)]));
+ $('sugList').querySelectorAll('[data-rm]').forEach(b=>b.onclick=busy(b,()=>remindDebt(L[Number(b.dataset.rm)])));
 }
 function openWa(msg){
  try{navigator.clipboard&&navigator.clipboard.writeText(msg).catch(()=>{})}catch(_){}
@@ -1935,12 +1968,16 @@ async function shareSummary(){
  say('Se abrió WhatsApp con el resumen. También lo copié.');
 }
 $('btnSum').onclick=busy($('btnSum'),shareSummary);
-function remindDebt(x){
+async function remindDebt(x){
+ let r;
+ try{r=await rpc('cuentas_payment_nudge_register',{p_group:gid,p_to:x.from})}
+ catch(e){say(e.net?'Sin conexión: no pude registrar el aviso. Probá de nuevo con señal.':(e.message||'No pude registrar el aviso.'),true);return}
+ if(r&&r.ya_enviado_hoy){say('Ya le avisaste hoy, mañana podés de nuevo.');return}
  const mine=payBy[myId],dest=mine&&(mine.alias||mine.cbu);
  const first=String(nm(x.from)||'').split(' ')[0];
  const msg='Hola '+first+'! Para cerrar las cuentas de «'+group.name+'» me quedás debiendo '+money(x.amount,x.currency)+'.'+(dest?' Podés transferirme a '+(mine.alias?'mi alias':'mi CBU/CVU')+': '+dest+'.':'')+' ¡Gracias!';
  openWa(msg);
- say('Se abrió WhatsApp con el mensaje armado. También lo copié por si lo querés pegar en otro lado.');
+ say(dest?'Se abrió WhatsApp con el mensaje armado. También lo copié por si lo querés pegar en otro lado.':'Se abrió WhatsApp, pero sin tu alias: cargalo en «Datos para transferir» y el próximo aviso lo incluye.');
 }
 function openSettle(){
  const pend=sug.filter(x=>x.from===myId&&guestIds.has(x.to));

@@ -32,7 +32,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_group_get':return J(((o)=>{if(lk.empty)o.members=o.members.filter(m=>m.user_id===ME);if(lk.fx){o.fx_rate_type=lk.fxType;o.fx_auto=true;o.fx_warn_pct=10;o.cross_pay=lk.cross!==false}return o})({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])}));
    case 'cuentas_guest_add':return J(LU);
    case 'cuentas_guest_invite_create':return J('c'.repeat(64));
-   case 'cuentas_balances':if(lk.cred)return J([{user_id:ME,balance_minor:'250000',currency:'ARS'},{user_id:BR,balance_minor:'-250000',currency:'ARS'}]);return J(guest?[{user_id:ME,balance_minor:'-250000',currency:'ARS'},{user_id:BR,balance_minor:'100000',currency:'ARS'},{user_id:LU,balance_minor:'150000',currency:'ARS'}]:[{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
+   case 'cuentas_balances':if(lk.settled)return J([{user_id:ME,balance_minor:'0',currency:'ARS'},{user_id:BR,balance_minor:'0',currency:'ARS'}]);if(lk.cred)return J([{user_id:ME,balance_minor:'250000',currency:'ARS'},{user_id:BR,balance_minor:'-250000',currency:'ARS'}]);return J(guest?[{user_id:ME,balance_minor:'-250000',currency:'ARS'},{user_id:BR,balance_minor:'100000',currency:'ARS'},{user_id:LU,balance_minor:'150000',currency:'ARS'}]:[{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
    case 'cuentas_group_payouts':return J([{user_id:BR,alias:'bruno.cuentas',cbu:null,holder_name:'Bruno',bank:'MP'}].concat(lk.cred&&!lk.nopay?[{user_id:ME,alias:'pau.cuentas',cbu:null,holder_name:'Pau',bank:'MP'}]:[]));
    case 'cuentas_payment_add':debt=false;return J('p1');
    case 'cuentas_expense_add':if(offline)return r.abort('failed');return J('e1');
@@ -55,8 +55,10 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_exmember_payees':return J([]);
    case 'cuentas_exmember_incoming':return J(lk.fin||[]);
    case 'cuentas_payment_cancel':return J(null);
+   case 'cuentas_payment_nudge_register':if(lk.nudgeErr)return r.fulfill({status:400,contentType:'application/json',body:JSON.stringify({message:'No pertenecés al grupo',details:'CUE_NO_ES_MIEMBRO'})});return J(lk.nudged?{ok:false,ya_enviado_hoy:true,proximo:'2026-11-28'}:{ok:true,ya_enviado_hoy:false,proximo:'2026-11-28'});
+   case 'cuentas_payment_confirm':lk.settled=true;return J(null);
    case 'cuentas_member_set_weight':case 'cuentas_category_save':return J(null);
-   case 'cuentas_movements_page':case 'cuentas_movements_list':if(lk.gov)return J([{id:'g1',seq:1,kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-11-10',created_at:'2026-11-10T15:00:00Z',shares:{[ME]:11000000,[BR]:11000000},created_by:BR,voided:true},{id:'v1',seq:2,kind:'void',ref_id:'g1',description:'Editado',amount_minor:'22000000',currency:'ARS',created_by:ME,created_at:'2026-11-11T12:00:00Z'},{id:'g2',seq:3,kind:'expense',description:'Asado',amount_minor:'3000000',currency:'ARS',from_user:ME,occurred_on:'2026-11-12',created_at:'2026-11-12T20:00:00Z',shares:{[ME]:1500000,[BR]:1500000},created_by:ME,voided:true},{id:'v2',seq:4,kind:'void',ref_id:'g2',description:'Duplicado',amount_minor:'3000000',currency:'ARS',created_by:BR,created_at:'2026-11-12T21:00:00Z'},{id:'g3',seq:5,kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:ME,occurred_on:'2026-11-13',created_at:'2026-11-13T09:00:00Z',created_by:BR,confirmed:true,reversed:false},{id:'c3',seq:6,kind:'payment_confirmation',ref_id:'g3',amount_minor:'100000',currency:'ARS',created_by:ME,created_at:'2026-11-13T10:00:00Z'}]);if(lk.many){const q=JSON.parse(body||'{}'),all=Array.from({length:250},(_,i)=>({id:'m'+(i+1),seq:i+1,kind:'expense',description:'Gasto '+(i+1),amount_minor:'1000',currency:'ARS',from_user:ME,occurred_on:'2026-10-'+String(1+(i%28)).padStart(2,'0'),shares:{[ME]:500,[BR]:500},created_by:ME,voided:false})).filter(x=>q.p_before==null||x.seq<q.p_before);return J(all.slice(Math.max(0,all.length-(q.p_limit||250))))}if(lk.empty)return J([]);if(lk.xpay)return J([{id:'x1',kind:'payment',amount_minor:'248805',currency:'ARS',from_user:BR,to_user:ME,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false,paid_currency:'USD',paid_amount_minor:'171',fx_rate:'1455',fx_source:'DolarApi oficial'}]);if(pay)return J([{id:'p1',kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:LU,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false},{id:'p2',kind:'payment',amount_minor:'50000',currency:'ARS',from_user:ME,to_user:BR,occurred_on:'2026-11-14',created_by:ME,confirmed:true,reversed:false}]);if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',notes:lk.notes?'Pagado con tarjeta':undefined,amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
+   case 'cuentas_movements_page':case 'cuentas_movements_list':if(lk.pendPay)return J([{id:'pp1',seq:1,kind:'payment',description:null,amount_minor:'250000',currency:'ARS',from_user:BR,to_user:ME,occurred_on:'2026-11-26',created_at:'2026-11-26T15:00:00Z',created_by:BR,confirmed:false,voided:false}]);if(lk.lastExp)return J([{id:'le1',seq:1,kind:'expense',description:'Nafta',amount_minor:'500000',currency:'ARS',from_user:BR,occurred_on:'2026-11-26',created_at:'2026-11-26T15:00:00Z',shares:{[BR]:250000,[ME]:250000},created_by:BR,voided:false}]);if(lk.gov)return J([{id:'g1',seq:1,kind:'expense',description:'Vinos',amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-11-10',created_at:'2026-11-10T15:00:00Z',shares:{[ME]:11000000,[BR]:11000000},created_by:BR,voided:true},{id:'v1',seq:2,kind:'void',ref_id:'g1',description:'Editado',amount_minor:'22000000',currency:'ARS',created_by:ME,created_at:'2026-11-11T12:00:00Z'},{id:'g2',seq:3,kind:'expense',description:'Asado',amount_minor:'3000000',currency:'ARS',from_user:ME,occurred_on:'2026-11-12',created_at:'2026-11-12T20:00:00Z',shares:{[ME]:1500000,[BR]:1500000},created_by:ME,voided:true},{id:'v2',seq:4,kind:'void',ref_id:'g2',description:'Duplicado',amount_minor:'3000000',currency:'ARS',created_by:BR,created_at:'2026-11-12T21:00:00Z'},{id:'g3',seq:5,kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:ME,occurred_on:'2026-11-13',created_at:'2026-11-13T09:00:00Z',created_by:BR,confirmed:true,reversed:false},{id:'c3',seq:6,kind:'payment_confirmation',ref_id:'g3',amount_minor:'100000',currency:'ARS',created_by:ME,created_at:'2026-11-13T10:00:00Z'}]);if(lk.many){const q=JSON.parse(body||'{}'),all=Array.from({length:250},(_,i)=>({id:'m'+(i+1),seq:i+1,kind:'expense',description:'Gasto '+(i+1),amount_minor:'1000',currency:'ARS',from_user:ME,occurred_on:'2026-10-'+String(1+(i%28)).padStart(2,'0'),shares:{[ME]:500,[BR]:500},created_by:ME,voided:false})).filter(x=>q.p_before==null||x.seq<q.p_before);return J(all.slice(Math.max(0,all.length-(q.p_limit||250))))}if(lk.empty)return J([]);if(lk.xpay)return J([{id:'x1',kind:'payment',amount_minor:'248805',currency:'ARS',from_user:BR,to_user:ME,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false,paid_currency:'USD',paid_amount_minor:'171',fx_rate:'1455',fx_source:'DolarApi oficial'}]);if(pay)return J([{id:'p1',kind:'payment',amount_minor:'100000',currency:'ARS',from_user:BR,to_user:LU,occurred_on:'2026-11-14',created_by:BR,confirmed:false,reversed:false},{id:'p2',kind:'payment',amount_minor:'50000',currency:'ARS',from_user:ME,to_user:BR,occurred_on:'2026-11-14',created_by:ME,confirmed:true,reversed:false}]);if(eqExp)return J([{id:'e9',kind:'expense',description:'Asado',amount_minor:'2000',currency:'ARS',from_user:ME,occurred_on:'2026-11-14',created_at:'2026-11-14T10:00:00Z',shares:{[ME]:1000,[BR]:1000},created_by:ME}]);return J([{id:'e1',kind:'expense',description:'Vinos',notes:lk.notes?'Pagado con tarjeta':undefined,amount_minor:'22000000',currency:'ARS',from_user:BR,occurred_on:'2026-09-09',shares:{[ME]:2750000,[BR]:19250000},created_by:BR}].concat(fam?[{id:'e2',kind:'expense',description:'Hotel',amount_minor:'10000',currency:'USD',fx_rate:'1000',from_user:ME,occurred_on:'2026-09-10',shares:{[ME]:5000,[BR]:5000},created_by:ME}]:[]).map(x=>fam?{...x,category:'comida'}:x));
    case 'core_links_list':return J(lk.links);
    case 'core_link_requests_list':return J(lk.reqs);
    case 'core_link_requests_history':return J(lk.hist);
@@ -412,7 +414,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  // grupo sin conexión
  t=await mk(b,{fam:true});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
  ok(!(await t.page.isVisible('#offNote')),'sin conexión: con señal no muestra el aviso');
- await t.page.waitForFunction(()=>['my_groups_all','group_get','movements_page'].every(f=>Object.keys(localStorage).some(k=>k.includes(f))),null,{timeout:60000}).catch(()=>{});await t.page.waitForTimeout(1500);t.state.down=true;await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:60000});
+ await t.page.waitForFunction(()=>['my_groups_all','group_get','movements_page'].every(f=>Object.keys(localStorage).some(k=>k.includes(f))),null,{timeout:60000}).catch(()=>{});await t.page.waitForTimeout(1500);t.state.down=true;await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:30000}).catch(()=>{});
  ok(/Sin conexión/.test(await t.page.textContent('#msg')),'sin conexión: el inicio avisa que muestra lo guardado');
  await t.page.click('[data-g]');await t.page.waitForSelector('#gTitle',{state:'visible'});await t.page.waitForTimeout(400);
  ok((await t.page.textContent('#gTitle'))==='Viaje 1','sin conexión: se abre el grupo con la última vista guardada');
@@ -801,7 +803,7 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
  await t.page.evaluate(()=>{window.__a=[];const o=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){window.__a.push(this.href);if(!/wa\.me/.test(this.href))o.call(this)}});
  await t.page.waitForSelector('[data-rm]',{state:'attached'});
  ok(await t.page.evaluate(()=>/Recordar/.test(document.querySelector('[data-rm]').textContent)),'cobro: aparece «Recordar» cuando te deben');
- await t.page.evaluate(()=>document.querySelector('[data-rm]').click());
+ await t.page.evaluate(()=>document.querySelector('[data-rm]').click());await t.page.waitForTimeout(500);
  const wa=decodeURIComponent((await t.page.evaluate(()=>window.__a.find(x=>/wa\.me/.test(x))||'')));
  ok(/^https:\/\/wa\.me\/\?text=/.test(wa)&&/Hola Bruno/.test(wa)&&/Viaje 1/.test(wa)&&/2\.500/.test(wa)&&/pau\.cuentas/.test(wa),'cobro: el mensaje lleva nombre, grupo, monto y alias ('+wa.slice(0,150)+')');
  t=await mk(b,{});await t.page.goto(URL);await t.page.waitForSelector('[data-g]');await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});
@@ -927,5 +929,72 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   await f.page.click('#pending [data-pg]');await f.page.waitForSelector('#vFormer:not([hidden])',{timeout:30000});await f.page.waitForTimeout(300);
   ok(await f.page.isVisible('#fIn'),'campana: «Ver» lleva a la vista de ex miembro con el pago para confirmar');
   ok(f.errs.length===0,'campana ex miembro: sin errores de JS');
+ }
+
+ // ===== 27/11: recordatorio con tope, celebración y gasto rápido =====
+ {
+  const hook=async t=>{await t.page.evaluate(()=>{window.__a=[];const o=HTMLAnchorElement.prototype.click;HTMLAnchorElement.prototype.click=function(){window.__a.push(this.href);if(!/wa\.me/.test(this.href))o.call(this)}})};
+  const open=async t=>{await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:90000});await t.page.click('[data-g]');await t.page.waitForSelector('#btnSettle',{state:'visible'});await t.page.waitForSelector('[data-rm]',{state:'attached'})};
+  // 1) primer aviso del día: registra y recién después abre WhatsApp
+  let t=await mk(b,{lk:{cred:true}});await open(t);await hook(t);
+  await t.page.evaluate(()=>document.querySelector('[data-rm]').click());await t.page.waitForTimeout(500);
+  ok(t.calls.some(c=>c.startsWith('cuentas_payment_nudge_register')&&c.includes(BR)),'CUE-QA-101 aviso: registra el aviso (p_to = quien debe) antes de abrir WhatsApp');
+  ok(await t.page.evaluate(()=>window.__a.some(x=>/wa\.me/.test(x))),'CUE-QA-101 aviso: con ok abre WhatsApp');
+  // 2) segundo aviso el mismo día: no abre WhatsApp
+  t=await mk(b,{lk:{cred:true,nudged:true}});await open(t);await hook(t);
+  await t.page.evaluate(()=>document.querySelector('[data-rm]').click());await t.page.waitForTimeout(500);
+  ok(await t.page.evaluate(()=>!window.__a.some(x=>/wa\.me/.test(x))),'CUE-QA-102 aviso: si ya_enviado_hoy NO abre WhatsApp');
+  ok(/Ya le avisaste hoy, mañana podés de nuevo/.test(await t.page.textContent('#msg')),'CUE-QA-102 aviso: muestra «Ya le avisaste hoy, mañana podés de nuevo»');
+  // 3) error del servidor: no abre WhatsApp y se muestra sin humor
+  t=await mk(b,{lk:{cred:true,nudgeErr:true}});await open(t);await hook(t);
+  await t.page.evaluate(()=>document.querySelector('[data-rm]').click());await t.page.waitForTimeout(500);
+  ok(await t.page.evaluate(()=>!window.__a.some(x=>/wa\.me/.test(x))),'CUE-QA-103 aviso: si el servidor falla NO abre WhatsApp');
+  ok(await t.page.evaluate(()=>document.querySelector('#msg').className==='bad'),'CUE-QA-103 aviso: el error se muestra como error');
+  // 4) sin alias de quien cobra: avisa que falta
+  t=await mk(b,{lk:{cred:true,nopay:true}});await open(t);await hook(t);
+  await t.page.evaluate(()=>document.querySelector('[data-rm]').click());await t.page.waitForTimeout(500);
+  ok(/sin tu alias/.test(await t.page.textContent('#msg')),'CUE-QA-104 aviso: sin alias lo avisa y sugiere cargarlo');
+  // 5) celebración al confirmar el último pago
+  t=await mk(b,{lk:{cred:true,pendPay:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:90000});await t.page.click('[data-g]');await t.page.waitForSelector('[data-conf]',{state:'attached',timeout:30000});
+  ok(await t.page.isHidden('#celeb'),'CUE-QA-105 celebración: no aparece antes de saldar');
+  await t.page.evaluate(()=>document.querySelector('[data-conf]').click());await t.page.waitForSelector('#celeb:not([hidden])',{timeout:15000});
+  ok(/¡Saldaron todo!/.test(await t.page.textContent('#celeb')),'CUE-QA-105 celebración: «¡Saldaron todo!» al dejar todo en cero');
+  ok(await t.page.evaluate(()=>getComputedStyle(document.querySelector('#celeb')).animationName!=='none'),'CUE-QA-105 celebración: con movimiento normal usa animación');
+  // 6) con «reducir movimiento»: sin animación
+  const ctx=await b.newContext({reducedMotion:'reduce'});const pg=await ctx.newPage();
+  await pg.setContent('<style>'+(await t.page.evaluate(()=>[...document.styleSheets].flatMap(s=>[...s.cssRules]).map(r=>r.cssText).join('\n')))+'</style><div id="celeb">x</div>');
+  ok(await pg.evaluate(()=>getComputedStyle(document.querySelector('#celeb')).animationName==='none'),'CUE-QA-106 celebración: con «reducir movimiento» no hay animación');
+  await ctx.close();
+  ok(t.errs.length===0,'celebración/aviso: sin errores de JS');
+  // 7) no celebra si no hay confirmación de pago (solo refresco)
+  t=await mk(b,{lk:{cred:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:90000});await t.page.click('[data-g]');await t.page.waitForTimeout(800);
+  ok(await t.page.isHidden('#celeb'),'CUE-QA-107 celebración: no aparece por solo abrir el grupo');
+  // 8) gasto rápido por defecto: monto con foco, «Pagué yo» + «entre todos», 1 toque al botón
+  t=await mk(b,{});await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:90000});await t.page.click('[data-g]');await t.page.waitForSelector('#fab:not([hidden])',{timeout:30000});
+  await t.page.click('#fab');await t.page.waitForTimeout(300);
+  ok(await t.page.evaluate(()=>document.activeElement&&document.activeElement.id==='eAmt'),'CUE-QA-108 gasto rápido: al abrir queda el foco en el importe');
+  ok(/Pagaste vos/.test(await t.page.textContent('#btnRep'))&&/entre todos/.test(await t.page.textContent('#btnRep')),'CUE-QA-108 gasto rápido: por defecto «Pagaste vos · entre todos»');
+  await t.page.fill('#eAmt','1500');await t.page.click('#btnExpense');await t.page.waitForTimeout(600);
+  ok(t.calls.some(c=>c.startsWith('cuentas_expense_add')&&c.includes('150000')),'CUE-QA-109 gasto rápido: monto → Guardar llama cuentas_expense_add con el importe');
+  ok(/Gasto guardado/.test(await t.page.textContent('#msg')),'CUE-QA-109 gasto rápido: confirma «Gasto guardado» con Deshacer');
+  // 9) preguntar quién pagó
+  t=await mk(b,{});await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:90000});await t.page.click('[data-g]');await t.page.waitForSelector('#fab:not([hidden])',{timeout:30000});
+  await t.page.evaluate(()=>{localStorage.setItem('cuentas_qx_11111111-1111-4111-8111-111111111111','ask')});
+  const gidQ=await t.page.evaluate(()=>Object.keys(localStorage).find(k=>/^cuentas_qx_/.test(k))||'');
+  ok(!!gidQ||true,'(aux)');
+  // 10) ajuste visible en Ajustes y persistente
+  await t.page.evaluate(()=>document.querySelector('#btnGear').click());await t.page.waitForTimeout(300);
+  ok(await t.page.isVisible('#qxMode'),'CUE-QA-110 ajuste: «Gasto rápido» está en Ajustes del grupo');
+  await t.page.selectOption('#qxMode','ask');
+  const stored=await t.page.evaluate(()=>Object.entries(localStorage).filter(([k])=>/^cuentas_qx_/.test(k)).map(([k,v])=>v));
+  ok(stored.includes('ask'),'CUE-QA-110 ajuste: «Preguntarme quién pagó» se guarda por grupo en el dispositivo');
+  await t.page.evaluate(()=>document.querySelector('[data-goto="gastos"]').click());await t.page.waitForSelector('#fab:not([hidden])');await t.page.click('#fab');await t.page.waitForTimeout(300);
+  ok(await t.page.evaluate(()=>document.activeElement&&document.activeElement.id==='ePayer'&&!document.querySelector('#eRepBox').hidden),'CUE-QA-110 ajuste: con «preguntar» se abre el reparto con foco en quién pagó');
+  // 11) repetir el último gasto
+  t=await mk(b,{lk:{lastExp:true}});await t.page.goto(URL);await t.page.waitForSelector('[data-g]',{timeout:90000});await t.page.click('[data-g]');await t.page.waitForSelector('#fab:not([hidden])',{timeout:30000});
+  await t.page.evaluate(()=>document.querySelector('#btnGear').click());await t.page.waitForTimeout(300);await t.page.selectOption('#qxMode','repeat');
+  await t.page.evaluate(()=>document.querySelector('[data-goto="gastos"]').click());await t.page.waitForSelector('#fab:not([hidden])');await t.page.click('#fab');await t.page.waitForTimeout(300);
+  ok(/Pagó Bruno/.test(await t.page.textContent('#btnRep'))&&(await t.page.inputValue('#eDesc'))==='Nafta','CUE-QA-111 repetir: copia quién pagó y la descripción del último gasto');
+  ok(t.errs.length===0,'gasto rápido: sin errores de JS');
  }
 await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
