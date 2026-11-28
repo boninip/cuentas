@@ -343,6 +343,7 @@ svg.line{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
 <section id="vGroup" hidden>
  <div class="row topbar"><button class="lnk" id="btnBack"><svg class="icn" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Grupos</button><button class="lnk" id="btnAna"><svg class="icn" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20v-6"/></svg>Análisis</button><button class="lnk" id="btnGear" aria-label="Ajustes del grupo"><svg class="icn" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>Ajustes</button></div>
  <div class="ghead"><h2 id="gTitle"></h2><div id="gMeta" class="muted"></div><p id="offNote" class="obx off" hidden></p><p id="obxNote" class="obx" hidden></p></div>
+ <div id="gBackEv" class="row" hidden></div>
  <div id="gSum" hidden></div><div id="gMembers" hidden></div>
  <div id="gTop">
  <div class="ghero" id="gStats"><small id="gLbl"></small><b id="gBig">–</b><span id="gSub"></span></div>
@@ -480,6 +481,10 @@ const $=id=>document.getElementById(id);
 const url=new URL(location.href);
 const inv=url.searchParams.get('invite');
 let token=/^[a-f0-9]{64}$/.test(inv||'')?inv:null;
+const gq=url.searchParams.get('g');let gDeep=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(gq||'')?gq.toLowerCase():null;
+function dropDeep(){gDeep=null;const u=new URL(location.href);u.searchParams.delete('g');history.replaceState(null,'',u)}
+// Destinos fijos por app (nunca de la URL). Formato exacto del enlace a un evento/viaje: pendiente de Juntada/Escapada.
+const BACK={juntada:{base:'https://boninip.github.io/juntada/',kind:'evento'},escapada_trip:{base:'https://boninip.github.io/escapada/',kind:'viaje'}};
 let session=null,group=null,gid=null,myId=null,tab='gastos',editId=null,editDate=null;
 try{const r=JSON.parse(localStorage.getItem(STORE)||'null');if(r&&r.access_token&&r.refresh_token)session=r}catch(_){}
 let sayT=0;const sayOff=()=>{clearTimeout(sayT);const m=$('msg');m.textContent=''};
@@ -987,6 +992,7 @@ function paintGroup(id,ran,arr){
  $('dUser').innerHTML=active.filter(m=>m.role!=='admin'&&!dBy[m.user_id]).map(m=>`<option value="${m.user_id}">${esc(name(m.user_id))}</option>`).join('');
  $('dList').querySelectorAll('[data-rv]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('cuentas_delegate_revoke',{p_group:gid,p_user:b.dataset.rv});await openGroup(gid);say('Delegación revocada.')}));
  const canLink=isAdmin||(me&&dBy[myId]&&dBy[myId].scopes.includes('link'));
+ {const bk=(links||[]).filter(l=>l.status==='active'&&!l.in_trash&&BACK[l.ref_type]);$('gBackEv').innerHTML=bk.map(l=>`<a class="lnk" data-bk="${esc(l.ref_type)}" href="${BACK[l.ref_type].base}" rel="noopener">‹ Volver al ${BACK[l.ref_type].kind}${l.name?': '+esc(l.name):''}</a>`).join('');$('gBackEv').hidden=!bk.length}
  lCan=!!canLink;lStatus=g.status;renderLinkUI(links||[],lreq||[]);
  $('lList').innerHTML=(links||[]).length?links.map(l=>`<div class="item"><span>${esc(l.name||'(eliminado)')} <span class="tag">${l.ref_type==='juntada'?'evento':'viaje'}</span> <span class="tag">${l.status==='active'?'vinculado':'desvinculado'}</span>${l.in_trash?' <span class="tag">en papelera</span>':''}</span>${l.status==='active'&&canLink?`<button class="sec" style="width:auto;margin:0" data-ul="${l.id}">Desvincular</button>`:''}</div>`).join(''):'<p class="muted">Sin vínculos.</p>';
  $('lList').querySelectorAll('[data-ul]').forEach(b=>b.onclick=busy(b,async()=>{await rpc('core_link_remove',{p_link:b.dataset.ul});await openGroup(gid);say('Desvinculado. Las deudas y el historial se mantienen.')}));
@@ -1378,6 +1384,7 @@ $('btnLogin').onclick=busy($('btnLogin'),async()=>{
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Ingresá un email válido');
  const redirect=new URL(location.pathname,location.origin);
  if(token)redirect.searchParams.set('invite',token);
+ if(gDeep)redirect.searchParams.set('g',gDeep);
  await req('/auth/v1/otp?redirect_to='+encodeURIComponent(redirect.toString()),{email,create_user:true});
  say('Revisá tu correo y abrí el enlace. Si no llega, mirá spam.');
 });
@@ -2033,7 +2040,7 @@ async function start(){
   history.replaceState(null,'',location.pathname+location.search);
  }
  let okS;try{okS=await fresh()}catch(e){if(!e.net)throw e;okS=!!session}
- if(!okS){show('vLogin');if(token)say('Ingresá para aceptar la invitación.');$('who').textContent='';$('avatar').hidden=true;return}
+ if(!okS){show('vLogin');if(token)say('Ingresá para aceptar la invitación.');else if(gDeep)say('Ingresá para abrir el grupo.');$('who').textContent='';$('avatar').hidden=true;return}
  myId=decodeSub(session.access_token);
  $('who').textContent='';$('who2').textContent=session.email||'';$('avatar').hidden=false;if(!$('avatar').dataset.n)$('avatar').textContent=(session.email||'P').charAt(0).toUpperCase();
  if(token){
@@ -2046,6 +2053,7 @@ async function start(){
    $('invNameW').hidden=hasName;if(!hasName&&p.guest_name)$('invName2').value=p.guest_name;show('vInvite');return;
   }catch(e){say(e.message,true)}
  }
+ if(gDeep){const g0=gDeep;dropDeep();try{await openGroup(g0);return}catch(e){try{await home()}catch(_){}say(e.net?'Sin conexión: no pude abrir el grupo.':'No pudimos abrir ese grupo. Puede que no seas parte, que ya no exista o que tengas que aceptar una invitación.',true);return}}
  try{await home()}catch(e){say(e.message,true)}
 }
 // Botón «atrás» del celular: cada nivel de pantalla es una entrada del historial
