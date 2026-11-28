@@ -29,7 +29,7 @@ async function mk(b,{preview,profile=true,owe=true,guest=false,eqExp=false,fam=f
    case 'cuentas_invite_accept':return J(G);
    case 'cuentas_my_groups_all':return J([{id:G,name:'Viaje 1',reference_currency:'ARS',status:'open',member_status:lk.former?'former':'active'}].concat(lk.personal?[{id:'33333333-3333-4333-8333-333333333333',name:'Gastos sin grupo',reference_currency:'ARS',status:'open',member_status:'active',kind:'personal'}]:[]));
    case 'cuentas_personal_group':return J(G);
-   case 'cuentas_group_get':return J(((o)=>{if(lk.empty)o.members=o.members.filter(m=>m.user_id===ME);if(lk.fx){o.fx_rate_type=lk.fxType;o.fx_auto=true;o.fx_warn_pct=10;o.cross_pay=lk.cross!==false}return o})({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])}));
+   case 'cuentas_group_get':if(lk.noAccess)return r.fulfill({status:400,contentType:'application/json',body:JSON.stringify({message:'No pertenecés al grupo',details:'CUE_NO_ES_MIEMBRO'})});return J(((o)=>{if(lk.empty)o.members=o.members.filter(m=>m.user_id===ME);if(lk.fx){o.fx_rate_type=lk.fxType;o.fx_auto=true;o.fx_warn_pct=10;o.cross_pay=lk.cross!==false}return o})({id:G,name:'Viaje 1',reference_currency:'ARS',status:lk.status,members:[{user_id:ME,role:lk.member?'member':'admin',status:'active',display_name:'Pau'},{user_id:BR,role:'member',status:'active',display_name:'Bruno',weight:fam?0.5:1,guardian:fam?ME:null}].concat(guest?[{user_id:LU,role:'member',status:'active',display_name:'Lucía',guest:true}]:[])}));
    case 'cuentas_guest_add':return J(LU);
    case 'cuentas_guest_invite_create':return J('c'.repeat(64));
    case 'cuentas_balances':if(lk.settled)return J([{user_id:ME,balance_minor:'0',currency:'ARS'},{user_id:BR,balance_minor:'0',currency:'ARS'}]);if(lk.cred)return J([{user_id:ME,balance_minor:'250000',currency:'ARS'},{user_id:BR,balance_minor:'-250000',currency:'ARS'}]);return J(guest?[{user_id:ME,balance_minor:'-250000',currency:'ARS'},{user_id:BR,balance_minor:'100000',currency:'ARS'},{user_id:LU,balance_minor:'150000',currency:'ARS'}]:[{user_id:ME,balance_minor:debt?'-250000':'0',currency:'ARS'},{user_id:BR,balance_minor:debt?'250000':'0',currency:'ARS'}]);
@@ -996,5 +996,25 @@ const views=p=>p.evaluate(()=>[...document.querySelectorAll('section')].filter(s
   await t.page.evaluate(()=>document.querySelector('[data-goto="gastos"]').click());await t.page.waitForSelector('#fab:not([hidden])');await t.page.click('#fab');await t.page.waitForTimeout(300);
   ok(/Pagó Bruno/.test(await t.page.textContent('#btnRep'))&&(await t.page.inputValue('#eDesc'))==='Nafta','CUE-QA-111 repetir: copia quién pagó y la descripción del último gasto');
   ok(t.errs.length===0,'gasto rápido: sin errores de JS');
+ }
+
+ // ===== 28/11: puente — link directo ?g= y volver al evento/viaje =====
+ {
+  let t=await mk(b,{});await t.page.goto(URL+'?g='+G);await t.page.waitForSelector('#vGroup:not([hidden])',{timeout:60000});
+  ok(await t.page.evaluate(()=>/Viaje 1/.test(document.querySelector('#gTitle').textContent)),'CUE-QA-112 puente: ?g=<id> abre ese grupo directo');
+  ok(await t.page.evaluate(()=>!/[?&]g=/.test(location.search)),'CUE-QA-112 puente: el parámetro se limpia de la URL');
+  ok(t.errs.length===0,'puente: sin errores de JS');
+  t=await mk(b,{});await t.page.goto(URL+'?g=no-es-un-id');await t.page.waitForSelector('[data-g]',{timeout:60000});
+  ok(await t.page.isHidden('#vGroup'),'CUE-QA-113 puente: un ?g= inválido se ignora y queda el inicio');
+  t=await mk(b,{lk:{noAccess:true}});await t.page.goto(URL+'?g='+G);await t.page.waitForSelector('[data-g]',{timeout:60000}).catch(()=>{});await t.page.waitForTimeout(500);
+  ok(/No pudimos abrir ese grupo/.test(await t.page.textContent('#msg')),'CUE-QA-113 puente: sin acceso muestra un mensaje claro (el servidor decide)');
+  ok(await t.page.isHidden('#vGroup'),'CUE-QA-113 puente: sin acceso no queda en la pantalla del grupo');
+  t=await mk(b,{lk:{links:[{id:'l1',ref_type:'escapada_trip',ref_id:'z',status:'active',name:'Playa'},{id:'l2',ref_type:'juntada',ref_id:'y',status:'active',name:'Asado'},{id:'l3',ref_type:'juntada',ref_id:'w',status:'active',name:'Viejo',in_trash:true},{id:'l4',ref_type:'escapada_trip',ref_id:'v',status:'removed',name:'Otro'}]}});
+  await t.page.goto(URL+'?g='+G);await t.page.waitForSelector('#vGroup:not([hidden])',{timeout:60000});await t.page.waitForTimeout(400);
+  const bk=await t.page.evaluate(()=>[...document.querySelectorAll('#gBackEv a')].map(a=>a.textContent.trim()+'|'+a.getAttribute('href')));
+  ok(bk.length===2&&bk.some(x=>/viaje: Playa\|https:\/\/boninip\.github\.io\/escapada\/$/.test(x))&&bk.some(x=>/evento: Asado\|https:\/\/boninip\.github\.io\/juntada\/$/.test(x)),'CUE-QA-114 volver: un botón por vínculo activo, con destino fijo ('+bk.join(' ; ')+')');
+  ok(!bk.some(x=>/Viejo|Otro/.test(x)),'CUE-QA-114 volver: no ofrece papelera ni vínculos desvinculados');
+  t=await mk(b,{});await t.page.goto(URL+'?g='+G);await t.page.waitForSelector('#vGroup:not([hidden])',{timeout:60000});await t.page.waitForTimeout(300);
+  ok(await t.page.isHidden('#gBackEv'),'CUE-QA-114 volver: sin vínculos no se muestra');
  }
 await b.close();console.log(fails?fails+' fallas':'todo ok');process.exit(fails?1:0)})();
